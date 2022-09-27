@@ -1,6 +1,6 @@
 import { Command } from '@sapphire/framework';
 import { ApplicationCommandType } from 'discord-api-types/v9';
-import { Formatters, GuildMember } from 'discord.js';
+import { GuildMember } from 'discord.js';
 
 export class BoopCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
