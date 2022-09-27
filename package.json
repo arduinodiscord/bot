@@ -1,5 +1,5 @@
 {
-  "name": "arduino-bot-revamp",
+  "name": "arduino-bot",
   "description": "The new and improved custom discord bot to power the official Arduino discord server @ https://arduino.cc/discord",
   "version": "0.1.0",
   "main": "src/index.ts",
@@ -10,13 +10,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/BluLightShow/arduino-bot-revamp.git"
+    "url": "git+https://github.com/max-bromberg/arduino-bot.git"
   },
   "bugs": {
-    "url": "https://github.com/BluLightShow/arduino-bot-revamp/issues"
+    "url": "https://github.com/max-bromberg/arduino-bot/issues"
   },
-  "homepage": "https://github.com/BluLightShow/arduino-bot-revamp#readme",
-  "author": "BluLightShow",
+  "homepage": "https://github.com/max-bromberg/arduino-bot#readme",
+  "author": "Max Bromberg and Contributors",
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "@prisma/client": "^4.4.0",
