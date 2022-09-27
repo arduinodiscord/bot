@@ -4,7 +4,7 @@ export const prisma = new PrismaClient();
 
 prisma
   .$connect()
-  .catch((error) => {
+  .catch((error: any) => {
     console.error(error);
     process.exit(1);
   })
