@@ -6,7 +6,7 @@ export class BoopCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
     super(context, {
       ...options,
-      description: 'Boop user.'
+      description: 'Boop user.',
     });
   }
 
@@ -18,11 +18,16 @@ export class BoopCommand extends Command {
     );
   }
 
-  public override async contextMenuRun(interaction: Command.ContextMenuInteraction) {
+  public override async contextMenuRun(
+    interaction: Command.ContextMenuInteraction
+  ) {
     // Use isUserContextMenu() to ensure this command was executed as a User Context Menu Command
-    if (interaction.isUserContextMenu() && interaction.targetMember instanceof GuildMember) {
+    if (
+      interaction.isUserContextMenu() &&
+      interaction.targetMember instanceof GuildMember
+    ) {
       return interaction.reply({
-        content: `BOOP`
+        content: `BOOP`,
       });
     }
   }

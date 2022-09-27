@@ -4,20 +4,20 @@ export class PingCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
     super(context, {
       ...options,
-      description: 'Pong!'
-    })
+      description: 'Pong!',
+    });
   }
-  public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry
+  ) {
     registry.registerChatInputCommand((builder) => {
-      builder
-      .setName(this.name)
-      .setDescription(this.description)
-    })
+      builder.setName(this.name).setDescription(this.description);
+    });
   }
 
   public override chatInputRun(interaction: Command.ChatInputInteraction) {
     return interaction.reply({
-      content: 'Pong!'
-    })
+      content: 'Pong!',
+    });
   }
 }
