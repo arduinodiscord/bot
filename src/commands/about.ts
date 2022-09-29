@@ -1,7 +1,6 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
 import { MessageEmbed } from 'discord.js';
-import fs from 'fs';
-const packageJSON = JSON.parse(fs.readFileSync('./package.json').toString());
+import { version } from './../../package.json';
 
 export class AboutCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
@@ -22,7 +21,7 @@ export class AboutCommand extends Command {
     return interaction.reply({
       embeds: [
         new MessageEmbed().setTitle('About Arduino Bot').addFields([
-          { name: 'Bot Version', value: packageJSON.version },
+          { name: 'Bot Version', value: version },
           { name: 'Node Version', value: process.version },
         ]),
       ],
