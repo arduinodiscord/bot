@@ -7,8 +7,8 @@ export const prisma = new PrismaClient();
 
 prisma
   .$connect()
-  .catch((error) => {
-    logger.fatal(error);
+  .catch((error: Error) => {
+    logger.fatal(error.message);
     process.exit(1);
   })
   .then(() => logger.info('Database connection success'));
