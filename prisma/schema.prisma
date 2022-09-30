@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Analytics {
-  time DateTime @id @db.Timestamptz(6)
+enum MemberAnalyticsEvent {
+  join
+  leave
+}
+
+model MemberAnalytics {
+  time     DateTime             @id @default(now()) @db.Timestamptz(6)
+  event    MemberAnalyticsEvent
+  memberId String               @db.VarChar()
 }

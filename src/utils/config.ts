@@ -12,4 +12,7 @@ if (missingEnv.length > 0)
       missingEnv.reduce((a, b) => (b += `\n- ${a}`))
   );
 
-export const { BOT_TOKEN = '' } = process.env;
+export const {
+  BOT_TOKEN = '',
+  SERVER_ID = '420594746990526466', // default: Arduino Official
+} = process.env;
