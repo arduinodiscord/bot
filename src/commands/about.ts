@@ -21,7 +21,7 @@ export class AboutCommand extends Command {
     return interaction.reply({
       embeds: [
         new MessageEmbed().setTitle('About Arduino Bot').addFields([
-          { name: 'Bot Version', value: version },
+          { name: 'Bot Version', value: 'v' + version },
           { name: 'Node Version', value: process.version },
         ]),
       ],
