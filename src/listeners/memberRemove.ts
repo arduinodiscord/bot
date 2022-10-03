@@ -1,5 +1,5 @@
 import { Events, Listener } from '@sapphire/framework';
-import { GuildMember } from 'discord.js';
+import type { GuildMember } from 'discord.js';
 import { prisma } from '../utils/db';
 
 export class MemberRemoveListener extends Listener {

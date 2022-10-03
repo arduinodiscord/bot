@@ -3,7 +3,14 @@ import { BOT_TOKEN } from './utils/config';
 import './utils/db';
 
 const client = new SapphireClient({
-  intents: ['GUILDS', 'GUILD_MESSAGES', 'GUILD_MEMBERS'],
+  intents: [
+    'GUILDS',
+    'GUILD_MESSAGES',
+    'GUILD_MEMBERS',
+    'GUILD_PRESENCES',
+    'MESSAGE_CONTENT',
+    'DIRECT_MESSAGES',
+  ],
 });
 
 client.login(BOT_TOKEN);

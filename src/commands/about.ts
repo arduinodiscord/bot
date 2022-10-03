@@ -21,8 +21,13 @@ export class AboutCommand extends Command {
     return interaction.reply({
       embeds: [
         new MessageEmbed().setTitle('About Arduino Bot').addFields([
-          { name: 'Bot Version', value: version },
-          { name: 'Node Version', value: process.version },
+          { name: 'Bot Version', value: version, inline: true },
+          { name: 'Node Version', value: process.version, inline: true },
+          {
+            name: 'Contributing',
+            value: '[GitHub](https://github.com/BluLightShow/arduino-bot)',
+            inline: true
+          },
         ]),
       ],
     });
