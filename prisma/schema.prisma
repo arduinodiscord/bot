@@ -14,9 +14,14 @@ model MemberAnalytics {
 }
 
 model MessageAnalytics {
-  time      DateTime @id @default(now()) @db.Timestamptz(6)
-  memberId  String   @db.VarChar
-  channelId String   @db.VarChar
+  time      DateTime @id(map: "MessageAnalytics_pk") @default(now()) @db.Timestamptz(6)
+  memberId  String?  @db.VarChar
+  channelId String?  @db.VarChar
+}
+
+model CommandAnalytics {
+  time    DateTime @id(map: "CommandAnalytics_pk") @default(now()) @db.Timestamptz(6)
+  command String?  @db.VarChar
 }
 
 enum MemberAnalyticsEvent {
