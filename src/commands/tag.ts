@@ -1,11 +1,12 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { MessageEmbed } from 'discord.js';
-import { version } from './../../package.json';
+import tags from '../utils/tags';
+
 
 export class TagCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
     super(context, {
       ...options,
+      name: 'tag',
       description: 'Send a tag ephemerally.',
     });
   }
@@ -14,30 +15,32 @@ export class TagCommand extends Command {
   ) {
     registry.registerChatInputCommand((builder) => {
       builder //
-      .setName(this.name).setDescription(this.description)
-      .addUserOption((option): any => {
-        option //
-        .setName('tag')
-        .setDescription('Tag to send')
-        .setRequired(true)
-      })
-    });
+        .setName(this.name)
+        .setDescription(this.description)
+        .addStringOption((option): any => {
+          option //
+            .setName('name')
+            .setDescription('Tag to see')
+            .setRequired(true)
+            .addChoices(
+              { name: 'ask', value: 'ask' },
+              { name: 'avrdude', value: 'avrdude' },
+              { name: 'codeblock', value: 'codeblock' },
+              { name: 'espcomm', value: 'espcomm' },
+              { name: 'hid', value: 'hid' },
+              { name: 'language', value: 'language' },
+              { name: 'libmissing', value: 'libmissing' },
+              { name: 'pin', value: 'pin' },
+              { name: 'pullup', value: 'pullup' },
+              { name: 'template', value: 'template' }
+            )
+            return option
+        })
+    })
   }
 
   public override chatInputRun(interaction: Command.ChatInputInteraction) {
-    return interaction.reply({
-      embeds: [
-        new MessageEmbed().setTitle('About Arduino Bot').addFields([
-          { name: 'Bot Version', value: version, inline: true },
-          { name: 'Node Version', value: process.version, inline: true },
-          {
-            name: 'Contributing',
-            value: '[GitHub](https://github.com/BluLightShow/arduino-bot)',
-            inline: true
-          },
-        ]),
-      ],
-      ephemeral: true
-    });
+    let tagRequested = interaction.options.getString('name')! as keyof typeof tags
+    return interaction.reply(tags[tagRequested])
   }
 }

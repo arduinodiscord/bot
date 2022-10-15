@@ -11,5 +11,15 @@ export class ReadyListener extends Listener {
     this.container.logger.info(
       `Logged in as ${username}#${discriminator} (${id})`
     );
+
+    user?.setPresence({
+      status: 'online',
+      activities: [
+        {
+          name: 'slash commands!',
+          type: 'WATCHING'
+        }
+      ]
+    })
   }
 }
