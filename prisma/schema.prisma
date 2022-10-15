@@ -7,13 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum MemberAnalyticsEvent {
-  join
-  leave
-}
-
 model MemberAnalytics {
   time     DateTime             @id @default(now()) @db.Timestamptz(6)
   event    MemberAnalyticsEvent
-  memberId String               @db.VarChar()
+  memberId String               @db.VarChar
+}
+
+model MessageAnalytics {
+  time      DateTime @id @default(now()) @db.Timestamptz(6)
+  memberId  String   @db.VarChar
+  channelId String   @db.VarChar
+}
+
+enum MemberAnalyticsEvent {
+  join
+  leave
 }

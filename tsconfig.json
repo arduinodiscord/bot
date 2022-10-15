@@ -1,4 +1,5 @@
 {
+  "extends": "@sapphire/ts-config",
   "compilerOptions": {
     "target": "es2019",
     "module": "commonjs",
