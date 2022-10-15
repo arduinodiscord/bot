@@ -24,15 +24,15 @@ export class TagCommand extends Command {
             .setRequired(true)
             .addChoices(
               { name: 'ask', value: 'ask' },
-              { name: 'avrdude', value: 'avrdude' },
-              { name: 'codeblock', value: 'codeblock' },
-              { name: 'espcomm', value: 'espcomm' },
-              { name: 'hid', value: 'hid' },
-              { name: 'language', value: 'language' },
-              { name: 'libmissing', value: 'libmissing' },
-              { name: 'pin', value: 'pin' },
-              { name: 'pullup', value: 'pullup' },
-              { name: 'template', value: 'template' }
+              // { name: 'avrdude', value: 'avrdude' },
+              // { name: 'codeblock', value: 'codeblock' },
+              // { name: 'espcomm', value: 'espcomm' },
+              // { name: 'hid', value: 'hid' },
+              // { name: 'language', value: 'language' },
+              // { name: 'libmissing', value: 'libmissing' },
+              // { name: 'pin', value: 'pin' },
+              // { name: 'pullup', value: 'pullup' },
+              // { name: 'template', value: 'template' }
             )
             return option
         })
