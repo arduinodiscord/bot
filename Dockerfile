@@ -1,6 +1,6 @@
 FROM node:alpine
 
-LABEL org.opencontainers.image.source https://github.com/hox/eli.tf
+LABEL org.opencontainers.image.source https://github.com/max-bromberg/arduino-bot
 
 WORKDIR /opt/app
 
