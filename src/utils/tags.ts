@@ -13,7 +13,6 @@ export default {
         }),
     ],
   },
-  // have no Idea what I am doing sorry.
   avrdude: {
     embeds: [
       new MessageEmbed(universalEmbed)
@@ -77,6 +76,18 @@ export default {
             value: "If you think that's the case, try reinstalling the IDE.",
           }
         ),
+    ],
+  },
+  codeblock: {
+    embeds: [
+      new MessageEmbed(universalEmbed)
+        .setTitle('How to Send Code Blocks')
+        .addFields({
+          name: 'Surround the code in three backticks',
+          value:
+            'If using new lines, a file extension can be placed directly after the first 3 backticks to highlight in that language. An example is shown below, highlighting code in arduino. The backtick key is typically found to the left of the 1 key.',
+        })
+        .setImage("https://cdn.blulight.show/xvcZVjDrGN3j/direct")
     ],
   },
 };
