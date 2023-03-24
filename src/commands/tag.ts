@@ -25,7 +25,7 @@ export class TagCommand extends Command {
             .addChoices(
               { name: 'ask', value: 'ask' },
               { name: 'avrdude', value: 'avrdude' },
-              // { name: 'codeblock', value: 'codeblock' },
+              { name: 'codeblock', value: 'codeblock' },
               // { name: 'espcomm', value: 'espcomm' },
               // { name: 'hid', value: 'hid' },
               // { name: 'language', value: 'language' },
