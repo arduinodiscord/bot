@@ -36,4 +36,4 @@ jobs:
           cloudflared_service_token_secret: ${{ secrets.TOKEN_SECRET }}
           cloudflared_host_address: 'k8s.mrln.link'
           kubeconfig: ${{ secrets.KUBECONFIG }}
-          kubectl_args: set image deploy/arduino-bot arduino-bot=ghcr.io/${{ github.repository }}:${{ github.sha }}
+          kubectl_args: set image deploy/bot bot=ghcr.io/${{ github.repository }}:${{ github.sha }}
