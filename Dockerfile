@@ -1,6 +1,6 @@
 FROM node:lts-alpine AS dependencies
 
-LABEL org.opencontainers.image.source https://github.com/max-bromberg/arduino-bot
+LABEL org.opencontainers.image.source https://github.com/arduinodiscord/bot
 
 WORKDIR /srv
 
