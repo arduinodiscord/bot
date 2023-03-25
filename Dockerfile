@@ -26,6 +26,7 @@ FROM node:lts-alpine AS runner
 WORKDIR /srv
 
 COPY --from=builder /srv/node_modules ./node_modules
+COPY --from=builder /srv/prisma ./prisma
 COPY --from=builder /srv/package.json .
 COPY --from=builder /srv/dist ./dist
 
