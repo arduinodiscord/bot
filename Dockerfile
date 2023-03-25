@@ -1,4 +1,4 @@
-FROM node:lts-alpine AS dependencies
+FROM node:lts-alpine
 
 LABEL org.opencontainers.image.source https://github.com/arduinodiscord/bot
 
