@@ -1,4 +1,4 @@
-import { MessageEmbed, ActionRowBuilder, Button } from 'discord.js';
+import { MessageEmbed, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import universalEmbed from '../index';
 export default {
   ask: {
