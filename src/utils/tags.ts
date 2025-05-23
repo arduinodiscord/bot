@@ -1,4 +1,4 @@
-import { MessageEmbed } from 'discord.js';
+import { MessageEmbed, ActionRowBuilder, ButtonBuilder } from 'discord.js';
 import universalEmbed from '../index';
 export default {
   ask: {
@@ -6,11 +6,19 @@ export default {
       new MessageEmbed(universalEmbed)
         .setTitle('Dont ask to ask - Just ask!')
         .addFields({
-          // TODO: Turn slash command reference into a button
-          name: 'Describe what your code/hardware does and what you want it to do instead. Sharing is caring! Share your code, use /tag `name: codeblock` to learn how.',
+          name: 'Describe what your code/hardware does and what you want it to do instead. Sharing is caring! Share your code, click the "codeblock" button below to learn how.',
           value:
             'Keep in mind: no one here is paid to help you, so the least you can do is to refine your question in a proper language.',
         }),
+    ],
+    components: [
+        new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder()
+            .setCustomId('codeblock')
+            .setLabel('codeblock')
+            .setStyle(ButtonStyle.Primary);
+        );
     ],
   },
   avrdude: {
@@ -79,15 +87,6 @@ export default {
     ],
   },
   codeblock: {
-    embeds: [
-      new MessageEmbed(universalEmbed)
-        .setTitle('How to Send Code Blocks')
-        .addFields({
-          name: 'Surround the code in three backticks',
-          value:
-            'If using new lines, a file extension can be placed directly after the first 3 backticks to highlight in that language. An example is shown below, highlighting code in arduino. The backtick key is typically found to the left of the 1 key.',
-        })
-        .setImage("https://cdn.blulight.show/xvcZVjDrGN3j/direct")
-    ],
+    content: '```ino\n// Please right-click on this message (long-press on mobile)\n// then select "Copy Text."\n\n// After that, copy your code; then paste it in place of this comment\n```'
   },
 };
