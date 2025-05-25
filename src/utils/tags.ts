@@ -88,9 +88,6 @@ export default {
   codeblock: {
     content: '```ino\n// Please right-click on this message (long-press on mobile)\n// then select "Copy Text."\n\n// After that, copy your code; then paste it in place of this comment\n```'
   },
-
-  // --- New commands from scratch.md below ---
-
   espcomm: {
     embeds: [
       new MessageEmbed(universalEmbed)
