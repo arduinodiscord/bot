@@ -4,11 +4,11 @@ export default {
   ask: {
     embeds: [
       new MessageEmbed(universalEmbed)
-        .setTitle('Dont ask to ask - Just ask!')
+        .setTitle('Don\'t ask to ask - Just ask!')
         .addFields({
-          name: 'Describe what your code/hardware does and what you want it to do instead. Sharing is caring! Share your code, click the "codeblock" button below to learn how.',
+          name: 'Describe what your code/hardware does and what you want it to do instead. Sharing is caring! Share your code, click the **"codeblock"** button below to learn how.',
           value:
-            'Keep in mind: no one here is paid to help you, so the least you can do is to refine your question in a proper language.',
+            'Keep in mind: no one here is paid to help you, so the least you can do is refine your question in proper language.',
         }),
     ],
     components: [
@@ -28,7 +28,7 @@ export default {
           {
             name: '1. Is your Serial monitor open?',
             value:
-              'If it is, close it. this allows your IDE to upload sketches without conflicts with the Serial Monitor.',
+              'If it is, close it. This allows your IDE to upload sketches without conflicts with the Serial Monitor.',
           },
           {
             name: '2. Have you selected the right port in your IDE?',
@@ -164,7 +164,7 @@ export default {
         .addFields(
           {
             name: "Arduino IDE code is normally C++14",
-            value: "The language most often used in Arduino IDE for programming is primarily C++14. There are some added functions that are very useful for using the Arduino platform. They can be found at https://www.arduino.cc/reference/en/. MicroPython and other python types are sometimes used, how ever they are extreamily limited in both the boards that support them and the library selection that is offered. Also the community and examples and tutorials are extreamily limited also, so rarly are they used in this community and never are they used in real world __commericial or industerial__ applications."
+            value: "The language most often used in Arduino IDE for programming is primarily **C++14**. There are some added functions that are very useful for using the Arduino platform. They can be found at https://www.arduino.cc/reference/en/. MicroPython and other Python types are sometimes used; however, they are extremely limited in both the boards that support them and the library selection that is offered. Also, the community, examples, and tutorials are extremely limited, so they are rarely used in this community and never used in real-world **commercial or industrial** applications."
           }
         )
     ]
@@ -184,8 +184,8 @@ export default {
             value: "Check for any capitalization errors as well!"
           },
           {
-            name: "3. Did you download it manualy?",
-            value: "If you downloaded it from gitHub or someplace else and it came as a zif pile do not open the zip. Insted, Open the ide, go to librrarys->installfromzip then point to the zip folder and install. Then close all ide's you have open wait 20 secconds then open the ide go to librarys and see if its now listed there it should be."
+            name: "3. Did you download it manually?",
+            value: "If you downloaded it from GitHub or somewhere else and it came as a zip file, do not open the zip. Instead, open the IDE, go to Libraries -> Install from ZIP, then point to the zip folder and install. Then close all IDEs you have open, wait 20 seconds, then open the IDE, go to Libraries and see if it's now listed there. It should be.",
           },
           {
             name: "Still can't fix it?",
@@ -206,19 +206,19 @@ export default {
           },
           {
             name: "2. How much power can each pin of the Arduino provide?",
-            value: "Each pin of the Arduino __UNO__ is rated for 20mA *other arduinos are less*. In many cases, if you do not provide a resistor to the circuit on a pin, you can damage the Arduino. We use resistors for LEDs or any other component that can draw more than 20mA. Motors should not be driven directly off the Arduino pins ever, no matter how small they are or what you have seen others do. This risks dammaging your arduino or your pc in some cases."
+            value: "Each pin of the Arduino **UNO** is rated for 20mA (*other Arduinos are less*). In many cases, if you do not provide a resistor to the circuit on a pin, you can damage the Arduino. We use resistors for LEDs or any other component that can draw more than 20mA. **Motors should never be driven directly off the Arduino pins**, no matter how small they are or what you have seen others do. This risks damaging your Arduino or your PC in some cases.",
           },
           {
             name: "3. Powering the Arduino properly",
             value: "On most Arduino boards, there will be a pin marked **VIN**. This stands for Voltage Input. You can provide the maximum power rating for your board on this pin. An UNO will accept 7-12V. If you have a regulated 5-volt power supply, you can sometimes use the 5V pin to power the Arduino. You should **NOT** connect batteries to the 5V or 3.3V pins. You can also power Arduinos via USB plugs or the barrel jack on some boards."
           },
           {
-            name: "4. The 3.3v pin,",
-            value: "The 3.3v pin on the UNO is designed to output 50mA. It is mostly used so the arduino can communicate to the pc and is used as a refrence for the arduino its self. normaly its safe to use up to 30mA from this pin just fine. trying to use __MORE__ then this amount from this pin will normaly cause communication issues to the ps, and will cause power outages for the device that is trying to be powered from the piin, so things like esp32's, wireless modules, and cellphonemodules etc can not be powered from this pin."
+            name: "4. The 3.3V pin",
+            value: "The 3.3V pin on the UNO is designed to output 50mA. It is mostly used so the Arduino can communicate to the PC and is used as a reference for the Arduino itself. Normally, it's safe to use up to 30mA from this pin. Trying to use **more** than this amount from this pin will usually cause communication issues to the PC, and will cause power outages for the device that is trying to be powered from the pin. So things like ESP32s, wireless modules, and cellphone modules, etc., **cannot** be powered from this pin.",
           },
           {
-            name: "5. Max output from the IC,",
-            value: "Although there is a max value the reagulator can out put say 400mA, this does NOT mean you have full access to that value, the arduino UNO will use 50mA of that, also that 400mA is if you was supplying 6.8v. If you supply 9v then the you only have around 300mA, if you supply 12v then you will only have around 150mA. Keep this in mind as you work on your project. along with this the MCU that your useing has a max out put also. Example the UNO 328 IC can output 20mA per pin. it has 19 pins so that should be 380mA. How ever this is not correct ether, as the max it can sorce is 200mA. So it is very important to read the datasheets of anything your working with to NOT cause issues with your devices."
+            name: "5. Max output from the IC",
+            value: "Although there is a max value the regulator can output (say 400mA), this does **not** mean you have full access to that value. The Arduino UNO will use about 50mA of that, and that 400mA is if you are supplying 6.8V. If you supply 9V, then you only have around 300mA; if you supply 12V, then you will only have around 150mA. Keep this in mind as you work on your project. Along with this, the MCU that you're using has a max output also. For example, the UNO 328 IC can output 20mA per pin. It has 19 pins, so that should be 380mA. However, this is not correct either, as the max it can source is 200mA. So it is very important to read the datasheets of anything you're working with to **avoid causing issues with your devices**.",
           }
         )
     ]
