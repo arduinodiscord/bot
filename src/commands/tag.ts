@@ -31,9 +31,14 @@ export class TagCommand extends Command {
               { name: 'hid', value: 'hid' },
               { name: 'language', value: 'language' },
               { name: 'libmissing', value: 'libmissing' },
-              { name: 'pin', value: 'pin' },
+              { name: 'power', value: 'power' },
               { name: 'pullup', value: 'pullup' },
-              { name: 'template', value: 'template' }
+              { name: 'template', value: 'template' },
+              { name: 'levelShifter', value: 'levelShifter' },
+              { name: 'debounce', value: 'debounce' },
+              { name: 'analogRead', value: 'analogRead' },
+              { name: 'motorControl', value: 'motorControl' },
+              { name: 'pwm', value: 'pwm' }
             )
         );
     });
