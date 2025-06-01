@@ -33,7 +33,7 @@ export class TagCommand extends Command {
               { name: 'libmissing', value: 'libmissing' },
               { name: 'power', value: 'power' },
               { name: 'pullup', value: 'pullup' },
-              //{ name: 'template', value: 'template' }
+              { name: 'wiki', value: 'wiki' }
             )
         );
     });
