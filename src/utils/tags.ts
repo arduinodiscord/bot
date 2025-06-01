@@ -114,8 +114,8 @@ export default {
             value: "If there is, try removing everything connected to them."
           },
           {
-            name: "6. Have you tried holding down the BOOT/FLASH button?",
-            value: "Try Holding down the BOOT/FLASH button before uploading."
+            name: "6. Have you tried holding down the BOOT/IO0/FLASH button?",
+            value: "Try Holding down the BOOT/IO0/FLASH button before uploading."
           },
           {
             name: "7. Are there any problems with your wiring?",
@@ -144,7 +144,7 @@ export default {
           },
           {
             name: "Boards that are __NOT__ HID compliant",
-            value: "Uno (R3 or older), Mega, Nano, Pro Mini, cannot be used as a HID device."
+            value: "Uno (R3 or older), Mega, Nano(328), Pro Mini, cannot be used as a HID device."
           },
           {
             name: "Boards that __ARE__ HID compliant",

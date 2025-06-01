@@ -33,12 +33,6 @@ export class TagCommand extends Command {
               { name: 'libmissing', value: 'libmissing' },
               { name: 'power', value: 'power' },
               { name: 'pullup', value: 'pullup' },
-              { name: 'template', value: 'template' },
-              { name: 'levelShifter', value: 'levelShifter' },
-              { name: 'debounce', value: 'debounce' },
-              { name: 'analogRead', value: 'analogRead' },
-              { name: 'motorControl', value: 'motorControl' },
-              { name: 'pwm', value: 'pwm' },
               { name: 'wiki', value: 'wiki' }
             )
         );
@@ -55,9 +49,9 @@ export class TagCommand extends Command {
 
     // If the tag is an object (with embeds/components), spread it; otherwise, send as content
     if (typeof tag === 'object') {
-      return interaction.reply({ ...tag, ephemeral: true });
+      return interaction.reply({ ...tag,});
     } else {
-      return interaction.reply({ content: tag, ephemeral: true });
+      return interaction.reply({ content: tag,});
     }
   }
 }
