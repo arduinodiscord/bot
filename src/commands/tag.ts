@@ -38,7 +38,8 @@ export class TagCommand extends Command {
               { name: 'debounce', value: 'debounce' },
               { name: 'analogRead', value: 'analogRead' },
               { name: 'motorControl', value: 'motorControl' },
-              { name: 'pwm', value: 'pwm' }
+              { name: 'pwm', value: 'pwm' },
+              { name: 'wiki', value: 'wiki' }
             )
         );
     });
