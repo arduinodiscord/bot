@@ -1,9 +1,9 @@
-import { MessageEmbed, ActionRowBuilder, ButtonBuilder } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import universalEmbed from '../index';
 export default {
   ask: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle('Don\'t ask to ask - Just ask!')
         .addFields({
           name: 'Describe what your code/hardware does and what you want it to do instead. Sharing is caring! Share your code, click the **"codeblock"** button below to learn how.',
@@ -22,7 +22,7 @@ export default {
   },
   avrdude: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle('Solving AVRDUDE communication errors (Try these in order)')
         .addFields(
           {
@@ -90,7 +90,7 @@ export default {
   },
   espcomm: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle("Solving your ESP board's communication errors (Try these in order)")
         .addFields(
           {
@@ -135,7 +135,7 @@ export default {
 
   hid: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle("Can your Arduino be used as a keyboard or mouse?")
         .addFields(
           {
@@ -156,7 +156,7 @@ export default {
 
   language: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle("What coding language does Arduino IDE use? What language should you learn?")
         .addFields(
           {
@@ -169,7 +169,7 @@ export default {
 
   libmissing: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle('Solving library errors (such as "yourlib.h not found")')
         .addFields(
           {
@@ -194,7 +194,7 @@ export default {
 
   power: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle("Powering an Arduino")
         .addFields(
           {
@@ -223,7 +223,7 @@ export default {
 
   pullup: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle("What does pull-up (or pull-down) mean, and how do I use it?")
         .addFields(
           {

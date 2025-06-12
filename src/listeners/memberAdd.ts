@@ -1,6 +1,6 @@
 import { Events, Listener } from '@sapphire/framework';
 import type { GuildMember } from 'discord.js';
-import { prisma } from '../utils/db';
+// import { prisma } from '../utils/db';
 
 export class MemberAddListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
@@ -8,8 +8,8 @@ export class MemberAddListener extends Listener {
   }
 
   public async run(member: GuildMember) {
-    await prisma.memberAnalytics.create({
-      data: { event: 'join', memberId: member.user.id },
-    });
+    // await prisma.memberAnalytics.create({
+    //   data: { event: 'join', memberId: member.user.id },
+    // });
   }
 }

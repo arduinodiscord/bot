@@ -1,22 +1,40 @@
 {
-  "extends": "@sapphire/ts-config",
   "compilerOptions": {
-    "target": "es2019",
-    "module": "commonjs",
-    "outDir": "./dist",
+    // --- Module Configuration ---
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "baseUrl": "./", // Allows for absolute paths from the root
+    "target": "ES2022", // Updated to a more modern target
+    "lib": ["ESNext"],
+
+    // --- Strictness & Type Checking ---
     "strict": true,
+    "noImplicitAny": true,
+    "alwaysStrict": true,
+    "useDefineForClassFields": true,
+    "skipLibCheck": true, // This is crucial
+
+    // --- Interoperability ---
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "esModuleInterop": true,
     "isolatedModules": false,
-    "skipLibCheck": true,
-    "noUnusedLocals": true,
-    "noImplicitAny": true,
-    "noUnusedParameters": true,
-    "incremental": true,
+
+    // --- Emit Configuration ---
+    "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
-    "baseUrl": "./",
-    "typeRoots": ["node_modules/*"]
+    "outDir": "./dist",
+    "removeComments": false,
+
+    // --- Other Settings ---
+    "incremental": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }
