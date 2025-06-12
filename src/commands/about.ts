@@ -1,5 +1,5 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { MessageEmbed } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { version } from './../../package.json';
 import universalEmbed from '../index'
 
@@ -19,10 +19,10 @@ export class AboutCommand extends Command {
     });
   }
 
-  public override chatInputRun(interaction: Command.ChatInputInteraction) {
+  public override chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     return interaction.reply({
       embeds: [
-        new MessageEmbed(universalEmbed).setTitle('About Arduino Bot').addFields([
+        new EmbedBuilder(universalEmbed).setTitle('About Arduino Bot').addFields([
           { name: 'Bot Version', value: version, inline: true },
           { name: 'Node Version', value: process.version, inline: true },
           {

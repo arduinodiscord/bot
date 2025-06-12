@@ -2,7 +2,8 @@ import 'dotenv/config';
 
 // TODO: zod validation would be nicer to have here
 
-const requiredEnvironment = ['BOT_TOKEN', 'DATABASE_URL'];
+// const requiredEnvironment = ['BOT_TOKEN', 'DATABASE_URL'];
+const requiredEnvironment = ['BOT_TOKEN'];
 
 const missingEnv = requiredEnvironment.filter((req) => !process.env[req]);
 
