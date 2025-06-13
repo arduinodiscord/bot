@@ -39,8 +39,9 @@ export class TagCommand extends Command {
     });
   }
 
-  public override async chatInputRun(interaction: Command.ChatInputInteraction) {
-    const tagRequested = interaction.options.getString('name')! as keyof typeof tags;
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+    const option = interaction.options.get('name');
+    const tagRequested = option?.value as keyof typeof tags;
     const tag = tags[tagRequested];
 
     if (!tag) {
