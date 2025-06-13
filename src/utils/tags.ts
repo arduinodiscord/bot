@@ -40,7 +40,7 @@ export default {
             value: 'You need to select the right board and model.',
           },
           {
-            name: 'You need to select the right board and model.',
+            name: '4. Does the power LED light up on your board?',
             value:
               'If it does, unplug and re-plug your board, then check for blinking LEDs. If only the Power LED or no LEDs light up ask for further assistance (not for all boards).',
           },
@@ -71,7 +71,7 @@ export default {
           {
             name: '10. Are your drivers installed?',
             value:
-              "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the CH340 USB-Serial chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). [Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all) to learn how to install CH340 Drivers. If you have an FTDI chip, [This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all) will show you how to install their drivers. If you don't have either we recommend googling the USB-Serial chip that your board uses.",
+              "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the CH340 USB-Serial chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). **[Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)** to learn how to install CH340 Drivers. If you have an FTDI chip, **[This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)** will show you how to install their drivers. If you don't have either we recommend googling the USB-Serial chip that your board uses.",
           },
           {
             name: '11. Is your cable faulty or capable of sending data?',
