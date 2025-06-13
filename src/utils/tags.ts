@@ -244,7 +244,7 @@ export default {
   },
   wiki: {
     embeds: [
-      new MessageEmbed(universalEmbed)
+      new EmbedBuilder(universalEmbed)
         .setTitle("The arduino wiki has lots of information about Arduino basics")
         .addFields(
           {
@@ -262,6 +262,60 @@ export default {
           {
             name: "Learn A lot more, all of the wiki is created by discord users like you!",
             value: "https://wiki.arduinodiscord.cc/ is the place to go for more information about Arduino basics, and how to use them in your projects."
+          }
+        )
+    ]
+  },
+  levelShifter: {
+    embeds: [
+      new EmbedBuilder(universalEmbed)
+        .setTitle("Logic Level Shifters: Protecting Your 3.3V Modules")
+        .addFields(
+          {
+            name: "The Problem: Voltage Mismatch",
+            value: "Many popular Arduino boards like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins send out 5V for a 'HIGH' signal.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant**."
+          },
+          {
+            name: "What Happens if You Connect 5V to a 3.3V Pin?",
+            value: "Sending a 5V signal directly to a 3.3V input pin on a module is like shouting too loudly into someone's sensitive ear. You're applying excessive voltage.\n\n**Consequences:**\n" +
+                   "- **Immediate Damage:** The module might be instantly destroyed.\n" +
+                   "- **Reduced Lifespan:** The module might work for a while, but the over-voltage stresses the internal components, leading to premature failure.\n" +
+                   "- **Unreliable Operation:** Your project might behave erratically or work intermittently before failing completely."
+          },
+          {
+            name: "The Solution: Logic Level Shifter (LLS)",
+            value: "A Logic Level Shifter is a small, inexpensive board that acts as a 'voltage translator' between your 5V Arduino and your 3.3V module.\n\n" +
+                   "It safely steps down the 5V signals from the Arduino to 3.3V for the module's inputs. Most bi-directional shifters also step up 3.3V signals from the module to 5V for the Arduino's inputs, though 3.3V is often high enough to be read as a 'HIGH' by a 5V Arduino. Some times the arduino might not be able to hear such a small signal and it would end up not reciving the data from the module, so it is best to use a bi-directional level shifter for both directions.\n\n" +
+                   "**Note:** Not all modules require a level shifter, but many do. Always check the module's datasheet for its voltage requirements."
+          },
+          {
+            name: "Common Modules Requiring 3.3V Logic (and often a Shifter with 5V Arduinos)",
+            value: "- **NRF24L01 / NRF24L01+** (Wireless Transceiver)\n" +
+                   "- **ESP8266 (e.g., ESP-01)** (Wi-Fi Module)\n" +
+                   "- **ESP32** (Wi-Fi & Bluetooth MCU - its pins are 3.3V logic)\n" +
+                   "- **Many SD Card Modules** (especially microSD breakout boards)\n" +
+                   "- **Cellular Modules (e.g., SIM800L, A6/A7 GSM/GPRS)**\n" +
+                   "- **Some Accelerometers/Gyroscopes (e.g., MPU6050 - *check specific breakout board, some have on-board regulators/shifters, many don't for logic lines*)\n" +
+                   "- **Many newer Sensors & Displays** (e.g., some TFTs, OLEDs, BME280/BMP280)\n\n" +
+                   "**Always check the module's datasheet for its VCC (power) and logic level specifications!**"
+          },
+          {
+            name: "⚠️ \"But I saw a video/tutorial where it worked without one!\"",
+            value: "You might find examples online where people connect 3.3V modules directly to 5V Arduinos, and it *appears* to work. **This is bad practice and risky.**\n\n" +
+                   "**Why it might *seem* to work (temporarily):**\n" +
+                   "1.  **Short-term tolerance:** Some chips might tolerate over-voltage for a short period before failing.\n" +
+                   "2.  **Input protection diodes:** Some chips have internal diodes that try to clamp excess voltage, but these are not designed for continuous operation outside specified limits and will eventually burn out.\n" +
+                   "3.  **Luck:** Sometimes, it just hasn't failed *yet*.\n\n" +
+                   "**Relying on this is asking for trouble.** Your project might work during testing but then fail unpredictably later. It shortens the lifespan of your module and is not a reliable or proper engineering approach."
+          },
+          {
+            name: "When is it Critical?",
+            value: "The most critical connections are when your **5V Arduino is sending data TO the 3.3V module** (e.g., MOSI, SCK, Chip Select, Arduino TX to Module RX).\n\n" +
+                   "When the **3.3V module sends data TO the 5V Arduino** (e.g., MISO, Module TX to Arduino RX), a level shifter is less often *strictly* needed because most 5V MCUs will correctly interpret a 3.3V signal as a 'HIGH'. However, using a bi-directional level shifter handles both directions cleanly and is good practice."
+          },
+          {
+            name: "Proper Powering is Also Key!",
+            value: "Besides logic levels, ensure your 3.3V module is also **powered** with 3.3V (e.g.,  the 3.3V pin on your Arduino is only rated for 50ma in many cases and so it can NOT be used to power esp's or cellphone modules or other power hungry devices. In most cases use a dedicated 3.3V regulator). Do NOT power a 3.3V module with 5V VCC unless its datasheet explicitly states it has an onboard regulator that can handle 5V input."
           }
         )
     ]
