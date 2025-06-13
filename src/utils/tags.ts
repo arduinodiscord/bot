@@ -40,7 +40,7 @@ export default {
             value: 'You need to select the right board and model.',
           },
           {
-            name: 'You need to select the right board and model.',
+            name: '4. Does the power LED light up on your board?',
             value:
               'If it does, unplug and re-plug your board, then check for blinking LEDs. If only the Power LED or no LEDs light up ask for further assistance (not for all boards).',
           },
@@ -71,7 +71,7 @@ export default {
           {
             name: '10. Are your drivers installed?',
             value:
-              "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the CH340 USB-Serial chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). [Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all) to learn how to install CH340 Drivers. If you have an FTDI chip, [This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all) will show you how to install their drivers. If you don't have either we recommend googling the USB-Serial chip that your board uses.",
+              "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the CH340 USB-Serial chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). **[Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)** to learn how to install CH340 Drivers. If you have an FTDI chip, **[This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)** will show you how to install their drivers. If you don't have either we recommend googling the USB-Serial chip that your board uses.",
           },
           {
             name: '11. Is your cable faulty or capable of sending data?',
@@ -241,5 +241,30 @@ export default {
         )
         .setImage("https://www.arduino.cc/wiki/static/f7e18e95df4a8d274fc9129fa60eb428/928ea/PullUp.png")
     ]
+  },
+  wiki: {
+    embeds: [
+      new MessageEmbed(universalEmbed)
+        .setTitle("The arduino wiki has lots of information about Arduino basics")
+        .addFields(
+          {
+            name: "Learn how to combine sketches",
+            value: "Take two sketches and place them together, or learn how to use libraries."
+          },
+          {
+            name: "Learn how Calculate resistor values for LEDs",
+            value: "Learn how to calculate the resistor value for LEDs, and how to use them in your projects."
+          },
+          {
+            name: "Learn how breadboards work",
+            value: "Learn how to use breadboards, and how to connect components together."
+          },
+          {
+            name: "Learn A lot more, all of the wiki is created by discord users like you!",
+            value: "https://wiki.arduinodiscord.cc/ is the place to go for more information about Arduino basics, and how to use them in your projects."
+          }
+        )
+    ]
   }
 };
+
