@@ -241,5 +241,30 @@ export default {
         )
         .setImage("https://www.arduino.cc/wiki/static/f7e18e95df4a8d274fc9129fa60eb428/928ea/PullUp.png")
     ]
+  },
+  wiki: {
+    embeds: [
+      new MessageEmbed(universalEmbed)
+        .setTitle("The arduino wiki has lots of information about Arduino basics")
+        .addFields(
+          {
+            name: "Learn how to combine sketches",
+            value: "Take two sketches and place them together, or learn how to use libraries."
+          },
+          {
+            name: "Learn how Calculate resistor values for LEDs",
+            value: "Learn how to calculate the resistor value for LEDs, and how to use them in your projects."
+          },
+          {
+            name: "Learn how breadboards work",
+            value: "Learn how to use breadboards, and how to connect components together."
+          },
+          {
+            name: "Learn A lot more, all of the wiki is created by discord users like you!",
+            value: "https://wiki.arduinodiscord.cc/ is the place to go for more information about Arduino basics, and how to use them in your projects."
+          }
+        )
+    ]
   }
 };
+
