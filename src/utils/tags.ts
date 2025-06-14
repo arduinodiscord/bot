@@ -110,37 +110,38 @@ export default {
     content: "```ino\n// Please right-click on this message (long-press on mobile)\n// then select \"Copy Text.\"\n\n// After that, copy your code; then paste it in place of this comment\n```",
   },
 
+
   espcomm: {
     embeds: [
       new EmbedBuilder(universalEmbed)
         .setTitle("Solving Your ESP Board's Communication Errors (Try These in Order)")
         .addFields(
           {
-            name: "1. Is your Serial monitor open?",
-            value: "If it is, close it. This allows your IDE to upload sketches without conflicts with the Serial Monitor."
+            name: '1. Is your Serial Monitor open?', value: 'If it is, close it. This allows your IDE to upload sketches without conflicts with the Serial Monitor.'
+
           },
           {
-            name: "2. Have you selected the right port in your IDE?",
-            value: "You could have selected something that is **not** your ESP. Change the port in the Arduino IDE by going into Tools -> Port."
+            name: '2. Have you selected the right port in your IDE?', value: 'You might have selected something that is **not** your ESP. Change the port in the Arduino IDE by going to **Tools** -> **Port**.'
+
           },
           {
-            name: "3. Have you selected the right board in your IDE?",
-            value: "You need to select the right board and model."
+            name: '3. Have you selected the right board in your IDE?', value: 'You need to select the correct board and model.'
+
           },
           {
             name: "4. Is your Serial monitor showing gibberish?", value: "Try setting it to the correct baud rate (At the bottom right corner of the Serial monitor). Most examples use 115200 baud."
           },
           {
-            name: "5. Is anything connected to your Tx and Rx pins?",
-            value: "If there is, try removing everything connected to them."
+            name: '5. Is anything connected to your Tx and Rx pins?', value: 'If there is, try removing everything connected to them.'
+
           },
           {
             name: "6. Have you tried holding down the BOOT/IO0/FLASH button?",
             value: "Try holding down the BOOT/IO0/FLASH button before uploading."
           },
           {
-            name: "7. Are there any problems with your wiring?",
-            value: "Check if there are any wiring errors or loose connections (Note: if you are using an FTDI Board, FTDI TX and RX pins must be cross-connected with the ESP Tx and Rx pins (TX goes to RX))."
+            name: '7. Are there any problems with your wiring?', value: 'Check for any wiring errors or loose connections (Note: If you are using an FTDI Board, FTDI TX and RX pins must be cross-connected with the ESP Tx and Rx pins (TX goes to RX)).'
+
           },
           {
             name: "8. Can't see your ESP's COM Port?",
@@ -156,16 +157,16 @@ export default {
 
   hid: {
     embeds: [
-      new EmbedBuilder(universalEmbed)
-        .setTitle("Can your Arduino be used as a keyboard or mouse?")
+      new EmbedBuilder({ ...universalEmbed })
+        .setTitle('Can Your Arduino Be Used as a Keyboard or Mouse?')
         .addFields(
           {
             name: "You want to use your Arduino for a Human Interface Device? HID",
             value: "Arduino has many boards that can be used as a mouse/keyboard natively. This is referred to as HID."
           },
           {
-            name: "Boards that are __NOT__ HID compliant",
-            value: "Uno (R3 or older), Mega, Nano(328), Pro Mini, cannot be used as a HID device."
+            name: 'Boards that are __NOT__ HID compliant', value: 'Uno (R3 or older), Mega, Nano (328), and Pro Mini cannot be used as HID devices.'
+
           },
           {
             name: "Boards that __ARE__ HID compliant",
@@ -181,25 +182,35 @@ export default {
 
   language: {
     embeds: [
-      new EmbedBuilder(universalEmbed)
-        .setTitle("What coding language does Arduino IDE use? What language should you learn?")
+      new EmbedBuilder({ ...universalEmbed })
+        .setTitle('What Coding Language Does Arduino IDE Use? What Language Should You Learn?')
+        .addFields(
+          { name: 'Arduino IDE code is normally C++14', value: 'The language most often used in the Arduino IDE for programming is primarily **C++14**. There are some added functions that are very useful for using the Arduino platform, which can be found at https://www.arduino.cc/reference/en/. MicroPython and other Python types are sometimes used; however, they are extremely limited in both the boards that support them and the library selection that is offered. Also, the community, examples, and tutorials are extremely limited, so they are rarely used in this community and never used in real-world **commercial or industrial** applications. Finding help for them is also very difficult, so we do not recommend using them unless you are already familiar with them and have a specific reason to use them. If possible, we recommend learning C++14, as it is the most widely used language in the Arduino community and is also used in many other applications, such as game development, web development, and more.' }
+        ),
+    ],
+  },
+
+  levelShifter: {
+    embeds: [
+      new EmbedBuilder({ ...universalEmbed })
+        .setTitle('Logic Level Shifters: Protecting Your 3.3V Modules')
         .addFields(
           {
             name: "Arduino IDE code is normally C++14",
             value: "The language most often used in Arduino IDE for programming is primarily **C++14**. There are some added functions that are very useful for using the Arduino platform. They can be found at https://www.arduino.cc/reference/en/. MicroPython and other Python types are sometimes used; however, they are extremely limited in both the boards that support them and the library selection that is offered. Also, the community, examples, and tutorials are extremely limited, so they are rarely used in this community and never used in real-world **commercial or industrial** applications. Finding help for them is also very difficult, so we do not recommend using them unless you are already familiar with them and have a specific reason to use them. If possable, we recommend learning C++14, as it is the most widely used language in the Arduino community and is also used in many other applications, such as game development, web development, and more.",
           }
-        )
-    ]
+        ),
+    ],
   },
 
   libmissing: {
     embeds: [
-      new EmbedBuilder(universalEmbed)
-        .setTitle('Solving library errors (such as "yourlib.h not found")')
+      new EmbedBuilder({ ...universalEmbed })
+        .setTitle('Solving Library Errors (Such as "yourlib.h not found")')
         .addFields(
           {
-            name: "1. Is your library installed?",
-            value: "Go to the **Library Manager** (Sketch -> Include Library -> Manage Libraries), search for the library, and install it. If it is already installed, try reinstalling it through the Library Manager."
+            name: '1. Is your library installed?', value: 'Go to the **Library Manager** (Sketch -> Include Library -> Manage Libraries), search for the library, and install it. If it is already installed, try reinstalling it through the Library Manager.'
+
           },
           {
             name: "2. Is your `#include` statement spelled correctly?",
@@ -214,58 +225,64 @@ export default {
             value: "If you are using a library that is not in the Library Manager, you need to use `#include \"yourlib.h\"` instead of `#include <yourlib.h>`. The first one is used for libraries that are not in the Library Manager, while the second one is used for libraries that are installed in the Library Manager."
           },
           {
-            name: "Still can't fix it?",
-            value: "Check out [this Arduino forum post](https://forum.arduino.cc/t/no-headers-files-h-found/596090#:~:text=This%20might%20be%20result%20from,one%20of%20the%20libraries%20folders.) for more assistance."
-          }
-        )
-    ]
+            name: '5. Are you using the correct board?', value: 'Some libraries are only compatible with certain boards. Make sure you have selected the correct board in **Tools** -> **Board**.'
+
+          },
+          {
+            name: '6. Are you using the correct version of the library?', value: 'Some libraries have different versions for different boards or architectures. Make sure you are using the correct version of the library for your board.'
+
+          },
+          {
+            name: '7. Are you using `#include <yourlib.h>` or `#include "yourlib.h"`?', value: 'If you are using a library that is not in the Library Manager, you need to use `#include <yourlib.h>` instead of `#include "yourlib.h"`.'
+
+          },
+          { name: 'Still can\'t fix it?', value: 'Check out [this Arduino forum post](https://forum.arduino.cc/t/no-headers-files-h-found/596090#:~:text=This%20might%20be%20result%20from,one%20of%20the%20libraries%20folders.) for more assistance.' }
+        ),
+    ],
   },
 
   power: {
     embeds: [
-      new EmbedBuilder(universalEmbed)
-        .setTitle("Powering an Arduino")
+      new EmbedBuilder({ ...universalEmbed })
+        .setTitle('Powering an Arduino')
         .addFields(
           {
-            name: "1. How much power can an Arduino provide?",
-            value: "Most PC USB ports are limited to 500mA. The Arduino has a fuse on the board to help protect your PC and the Arduino from shorts. This is limited to 400mA. If you try to draw more current than this, the fuse will get hot and stop the short."
+            name: '1. How much power can an Arduino provide?', value: 'Most PC USB ports are limited to 500mA. The Arduino has a fuse on the board to help protect your PC and the Arduino from shorts. This is limited to 400mA. If you try to draw more current than this, the fuse will get hot and stop the short.'
+
           },
           {
-            name: "2. How much power can each pin of the Arduino provide?",
-            value: "Each pin of the Arduino **UNO** is rated for 20mA (*other Arduinos are less*). In many cases, if you do not provide a resistor to the circuit on a pin, you can damage the Arduino. We use resistors for LEDs or any other component that can draw more than 20mA. **Motors should never be driven directly off the Arduino pins**, no matter how small they are or what you have seen others do. This risks damaging your Arduino or your PC in some cases.",
+            name: '2. How much power can each pin of the Arduino provide?', value: 'Each pin of the Arduino **UNO** is rated for 20mA (*other Arduinos are less*). In many cases, if you do not provide a resistor to the circuit on a pin, you can damage the Arduino. We use resistors for LEDs or any other component that can draw more than 20mA. **Motors should never be driven directly off the Arduino pins**, no matter how small they are or what you have seen others do. This risks damaging your Arduino or your PC in some cases.'
+
           },
           {
-            name: "3. Powering the Arduino properly",
-            value: "On most Arduino boards, there will be a pin marked **VIN**. This stands for Voltage Input. You can provide the maximum power rating for your board on this pin. An UNO will accept 7-12V. If you have a regulated 5-volt power supply, you can sometimes use the 5V pin to power the Arduino. You should **NOT** connect batteries to the 5V or 3.3V pins. You can also power Arduinos via USB plugs or the barrel jack on some boards."
+            name: '3. Powering the Arduino properly', value: 'On most Arduino boards, there will be a pin marked **VIN**. This stands for Voltage Input. You can provide the maximum power rating for your board on this pin. An UNO will accept 7-12V. If you have a regulated 5-volt power supply, you can sometimes use the 5V pin to power the Arduino. You should **NOT** connect batteries to the 5V or 3.3V pins. You can also power Arduinos via USB plugs or the barrel jack on some boards.'
+
           },
           {
-            name: "4. The 3.3V pin",
-            value: "The 3.3V pin on the UNO is designed to output 50mA. It is mostly used so the Arduino can communicate to the PC and is used as a reference for the Arduino itself. Normally, it's safe to use up to 30mA from this pin. Trying to use **more** than this amount from this pin will usually cause communication issues to the PC, and will cause power outages for the device that is trying to be powered from the pin. So things like ESP32s, wireless modules, and cellphone modules, etc., **cannot** be powered from this pin.",
+            name: '4. The 3.3V pin', value: 'The 3.3V pin on the UNO is designed to output 50mA. It is mostly used so the Arduino can communicate with the PC and is used as a reference for the Arduino itself. Normally, it\'s safe to use up to 30mA from this pin. Trying to use **more** than this amount from this pin will usually cause communication issues with the PC and will cause power outages for the device that is trying to be powered from the pin. So, things like ESP32s, wireless modules, and cell phone modules, etc., **cannot** be powered from this pin.'
+
           },
-          {
-            name: "5. Max output from the IC",
-            value: "Although there is a max value the regulator can output (say 400mA), this does **not** mean you have full access to that value. The Arduino UNO will use about 50mA of that, and that 400mA is if you are supplying 6.8V. If you supply 9V, then you only have around 300mA; if you supply 12V, then you will only have around 150mA. Keep this in mind as you work on your project. Along with this, the MCU that you're using has a max output also. For example, the UNO 328 IC can output 20mA per pin. It has 19 pins, so that should be 380mA. However, this is not correct either, as the max it can source is 200mA. So it is very important to read the datasheets of anything you're working with to **avoid causing issues with your devices**.",
-          }
-        )
-    ]
+          { name: '5. Max output from the IC', value: 'Although there is a max value the regulator can output (say 400mA), this does **not** mean you have full access to that value. The Arduino UNO will use about 50mA of that, and that 400mA is if you are supplying 6.8V. If you supply 9V, then you only have around 300mA; if you supply 12V, then you will only have around 150mA. Keep this in mind as you work on your project. Along with this, the MCU that you\'re using has a max output also. For example, the UNO 328 IC can output 20mA per pin. It has 19 pins, so that should be 380mA. However, this is not correct either, as the max it can source is 200mA. So, it is very important to read the datasheets of anything you\'re working with to **avoid causing issues with your devices**.' }
+        ),
+    ],
   },
 
   pullup: {
     embeds: [
-      new EmbedBuilder(universalEmbed)
-        .setTitle("What does pull-up (or pull-down) mean, and how do I use it?")
+      new EmbedBuilder({ ...universalEmbed })
+        .setTitle('What does pull-up (or pull-down) mean, and how do I use it?')
         .addFields(
           {
-            name: "Pins used as INPUT should not be left unconnected (floating).",
-            value: "This can lead to undesired behavior. If input pins are connected to digital sensors, the sensor itself usually keeps the pin either **HIGH** or **LOW**."
+            name: 'Pins used as INPUT should not be left unconnected (floating).', value: 'This can lead to undesired behavior. If input pins are connected to digital sensors, the sensor itself usually keeps the pin either **HIGH** or **LOW**.'
+
           },
           {
-            name: "Pins used with switches (pushbuttons or others) should use a resistor to 'pull' the pin HIGH or LOW.",
-            value: "If the pin is connected to **Vcc** through a resistor, it is said to be 'pulled up'. If the pin goes to ground through a resistor, it is said to be 'pulled down'. When a resistor is used this way, the input is held at either Vcc or ground when the switch is not closed, so that it is never 'floating'. Pins that are pulled down are normally **LOW** and go **HIGH** when the switch (wired to Vcc) is closed. Pins that are pulled up are normally **HIGH** and go **LOW** when the switch (wired to ground) is closed. (The resistor, often 10KΩ, allows only a small current to flow from Vcc to ground when the switch is closed. If the pin was tied directly to a power rail, closing the switch would short out the power supply!)"
+            name: 'Pins used with switches (pushbuttons or others) should use a resistor to "pull" the pin HIGH or LOW.', value: 'If the pin is connected to **Vcc** through a resistor, it is said to be "pulled up." If the pin goes to ground through a resistor, it is said to be "pulled down." When a resistor is used this way, the input is held at either Vcc or ground when the switch is not closed, so that it is never "floating." Pins that are pulled down are normally **LOW** and go **HIGH** when the switch (wired to Vcc) is closed. Pins that are pulled up are normally **HIGH** and go **LOW** when the switch (wired to ground) is closed. (The resistor, often 10KΩ, allows only a small current to flow from Vcc to ground when the switch is closed. If the pin was tied directly to a power rail, closing the switch would short out the power supply!)'
+
           },
           {
-            name: "Many chips include internal resistors, so an external resistor doesn't need to be added to your circuit.",
-            value: "On the ATmega328P chips used on many Arduino boards, you can pull up the pin by using `pinMode(pin, INPUT_PULLUP)`. If the pin is declared this way, it is normally **HIGH**, and all that is needed is a switch wired from the pin to ground. When the switch is closed, the pin will go **LOW**. The example below shows pin 2 set up this way."
+            name: 'Many chips include internal resistors, so an external resistor doesn\'t need to be added to your circuit.', value: 'On the ATmega328P chips used on many Arduino boards, you can pull up the pin by using `pinMode(pin, INPUT_PULLUP)`. If the pin is declared this way, it is normally **HIGH**, and all that is needed is a switch wired from the pin to ground. When the switch is closed, the pin will go **LOW**. The example below shows pin 2 set up this way.'
+
           }
         )
         .setImage("https://www.arduino.cc/wiki/static/f7e18e95df4a8d274fc9129fa60eb428/928ea/PullUp.png")
