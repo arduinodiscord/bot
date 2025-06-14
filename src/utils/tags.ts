@@ -13,7 +13,7 @@ export default {
         .addFields(
           {
             name: "1️⃣ Describe Your Problem Clearly",
-            value: "Explain **what your code or hardware is doing** and **what you want it to do instead**. Be as specific as possible. List hardware code and any sources that you're using. If you have an error message, include it in your question.",
+            value: "Explain **what your code or hardware is doing** and **what you want it to do instead**. Be as specific as possible. List hardware, code and any sources that you're following. If you have an error message, include it in your question.",
           },
           {
             name: "2️⃣ Share Your Code",
@@ -21,7 +21,7 @@ export default {
           },
           {
             name: "3️⃣ Be Patient and Polite",
-            value: "Remember, no one here is paid to help you. Take the time to write a clear question, and be respectful while waiting for a response. Only ask for help in ONE channel. Asking in multiple channels will not get you help faster and will only annoy people, and is against server rules.",
+            value: "Remember, no one here is paid to help you. Take the time to write a clear question, and be respectful while waiting for a response. Only ask for help in ONE channel, and be sure to have the project in front of you and time available to work on it before asking for help. Asking in multiple channels will not get you help faster and will only annoy people, and is against server rules.",
           }
         )
         .setFooter({
@@ -43,49 +43,55 @@ export default {
     embeds: [
       new EmbedBuilder(universalEmbed)
         .setTitle("Solving AVRDUDE Communication Errors (Try These in Order)")
+        .setDescription("__avrdude: stk500__ ... Error is very common, and can be caused by many different things. Here are some steps to try to fix it. If you have tried all of these and it still doesn't work, please ask for help in the **\#general-help channel.**")
         .addFields(
           {
             name: "1. Is your Serial monitor open?",
-            value: "If it is, close it. This allows your IDE to upload sketches without conflicts with the Serial Monitor."
+            value: "If it is, close it. This allows your IDE to upload sketches without conflicts with the Serial Monitor. Only have one IDE open at a time, as having multiple IDEs open can cause issues with the IDE. So close them all before uploading a sketch, and try restarting your PC."
 
           },
           {
             name: "2. Have you selected the right port in your IDE?",
-            value: "You could have selected something that is **not** your Arduino. Change the port in the Arduino IDE by going into Tools -> Port. Only have one Arduino connected to your computer at a time, as having multiple Arduinos connected can cause issues with the IDE."
+            value: "-  You could have selected something that is **not** your Arduino. Change the port in the Arduino IDE by going into Tools -> Port.\n" +
+            "- Only have one Arduino connected to your computer at a time, as *having multiple Arduinos connected can cause issues with the IDE.*"
 
           },
           {
             name: "3. Have you selected the right board in your IDE?",
-            value: "You need to select the right board and model."
+            value: "Select the right board and model in your IDE, and see if it's showing up in your device manager correctly."
 
           },
           {
             name: "4. Is anything connected to your Tx and Rx pins?",
-            value: "If there is, try removing everything connected to them."
+            value: "Removing everything connected to the tx and rx pins of your board. This includes any shields, modules, or wires connected to the Tx and Rx pins. If you are using a shield, make sure it is compatible with your board.\n" +
+            "If your board was at one time working and is now __not__ working, try removing the shield and see if it works without it. If it does, then the shield is probably causing the issue. If you are using a clone board, make sure it is compatible with your board and that you have the correct drivers installed."
 
           },
           {
             name: "5. Are your drivers installed?",
-            value: "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the **CH340 USB-Serial** chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). **[Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)** to learn how to install CH340 Drivers. If you have an FTDI chip, **[This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)** will show you how to install their drivers. If you don't have either, we recommend googling the USB-Serial chip that your board uses."
+            value: "Check your drivers, sometimes just uninstalling them, and reinstalling them then rebooting the PC works. If you are using a clone board, you might have the **CH340 USB-Serial** chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one).\n" +
+            "-  **[Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)** to learn how to install CH340 Drivers. \n" +
+            "-  If you have an FTDI chip, **[This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)** will show you how to install their drivers. If you don't have either, we recommend googling the USB-Serial chip that your board uses."
 
           },
           {
             name: "6. Is your cable faulty or capable of sending data?",
-            value: "Some USB cables aren't capable of transferring data, and some may be faulty, so make sure to try a different one to see if it works! APPLE computers sometimes have issues with USB cables, so if you are using an Apple computer, try a different cable, or another adapter for your MAC."
+            value: "Some USB cables aren't capable of transferring data, and some may be faulty, so make sure to try a different one to see if it works! You should try plugging another device into the cable to see if data can pass through it.\n" + "APPLE computers sometimes have issues with there usb adapters. You need to try other adaptors or buy an official one for your MAC."
           },
           {
-            name: "7. Does the power LED light up on your board?",
-            value: "If it does, unplug and re-plug your board, then check for blinking LEDs. If only the Power LED or no LEDs light up, ask for further assistance (not for all boards)."
+            name: "7. Is the power LED lit on your board?",
+            value: "If it is, unplug and re-plug your board, then check for blinking LEDs. If only the Power LED or no LEDs light up, ask for further assistance (not for all boards)."
 
           },
           {
             name: "8. Do you have a Nano or other Atmega 328p-based board?",
-            value: "If so, try using the old bootloader. In the Arduino IDE, go to Tools -> Processor and select 328p (old bootloader). If your board doesn't have an Atmega 328p, you can skip this step."
+            value: "If so, try using the old bootloader. In the Arduino IDE, go to Tools -> Processor and select 328p (old bootloader). *If your board doesn't have an Atmega 328p, you can skip this step.*"
 
           },
           {
             name: "9. Does your onboard LED blink when you press the reset button?",
-            value: "Try pressing the reset button on your Arduino. If the onboard LED doesn't blink when you reset, you probably have a broken bootloader. You can check out [this tutorial](https://www.arduino.cc/en/Hacking/Bootloader?from=Tutorial.Bootloader) on how to burn the bootloader."
+            value: "Try pressing the reset button on your Arduino. If the onboard LED doesn't blink when you reset, you probably have a broken bootloader. You can check out [this tutorial](https://www.arduino.cc/en/Hacking/Bootloader?from=Tutorial.Bootloader) on how to burn the bootloader.\n\n" +
+            "It it does, try unplugging the board, holding down the reset button, then plugging it back in while still holding the reset button. After a few seconds, release the reset button and try uploading your sketch again. This is called the \"manual reset\" method and can sometimes help with communication issues. You can also hold down the button untill its done compileing and tries to UPLOAD, then release it. This is called the \"manual reset\" method and can sometimes help with communication issues."
           },
           {
             name: "10. Is this a problem on your computer's side?",
@@ -162,23 +168,20 @@ export default {
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
         .setTitle('Can Your Arduino Be Used as a Keyboard or Mouse?')
+        .setDescription("You want to use your Arduino for a Human Interface Device? HID")
         .addFields(
           {
-            name: "You want to use your Arduino for a Human Interface Device? HID",
-            value: "Arduino has many boards that can be used as a mouse/keyboard natively. This is referred to as HID."
-          },
-          {
             name: "Boards that are __NOT__ HID compliant",
-            value: "Uno (R3 or older), Mega, Nano (328), and Pro Mini cannot be used as HID devices."
-
+            value: "Uno (R3 or older), Mega, Nano (328), and Pro Mini cannot be used as HID devices. Attemppting to do so will result in a bricked board."
           },
           {
             name: "Boards that __ARE__ HID compliant",
-            value: "Uno R4, Giga, RP2040, Leonardo, (Pro)Micro, any other 8u2/16u2/at90usb8/162/32u2/32u4 board, Zero, MKR1000."
+            value: "Arduino has many boards that can be used as a mouse/keyboard natively. This is referred to as HID.\n\n" +
+            "Uno R4, Giga, RP2040, Leonardo, (Pro)Micro, any other 8u2/16u2/at90usb8/162/32u2/32u4 board, Zero, MKR1000. Can all be used as HID devices. "
           },
           {
             name: "I have seen people use the Uno R3 as a HID device, how is that possible?",
-            value: "The Uno R3 can be used as a HID device, but it requires a special bootloader to be flashed onto the board. This is not recommended for beginners, and it is better to use a board that is already HID compliant. Also we do not recommend using the Uno R3 as a HID device, as it is not designed for that purpose and can cause issues with your computer. We do not help with this as it normaly ends up in a unusable device and is rarly usefull."
+            value: "The Uno R3 can be used as a HID device, but it requires a special bootloader to be flashed onto the board. This is **not recommended**. It is better to use a board that is already HID compliant. __We do not help with this, or with recovering a board this has been done to already as, it normally ends up in an unusable device and is just a waste of time__ ."
           }
         )
     ]
@@ -195,7 +198,7 @@ export default {
     ],
   },
 
-    levelShifter: {
+  levelShifter: {
     embeds: [
       new EmbedBuilder(universalEmbed)
       .setTitle("Logic Level Shifters: Protecting Your 3.3V Modules")
@@ -214,17 +217,13 @@ export default {
         {
           name: "The Solution: Logic Level Shifter (LLS)",
           value: "A Logic Level Shifter is a small, inexpensive board that acts as a 'voltage translator' between your 5V Arduino and your 3.3V module.\n\n" +
-          "It safely steps down the 5V signals from the Arduino to 3.3V for the module's inputs. Most bi-directional shifters also step up 3.3V signals from the module to 5V for the Arduino's inputs, though 3.3V is often high enough to be read as a 'HIGH' by a 5V Arduino. Some times the arduino might not be able to hear such a small signal and it would end up not reciving the data from the module, so it is best to use a bi-directional level shifter for both directions.\n\n" +
-          "**Note:** Not all modules require a level shifter, but many do. Always check the module's datasheet for its voltage requirements."
+          " https://www.amazon.com/SparkFun-12009-Logic-Converter-Bi-Directional/dp/B088FYQJYZ?"
         },
         {
           name: "Common Modules Requiring 3.3V Logic (and often a Shifter with 5V Arduinos)",
           value: "- **NRF24L01 / NRF24L01+** (Wireless Transceiver)\n" +
-          "- **ESP8266 (e.g., ESP-01)** (Wi-Fi Module)\n" +
-          "- **ESP32** (Wi-Fi & Bluetooth MCU - its pins are 3.3V logic)\n" +
-          "- **Many SD Card Modules** (especially microSD breakout boards)\n" +
+          "- **ESP8266 and ESP32 (e.g., ESP-01)** (Wi-Fi Module)\n" +
           "- **Cellular Modules (e.g., SIM800L, A6/A7 GSM/GPRS)**\n" +
-              "- **Some Accelerometers/Gyroscopes (e.g., MPU6050 - *check specific breakout board, some have on-board regulators/shifters, many don't for logic lines*)\n" +
               "- **Many newer Sensors & Displays** (e.g., some TFTs, OLEDs, BME280/BMP280)\n\n" +
               "**Always check the module's datasheet for its VCC (power) and logic level specifications!**"
           },
@@ -236,15 +235,6 @@ export default {
               "2.  **Input protection diodes:** Some chips have internal diodes that try to clamp excess voltage, but these are not designed for continuous operation outside specified limits and will eventually burn out.\n" +
               "3.  **Luck:** Sometimes, it just hasn't failed *yet*.\n\n" +
               "**Relying on this is asking for trouble.** Your project might work during testing but then fail unpredictably later. It shortens the lifespan of your module and is not a reliable or proper engineering approach."
-          },
-          {
-            name: "When is it Critical?",
-            value: "The most critical connections are when your **5V Arduino is sending data TO the 3.3V module** (e.g., MOSI, SCK, Chip Select, Arduino TX to Module RX).\n\n" +
-              "When the **3.3V module sends data TO the 5V Arduino** (e.g., MISO, Module TX to Arduino RX), a level shifter is less often *strictly* needed because most 5V MCUs will correctly interpret a 3.3V signal as a 'HIGH'. However, using a bi-directional level shifter handles both directions cleanly and is good practice."
-          },
-          {
-            name: "Proper Powering is Also Key!",
-            value: "Besides logic levels, ensure your 3.3V module is also **powered** with 3.3V ( The 3.3V pin on your Arduino is only rated for 50ma in many cases and so it can NOT be used to power esp's or cellphone modules or other power hungry devices. In most cases use a dedicated 3.3V regulator). Do NOT power a 3.3V module with 5V VCC unless its datasheet explicitly states it has an onboard regulator that can handle 5V input."
           }
         )
     ]
@@ -257,7 +247,7 @@ export default {
         .addFields(
           {
             name: "1. Is your library installed?",
-            value: "Go to the **Library Manager** (Sketch -> Include Library -> Manage Libraries), search for the library, and install it. If it is already installed, try reinstalling it through the Library Manager."
+            value: "Go to the **Library Manager** (Sketch -> Include Library -> Manage Libraries), search for the library, and install it. If it is already installed, try reinstalling it through the Library Manager. Make sure your working directory is not a cloud-based folder like ONEDRIVE or DROPBOX, if it is reinstall to a local drive on your computer. "
 
           },
           {
@@ -270,25 +260,28 @@ export default {
           },
           {
             name: "4. #include <yourlib.h> vs #include \"yourlib.h\"",
-            value: "If you are using a library that is not in the Library Manager, you need to use `#include \"yourlib.h\"` instead of `#include <yourlib.h>`. The first one is used for libraries that are not in the Library Manager, while the second one is used for libraries that are installed in the Library Manager."
+            value: "If you are using a library that is in the Library Manager, you need to use `#include <yourlib.h>`. If you are using a library that is not in the Library Manager (for example, one you downloaded manually), you should use `#include \"yourlib.h\"`."
           },
           {
             name: "5. Are you using the correct board?",
             value: "Some libraries are only compatible with certain boards. Make sure you have selected the correct board in **Tools** -> **Board**."
 
           },
-          {
-            name: "6. Are you using the correct version of the library?",
-            value: "Some libraries have different versions for different boards or architectures. Make sure you are using the correct version of the library for your board."
-
-          },
-          {
-            name: "7. Are you using `#include <yourlib.h>` or `#include \"yourlib.h\"`?",
-            value: "If you are using a library that is not in the Library Manager, you need to use `#include <yourlib.h>` instead of `#include \"yourlib.h\"`."
-
-          },
-          { name: "Still can\'t fix it?",
+          { name: "Still can't fix it?",
             value: "Check out [this Arduino forum post](https://forum.arduino.cc/t/no-headers-files-h-found/596090#:~:text=This%20might%20be%20result%20from,one%20of%20the%20libraries%20folders.) for more assistance." }
+        ),
+    ],
+  },
+  nine:{
+    embeds: [
+      new EmbedBuilder({ ...universalEmbed })
+        .setTitle('Nine Volt usefulness')
+        .setDescription("Not very usefull")
+        .addFields(
+          {
+            name: "Dies quickly",
+            value: "Nine-volt batteries are not very useful for powering Arduinos or other electronics. They have a low capacity and will die quickly, especially if you are using them to power an Arduino. They do not have enough power to drive motors or servos. They rarely have a usefull purpose in the Arduino world, and are not recommended for use with Arduinos, even though many kits come with them. https://odysee.com/@Maderdash:2/9vBattery:0"
+          }
         ),
     ],
   },
@@ -315,12 +308,12 @@ export default {
           },
           {
             name: "4. The 3.3V pin",
-            value: "The 3.3V pin on the UNO is designed to output 50mA. It is mostly used so the Arduino can communicate with the PC and is used as a reference for the Arduino itself. Normally, it\'s safe to use up to 30mA from this pin. Trying to use **more** than this amount from this pin will usually cause communication issues with the PC and will cause power outages for the device that is trying to be powered from the pin. So, things like ESP32s, wireless modules, and cell phone modules, etc., **cannot** be powered from this pin."
+            value: "The 3.3V pin on the UNO is designed to output 50mA. It is mostly used so the Arduino can communicate with the PC and is used as a reference for the Arduino itself. Normally, it's safe to use up to 30mA from this pin. Trying to use **more** than this amount from this pin will usually cause communication issues with the PC and will cause power outages for the device that is trying to be powered from the pin. So, things like ESP32s, wireless modules, and cell phone modules, etc., **cannot** be powered from this pin."
 
           },
           {
             name: "5. Max output from the IC",
-            value: "Although there is a max value the regulator can output (say 400mA), this does **not** mean you have full access to that value. The Arduino UNO will use about 50mA of that, and that 400mA is if you are supplying 6.8V. If you supply 9V, then you only have around 300mA; if you supply 12V, then you will only have around 150mA. Keep this in mind as you work on your project. Along with this, the MCU that you\'re using has a max output also. For example, the UNO 328 IC can output 20mA per pin. It has 19 pins, so that should be 380mA. However, this is not correct either, as the max it can source is 200mA. So, it is very important to read the datasheets of anything you\'re working with to **avoid causing issues with your devices**." }
+            value: "Although there is a max value the regulator can output (say 400mA), this does **not** mean you have full access to that value. The Arduino UNO will use about 50mA of that, and that 400mA is if you are supplying 6.8V. If you supply 9V, then you only have around 300mA; if you supply 12V, then you will only have around 150mA. Keep this in mind as you work on your project. Along with this, the MCU that you're using has a max output also. For example, the UNO 328 IC can output 20mA per pin. It has 19 pins, so that should be 380mA. However, this is not correct either, as the max it can source is 200mA. So, it is very important to read the datasheets of anything you're working with to **avoid causing issues with your devices**." }
         ),
     ],
   },
@@ -341,40 +334,33 @@ export default {
 
           },
           {
-            name: "Many chips include internal resistors, so an external resistor doesn\'t need to be added to your circuit.",
+            name: "Many chips include internal resistors, so an external resistor doesn't need to be added to your circuit.",
             value: "On the ATmega328P chips used on many Arduino boards, you can pull up the pin by using `pinMode(pin, INPUT_PULLUP)`. If the pin is declared this way, it is normally **HIGH**, and all that is needed is a switch wired from the pin to ground. When the switch is closed, the pin will go **LOW**. The example below shows pin 2 set up this way."
 
           }
         )
         .setImage("https://www.arduino.cc/wiki/static/f7e18e95df4a8d274fc9129fa60eb428/928ea/PullUp.png")
-    ]
+    ],
   },
 
   wiki: {
     embeds: [
       new EmbedBuilder(universalEmbed)
-        .setTitle("The arduino wiki has lots of information about Arduino basics")
+        .setTitle("The Arduino wiki has lots of information about Arduino basics")
         .addFields(
           {
-            name: "Learn how to combine sketches",
-            value: "Take two sketches and merge them together, or learn how to use libraries."
-          },
-          {
-            name: "Learn how Calculate resistor values for LEDs, why do you need resistors for leds?",
-            value: "Learn how to calculate the resistor value for LEDs, and how to use them in your projects."
-          },
-          {
-            name: "Learn how breadboards work",
-            value: "Learn how to use breadboards, and how to connect components together on them. Also learn how to use jumper wires, and how to connect them to your Arduino."
-          },
-          {
-            name: "Learn A lot more, all of the wiki is created by discord users like you!",
-            value: "https://wiki.arduinodiscord.cc/ is the place to go for more information about Arduino basics, and how to use them in your projects."
+            name: "The wiki cover many of the common questions that new users have. Examples:",
+            value: "1. Take two sketches and merge them together, or learn how to use libraries.\n" +
+            "2. How to calculate the proper resistor value for an led. \n" +
+            "3. How to use breadboards, and how to connect components together on them.\n" +
+            "4. How to use jumper wires, and how to connect them to your Arduino.\n" +
+            "5. How to use millis() and delay() in your sketches.\n" +
+            "6. How to use buttons, and how to debounce them.\n\n" +
+            "**https://wiki.arduinodiscord.cc/** is the place to go for more information about Arduino basics, and how to use them in your projects."
+
           }
-        )
-    ]
+        ),
+    ],
   }
 };
-
-
 
