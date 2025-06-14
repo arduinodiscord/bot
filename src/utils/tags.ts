@@ -161,7 +161,7 @@ export default {
         .addFields(
           {
             name: "Arduino IDE code is normally C++14",
-            value: "The language most often used in Arduino IDE for programming is primarily **C++14**. There are some added functions that are very useful for using the Arduino platform. They can be found at https://www.arduino.cc/reference/en/. MicroPython and other Python types are sometimes used; however, they are extremely limited in both the boards that support them and the library selection that is offered. Also, the community, examples, and tutorials are extremely limited, so they are rarely used in this community and never used in real-world **commercial or industrial** applications."
+            value: "The language most often used in Arduino IDE for programming is primarily **C++14**. There are some added functions that are very useful for using the Arduino platform. They can be found at https://www.arduino.cc/reference/en/. MicroPython and other Python types are sometimes used; however, they are extremely limited in both the boards that support them and the library selection that is offered. Also, the community, examples, and tutorials are extremely limited, so they are rarely used in this community and never used in real-world **commercial or industrial** applications. Finding help for them is also very difficult, so we do not recommend using them unless you are already familiar with them and have a specific reason to use them. If possable, we recommend learning C++14, as it is the most widely used language in the Arduino community and is also used in many other applications, such as game development, web development, and more.",
           }
         )
     ]
@@ -178,7 +178,7 @@ export default {
           },
           {
             name: "2. Is your `#include` statement spelled correctly?",
-            value: "Check for any capitalization errors as well!"
+            value: "Check for any capitalization errors as well! Also there is a difference in the way you include libraries: if you are using a library that is not in the Library Manager, you need to use `#include <yourlib.h>` instead of `#include \"yourlib.h\"`."
           },
           {
             name: "3. Did you download it manually?",
@@ -249,15 +249,15 @@ export default {
         .addFields(
           {
             name: "Learn how to combine sketches",
-            value: "Take two sketches and place them together, or learn how to use libraries."
+            value: "Take two sketches and merge them together, or learn how to use libraries."
           },
           {
-            name: "Learn how Calculate resistor values for LEDs",
+            name: "Learn how Calculate resistor values for LEDs, why do you need resistors for leds?",
             value: "Learn how to calculate the resistor value for LEDs, and how to use them in your projects."
           },
           {
             name: "Learn how breadboards work",
-            value: "Learn how to use breadboards, and how to connect components together."
+            value: "Learn how to use breadboards, and how to connect components together on them. Also learn how to use jumper wires, and how to connect them to your Arduino."
           },
           {
             name: "Learn A lot more, all of the wiki is created by discord users like you!",
@@ -273,7 +273,7 @@ export default {
         .addFields(
           {
             name: "The Problem: Voltage Mismatch",
-            value: "Many popular Arduino boards like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins send out 5V for a 'HIGH' signal.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant**."
+            value: "Many popular Arduino boards like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins send out 5V for a 'HIGH' signal.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant**. https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel"
           },
           {
             name: "What Happens if You Connect 5V to a 3.3V Pin?",
@@ -315,7 +315,7 @@ export default {
           },
           {
             name: "Proper Powering is Also Key!",
-            value: "Besides logic levels, ensure your 3.3V module is also **powered** with 3.3V (e.g.,  the 3.3V pin on your Arduino is only rated for 50ma in many cases and so it can NOT be used to power esp's or cellphone modules or other power hungry devices. In most cases use a dedicated 3.3V regulator). Do NOT power a 3.3V module with 5V VCC unless its datasheet explicitly states it has an onboard regulator that can handle 5V input."
+            value: "Besides logic levels, ensure your 3.3V module is also **powered** with 3.3V ( The 3.3V pin on your Arduino is only rated for 50ma in many cases and so it can NOT be used to power esp's or cellphone modules or other power hungry devices. In most cases use a dedicated 3.3V regulator). Do NOT power a 3.3V module with 5V VCC unless its datasheet explicitly states it has an onboard regulator that can handle 5V input."
           }
         )
     ]
