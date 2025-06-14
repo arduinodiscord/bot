@@ -195,7 +195,7 @@ export default {
     ],
   },
 
-    levelShifter: {
+  levelShifter: {
     embeds: [
       new EmbedBuilder(universalEmbed)
       .setTitle("Logic Level Shifters: Protecting Your 3.3V Modules")
@@ -375,6 +375,3 @@ export default {
     ]
   }
 };
-
-
-
