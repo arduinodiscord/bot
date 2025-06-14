@@ -1,97 +1,116 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import universalEmbed from '../index';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import universalEmbed from "../index";
+
 export default {
   ask: {
     embeds: [
       new EmbedBuilder(universalEmbed)
-        .setTitle('Don\'t ask to ask - Just ask!')
-        .addFields({
-          name: 'Describe what your code/hardware does and what you want it to do instead. Sharing is caring! Share your code, click the **"codeblock"** button below to learn how.',
-          value:
-            'Keep in mind: no one here is paid to help you, so the least you can do is refine your question in proper language.',
+        .setTitle("💡 How to Ask for Help Effectively 💡")
+        .setDescription(
+          "When you need help, **don't just ask HELP, or ask if you can ask a question**—just ask your question directly! Here's how to get the best help:"
+        )
+        .addFields(
+          {
+            name: "1️⃣ Describe Your Problem Clearly",
+            value: "Explain **what your code or hardware is doing** and **what you want it to do instead**. Be as specific as possible. List hardware code and any sources that you're using. If you have an error message, include it in your question.",
+          },
+          {
+            name: "2️⃣ Share Your Code",
+            value: "Sharing your code helps others understand your issue. Click the **\"Codeblock\"** button below to learn how to format and share your code properly.",
+          },
+          {
+            name: "3️⃣ Be Patient and Polite",
+            value: "Remember, no one here is paid to help you. Take the time to write a clear question, and be respectful while waiting for a response. Only ask for help in ONE channel. Asking in multiple channels will not get you help faster and will only annoy people, and is against server rules.",
+          }
+        )
+        .setFooter({
+          text: "The clearer your question, the faster and better the help you'll receive!",
         }),
     ],
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId('codeblock')
-          .setLabel('codeblock')
+          .setCustomId("codeblock")
+          .setLabel("Learn How to Share Code")
           .setStyle(ButtonStyle.Primary)
       ),
     ],
   },
+
   avrdude: {
     embeds: [
       new EmbedBuilder(universalEmbed)
-        .setTitle('Solving AVRDUDE communication errors (Try these in order)')
+        .setTitle("Solving AVRDUDE Communication Errors (Try These in Order)")
         .addFields(
           {
-            name: '1. Is your Serial monitor open?',
-            value:
-              'If it is, close it. This allows your IDE to upload sketches without conflicts with the Serial Monitor.',
+            name: "1. Is your Serial monitor open?",
+            value: "If it is, close it. This allows your IDE to upload sketches without conflicts with the Serial Monitor."
+
           },
           {
-            name: '2. Have you selected the right port in your IDE?',
-            value:
-              'You could have selected something that is **not** your Arduino. Change the port in the Arduino IDE by going into Tools -> Port.',
+            name: "2. Have you selected the right port in your IDE?",
+            value: "You could have selected something that is **not** your Arduino. Change the port in the Arduino IDE by going into Tools -> Port. Only have one Arduino connected to your computer at a time, as having multiple Arduinos connected can cause issues with the IDE."
+
           },
           {
-            name: '3. Have you selected the right board in your IDE?',
-            value: 'You need to select the right board and model.',
+            name: "3. Have you selected the right board in your IDE?",
+            value: "You need to select the right board and model."
+
           },
           {
-            name: '4. Does the power LED light up on your board?',
-            value:
-              'If it does, unplug and re-plug your board, then check for blinking LEDs. If only the Power LED or no LEDs light up ask for further assistance (not for all boards).',
+            name: "4. Is anything connected to your Tx and Rx pins?",
+            value: "If there is, try removing everything connected to them."
+
           },
           {
-            name: '5. Do you have a Nano or other Atmega 328p based board?',
-            value:
-              "If so, try using the old bootloader. In the Arduino IDE Go to Tools -> Processor and select 328p(old bootloader). If your board doesn't have an Atmega 328p, you can skip this step.",
+            name: "5. Are your drivers installed?", value: "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the **CH340 USB-Serial** chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). **[Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)** to learn how to install CH340 Drivers. If you have an FTDI chip, **[This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)** will show you how to install their drivers. If you don't have either, we recommend googling the USB-Serial chip that your board uses."
+
           },
           {
-            name: '6. Does your onboard LED blink when you press the reset button?',
-            value:
-              "Try pressing the reset button on your Arduino, if the onboard LED doesn't blink when you reset, you probably have a broken bootloader, you can check out [this tutorial](https://www.arduino.cc/en/Hacking/Bootloader?from=Tutorial.Bootloader) on how to burn the bootloader.",
+            name: "6. Is your cable faulty or capable of sending data?",
+            value: "Some USB cables aren't capable of transferring data, and some may be faulty, so make sure to try a different one to see if it works! APPLE computers sometimes have issues with USB cables, so if you are using an Apple computer, try a different cable, or another adapter for your MAC."
           },
           {
-            name: '7. Is anything connected to your Tx and Rx pins?',
-            value: 'If there is, try removing everything connected to them.',
+            name: "7. Does the power LED light up on your board?",
+            value: "If it does, unplug and re-plug your board, then check for blinking LEDs. If only the Power LED or no LEDs light up, ask for further assistance (not for all boards)."
+
           },
           {
-            name: "8. Is this a problem on your computer's side?",
-            value:
-              "This might be a problem on your computer's side, so try restarting your computer.",
+            name: "8. Do you have a Nano or other Atmega 328p-based board?",
+            value: "If so, try using the old bootloader. In the Arduino IDE, go to Tools -> Processor and select 328p (old bootloader). If your board doesn't have an Atmega 328p, you can skip this step."
+
           },
           {
-            name: '9. Are you running Linux?',
-            value:
-              'If you are running Linux, try checking which groups you belong by using the `groups` command, then look at which group you need to be in with `ls -l /dev/ttyACM*`, `ls -l /dev/S*` or `ls -ls /dev/USB*` (replace the `*` with your port number), then use this command:- `sudo usermod -a -G <group> <username>` and add your user to the necessary groups.',
+            name: "9. Does your onboard LED blink when you press the reset button?",
+            value: "Try pressing the reset button on your Arduino. If the onboard LED doesn't blink when you reset, you probably have a broken bootloader. You can check out [this tutorial](https://www.arduino.cc/en/Hacking/Bootloader?from=Tutorial.Bootloader) on how to burn the bootloader."
           },
           {
-            name: '10. Are your drivers installed?',
-            value:
-              "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the CH340 USB-Serial chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). **[Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)** to learn how to install CH340 Drivers. If you have an FTDI chip, **[This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)** will show you how to install their drivers. If you don't have either we recommend googling the USB-Serial chip that your board uses.",
+            name: "10. Is this a problem on your computer's side?",
+            value: "This might be a problem on your computer's side, so try restarting your computer."
+
           },
           {
-            name: '11. Is your cable faulty or capable of sending data?',
-            value:
-              'Some USB cables arent capable of transferring data, and some may be faulty, so make sure to try a different one to see if it works!',
+            name: "11. Are you running Linux?",
+            value: "If you are running Linux, try checking which groups you belong to by using the `groups` command, then look at which group you need to be in with `ls -l /dev/ttyACM*`, `ls -l /dev/S*` or `ls -ls /dev/USB*` (replace the `*` with your port number), then use this command: `sudo usermod -a -G <group> <username>` and add your user to the necessary groups."
+
           },
           {
-            name: '12. Is this a problem with your IDE?',
-            value: "If you think that's the case, try reinstalling the IDE.",
+            name: "12. Is this a problem with your IDE?",
+            value: "If you think that's the case, try reinstalling the IDE."
+
           }
         ),
     ],
   },
+
   codeblock: {
-    content: '```ino\n// Please right-click on this message (long-press on mobile)\n// then select "Copy Text."\n\n// After that, copy your code; then paste it in place of this comment\n```'
+    content: "```ino\n// Please right-click on this message (long-press on mobile)\n// then select \"Copy Text.\"\n\n// After that, copy your code; then paste it in place of this comment\n```",
   },
+
   espcomm: {
     embeds: [
       new EmbedBuilder(universalEmbed)
-        .setTitle("Solving your ESP board's communication errors (Try these in order)")
+        .setTitle("Solving Your ESP Board's Communication Errors (Try These in Order)")
         .addFields(
           {
             name: "1. Is your Serial monitor open?",
@@ -106,8 +125,7 @@ export default {
             value: "You need to select the right board and model."
           },
           {
-            name: "4. Is your Serial monitor showing gibberish?",
-            value: "Try setting it to the correct baud rate (At the bottom right corner of the Serial monitor). Most examples use 115200 baud."
+            name: "4. Is your Serial monitor showing gibberish?", value: "Try setting it to the correct baud rate (At the bottom right corner of the Serial monitor). Most examples use 115200 baud."
           },
           {
             name: "5. Is anything connected to your Tx and Rx pins?",
@@ -115,7 +133,7 @@ export default {
           },
           {
             name: "6. Have you tried holding down the BOOT/IO0/FLASH button?",
-            value: "Try Holding down the BOOT/IO0/FLASH button before uploading."
+            value: "Try holding down the BOOT/IO0/FLASH button before uploading."
           },
           {
             name: "7. Are there any problems with your wiring?",
@@ -123,14 +141,14 @@ export default {
           },
           {
             name: "8. Can't see your ESP's COM Port?",
-            value: "This often means you don’t have the USB drivers installed. Take a closer look at the USB chip and check its name, Go to Google and search for your particular chip to find the drivers and install them in your operating system. If you have the CP2102 chip, here are the [official drivers](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers)."
+            value: "This often means you don’t have the USB drivers installed. Take a closer look at the USB chip and check its name. Go to Google and search for your particular chip to find the drivers and install them in your operating system. If you have the CP2102 chip, here are the [official drivers](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers)."
           },
           {
             name: "Still not fixed?",
             value: "Check out these troubleshooting guides for your respective boards: [ESP32](https://randomnerdtutorials.com/esp32-troubleshooting-guide/#:~:text=When%20you%20try%20to%20upload,button%20in%20your%20ESP32%20board), [ESP32 CAM](https://randomnerdtutorials.com/esp32-cam-troubleshooting-guide/#:~:text=If%20you%20get%20this%20exact,times%2C%20might%20solve%20the%20issue.) and [ESP8266](https://randomnerdtutorials.com/esp8266-troubleshooting-guide/)."
           }
-        )
-    ]
+        ),
+    ],
   },
 
   hid: {
@@ -139,7 +157,7 @@ export default {
         .setTitle("Can your Arduino be used as a keyboard or mouse?")
         .addFields(
           {
-            name: "You want to use your Arduino for a Human Interface Device?",
+            name: "You want to use your Arduino for a Human Interface Device? HID",
             value: "Arduino has many boards that can be used as a mouse/keyboard natively. This is referred to as HID."
           },
           {
@@ -149,6 +167,10 @@ export default {
           {
             name: "Boards that __ARE__ HID compliant",
             value: "Uno R4, Giga, RP2040, Leonardo, (Pro)Micro, any other 8u2/16u2/at90usb8/162/32u2/32u4 board, Zero, MKR1000."
+          },
+          {
+            name: "I have seen people use the Uno R3 as a HID device, how is that possible?",
+            value: "The Uno R3 can be used as a HID device, but it requires a special bootloader to be flashed onto the board. This is not recommended for beginners, and it is better to use a board that is already HID compliant. Also we do not recommend using the Uno R3 as a HID device, as it is not designed for that purpose and can cause issues with your computer. We do not help with this as it normaly ends up in a unusable device and is rarly usefull."
           }
         )
     ]
@@ -182,7 +204,11 @@ export default {
           },
           {
             name: "3. Did you download it manually?",
-            value: "If you downloaded it from GitHub or somewhere else and it came as a zip file, do not open the zip. Instead, open the IDE, go to Libraries -> Install from ZIP, then point to the zip folder and install. Then close all IDEs you have open, wait 20 seconds, then open the IDE, go to Libraries and see if it's now listed there. It should be.",
+            value: "If you downloaded it from GitHub or somewhere else and it came as a zip file, do not open the zip. Instead, open the IDE, go to Libraries -> Install from ZIP, then point to the zip folder and install. Then close all IDEs you have open, wait 20 seconds, then open the IDE, go to Libraries and see if it's now listed there. It should be."
+          },
+          {
+            name: "4. #include <yourlib.h> vs #include \"yourlib.h\"",
+            value: "If you are using a library that is not in the Library Manager, you need to use `#include \"yourlib.h\"` instead of `#include <yourlib.h>`. The first one is used for libraries that are not in the Library Manager, while the second one is used for libraries that are installed in the Library Manager."
           },
           {
             name: "Still can't fix it?",
@@ -278,40 +304,40 @@ export default {
           {
             name: "What Happens if You Connect 5V to a 3.3V Pin?",
             value: "Sending a 5V signal directly to a 3.3V input pin on a module is like shouting too loudly into someone's sensitive ear. You're applying excessive voltage.\n\n**Consequences:**\n" +
-                   "- **Immediate Damage:** The module might be instantly destroyed.\n" +
-                   "- **Reduced Lifespan:** The module might work for a while, but the over-voltage stresses the internal components, leading to premature failure.\n" +
-                   "- **Unreliable Operation:** Your project might behave erratically or work intermittently before failing completely."
+              "- **Immediate Damage:** The module might be instantly destroyed.\n" +
+              "- **Reduced Lifespan:** The module might work for a while, but the over-voltage stresses the internal components, leading to premature failure.\n" +
+              "- **Unreliable Operation:** Your project might behave erratically or work intermittently before failing completely."
           },
           {
             name: "The Solution: Logic Level Shifter (LLS)",
             value: "A Logic Level Shifter is a small, inexpensive board that acts as a 'voltage translator' between your 5V Arduino and your 3.3V module.\n\n" +
-                   "It safely steps down the 5V signals from the Arduino to 3.3V for the module's inputs. Most bi-directional shifters also step up 3.3V signals from the module to 5V for the Arduino's inputs, though 3.3V is often high enough to be read as a 'HIGH' by a 5V Arduino. Some times the arduino might not be able to hear such a small signal and it would end up not reciving the data from the module, so it is best to use a bi-directional level shifter for both directions.\n\n" +
-                   "**Note:** Not all modules require a level shifter, but many do. Always check the module's datasheet for its voltage requirements."
+              "It safely steps down the 5V signals from the Arduino to 3.3V for the module's inputs. Most bi-directional shifters also step up 3.3V signals from the module to 5V for the Arduino's inputs, though 3.3V is often high enough to be read as a 'HIGH' by a 5V Arduino. Some times the arduino might not be able to hear such a small signal and it would end up not reciving the data from the module, so it is best to use a bi-directional level shifter for both directions.\n\n" +
+              "**Note:** Not all modules require a level shifter, but many do. Always check the module's datasheet for its voltage requirements."
           },
           {
             name: "Common Modules Requiring 3.3V Logic (and often a Shifter with 5V Arduinos)",
             value: "- **NRF24L01 / NRF24L01+** (Wireless Transceiver)\n" +
-                   "- **ESP8266 (e.g., ESP-01)** (Wi-Fi Module)\n" +
-                   "- **ESP32** (Wi-Fi & Bluetooth MCU - its pins are 3.3V logic)\n" +
-                   "- **Many SD Card Modules** (especially microSD breakout boards)\n" +
-                   "- **Cellular Modules (e.g., SIM800L, A6/A7 GSM/GPRS)**\n" +
-                   "- **Some Accelerometers/Gyroscopes (e.g., MPU6050 - *check specific breakout board, some have on-board regulators/shifters, many don't for logic lines*)\n" +
-                   "- **Many newer Sensors & Displays** (e.g., some TFTs, OLEDs, BME280/BMP280)\n\n" +
-                   "**Always check the module's datasheet for its VCC (power) and logic level specifications!**"
+              "- **ESP8266 (e.g., ESP-01)** (Wi-Fi Module)\n" +
+              "- **ESP32** (Wi-Fi & Bluetooth MCU - its pins are 3.3V logic)\n" +
+              "- **Many SD Card Modules** (especially microSD breakout boards)\n" +
+              "- **Cellular Modules (e.g., SIM800L, A6/A7 GSM/GPRS)**\n" +
+              "- **Some Accelerometers/Gyroscopes (e.g., MPU6050 - *check specific breakout board, some have on-board regulators/shifters, many don't for logic lines*)\n" +
+              "- **Many newer Sensors & Displays** (e.g., some TFTs, OLEDs, BME280/BMP280)\n\n" +
+              "**Always check the module's datasheet for its VCC (power) and logic level specifications!**"
           },
           {
             name: "⚠️ \"But I saw a video/tutorial where it worked without one!\"",
             value: "You might find examples online where people connect 3.3V modules directly to 5V Arduinos, and it *appears* to work. **This is bad practice and risky.**\n\n" +
-                   "**Why it might *seem* to work (temporarily):**\n" +
-                   "1.  **Short-term tolerance:** Some chips might tolerate over-voltage for a short period before failing.\n" +
-                   "2.  **Input protection diodes:** Some chips have internal diodes that try to clamp excess voltage, but these are not designed for continuous operation outside specified limits and will eventually burn out.\n" +
-                   "3.  **Luck:** Sometimes, it just hasn't failed *yet*.\n\n" +
-                   "**Relying on this is asking for trouble.** Your project might work during testing but then fail unpredictably later. It shortens the lifespan of your module and is not a reliable or proper engineering approach."
+              "**Why it might *seem* to work (temporarily):**\n" +
+              "1.  **Short-term tolerance:** Some chips might tolerate over-voltage for a short period before failing.\n" +
+              "2.  **Input protection diodes:** Some chips have internal diodes that try to clamp excess voltage, but these are not designed for continuous operation outside specified limits and will eventually burn out.\n" +
+              "3.  **Luck:** Sometimes, it just hasn't failed *yet*.\n\n" +
+              "**Relying on this is asking for trouble.** Your project might work during testing but then fail unpredictably later. It shortens the lifespan of your module and is not a reliable or proper engineering approach."
           },
           {
             name: "When is it Critical?",
             value: "The most critical connections are when your **5V Arduino is sending data TO the 3.3V module** (e.g., MOSI, SCK, Chip Select, Arduino TX to Module RX).\n\n" +
-                   "When the **3.3V module sends data TO the 5V Arduino** (e.g., MISO, Module TX to Arduino RX), a level shifter is less often *strictly* needed because most 5V MCUs will correctly interpret a 3.3V signal as a 'HIGH'. However, using a bi-directional level shifter handles both directions cleanly and is good practice."
+              "When the **3.3V module sends data TO the 5V Arduino** (e.g., MISO, Module TX to Arduino RX), a level shifter is less often *strictly* needed because most 5V MCUs will correctly interpret a 3.3V signal as a 'HIGH'. However, using a bi-directional level shifter handles both directions cleanly and is good practice."
           },
           {
             name: "Proper Powering is Also Key!",
@@ -321,4 +347,6 @@ export default {
     ]
   }
 };
+
+
 
