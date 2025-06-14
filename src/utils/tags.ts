@@ -5,6 +5,7 @@ export default {
   ask: {
     embeds: [
       new EmbedBuilder(universalEmbed)
+        .setImage("https://i.imgur.com/QLgiMEM.jpeg")
         .setTitle("💡 How to Ask for Help Effectively 💡")
         .setDescription(
           "When you need help, **don't just ask HELP, or ask if you can ask a question**—just ask your question directly! Here's how to get the best help:"
@@ -25,7 +26,8 @@ export default {
         )
         .setFooter({
           text: "The clearer your question, the faster and better the help you'll receive!",
-        }),
+        }
+      ),
     ],
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -63,7 +65,8 @@ export default {
 
           },
           {
-            name: "5. Are your drivers installed?", value: "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the **CH340 USB-Serial** chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). **[Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)** to learn how to install CH340 Drivers. If you have an FTDI chip, **[This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)** will show you how to install their drivers. If you don't have either, we recommend googling the USB-Serial chip that your board uses."
+            name: "5. Are your drivers installed?",
+            value: "Check your drivers, sometimes just reinstalling them works. If you are using a clone board, you might have the **CH340 USB-Serial** chip, which isn't supported by default. You can check by looking at your board and checking the SMD USB-Serial chip's name (not the big one). **[Click here](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)** to learn how to install CH340 Drivers. If you have an FTDI chip, **[This website](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)** will show you how to install their drivers. If you don't have either, we recommend googling the USB-Serial chip that your board uses."
 
           },
           {
@@ -268,59 +271,35 @@ export default {
         .setImage("https://www.arduino.cc/wiki/static/f7e18e95df4a8d274fc9129fa60eb428/928ea/PullUp.png")
     ]
   },
-  wiki: {
-    embeds: [
-      new EmbedBuilder(universalEmbed)
-        .setTitle("The arduino wiki has lots of information about Arduino basics")
-        .addFields(
-          {
-            name: "Learn how to combine sketches",
-            value: "Take two sketches and merge them together, or learn how to use libraries."
-          },
-          {
-            name: "Learn how Calculate resistor values for LEDs, why do you need resistors for leds?",
-            value: "Learn how to calculate the resistor value for LEDs, and how to use them in your projects."
-          },
-          {
-            name: "Learn how breadboards work",
-            value: "Learn how to use breadboards, and how to connect components together on them. Also learn how to use jumper wires, and how to connect them to your Arduino."
-          },
-          {
-            name: "Learn A lot more, all of the wiki is created by discord users like you!",
-            value: "https://wiki.arduinodiscord.cc/ is the place to go for more information about Arduino basics, and how to use them in your projects."
-          }
-        )
-    ]
-  },
   levelShifter: {
     embeds: [
       new EmbedBuilder(universalEmbed)
-        .setTitle("Logic Level Shifters: Protecting Your 3.3V Modules")
-        .addFields(
-          {
-            name: "The Problem: Voltage Mismatch",
-            value: "Many popular Arduino boards like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins send out 5V for a 'HIGH' signal.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant**. https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel"
-          },
-          {
-            name: "What Happens if You Connect 5V to a 3.3V Pin?",
-            value: "Sending a 5V signal directly to a 3.3V input pin on a module is like shouting too loudly into someone's sensitive ear. You're applying excessive voltage.\n\n**Consequences:**\n" +
-              "- **Immediate Damage:** The module might be instantly destroyed.\n" +
-              "- **Reduced Lifespan:** The module might work for a while, but the over-voltage stresses the internal components, leading to premature failure.\n" +
-              "- **Unreliable Operation:** Your project might behave erratically or work intermittently before failing completely."
-          },
-          {
-            name: "The Solution: Logic Level Shifter (LLS)",
-            value: "A Logic Level Shifter is a small, inexpensive board that acts as a 'voltage translator' between your 5V Arduino and your 3.3V module.\n\n" +
-              "It safely steps down the 5V signals from the Arduino to 3.3V for the module's inputs. Most bi-directional shifters also step up 3.3V signals from the module to 5V for the Arduino's inputs, though 3.3V is often high enough to be read as a 'HIGH' by a 5V Arduino. Some times the arduino might not be able to hear such a small signal and it would end up not reciving the data from the module, so it is best to use a bi-directional level shifter for both directions.\n\n" +
-              "**Note:** Not all modules require a level shifter, but many do. Always check the module's datasheet for its voltage requirements."
-          },
-          {
-            name: "Common Modules Requiring 3.3V Logic (and often a Shifter with 5V Arduinos)",
-            value: "- **NRF24L01 / NRF24L01+** (Wireless Transceiver)\n" +
-              "- **ESP8266 (e.g., ESP-01)** (Wi-Fi Module)\n" +
-              "- **ESP32** (Wi-Fi & Bluetooth MCU - its pins are 3.3V logic)\n" +
-              "- **Many SD Card Modules** (especially microSD breakout boards)\n" +
-              "- **Cellular Modules (e.g., SIM800L, A6/A7 GSM/GPRS)**\n" +
+      .setTitle("Logic Level Shifters: Protecting Your 3.3V Modules")
+      .addFields(
+        {
+          name: "The Problem: Voltage Mismatch",
+          value: "Many popular Arduino boards like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins send out 5V for a 'HIGH' signal.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant**. https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel"
+        },
+        {
+          name: "What Happens if You Connect 5V to a 3.3V Pin?",
+          value: "Sending a 5V signal directly to a 3.3V input pin on a module is like shouting too loudly into someone's sensitive ear. You're applying excessive voltage.\n\n**Consequences:**\n" +
+          "- **Immediate Damage:** The module might be instantly destroyed.\n" +
+          "- **Reduced Lifespan:** The module might work for a while, but the over-voltage stresses the internal components, leading to premature failure.\n" +
+          "- **Unreliable Operation:** Your project might behave erratically or work intermittently before failing completely."
+        },
+        {
+          name: "The Solution: Logic Level Shifter (LLS)",
+          value: "A Logic Level Shifter is a small, inexpensive board that acts as a 'voltage translator' between your 5V Arduino and your 3.3V module.\n\n" +
+          "It safely steps down the 5V signals from the Arduino to 3.3V for the module's inputs. Most bi-directional shifters also step up 3.3V signals from the module to 5V for the Arduino's inputs, though 3.3V is often high enough to be read as a 'HIGH' by a 5V Arduino. Some times the arduino might not be able to hear such a small signal and it would end up not reciving the data from the module, so it is best to use a bi-directional level shifter for both directions.\n\n" +
+          "**Note:** Not all modules require a level shifter, but many do. Always check the module's datasheet for its voltage requirements."
+        },
+        {
+          name: "Common Modules Requiring 3.3V Logic (and often a Shifter with 5V Arduinos)",
+          value: "- **NRF24L01 / NRF24L01+** (Wireless Transceiver)\n" +
+          "- **ESP8266 (e.g., ESP-01)** (Wi-Fi Module)\n" +
+          "- **ESP32** (Wi-Fi & Bluetooth MCU - its pins are 3.3V logic)\n" +
+          "- **Many SD Card Modules** (especially microSD breakout boards)\n" +
+          "- **Cellular Modules (e.g., SIM800L, A6/A7 GSM/GPRS)**\n" +
               "- **Some Accelerometers/Gyroscopes (e.g., MPU6050 - *check specific breakout board, some have on-board regulators/shifters, many don't for logic lines*)\n" +
               "- **Many newer Sensors & Displays** (e.g., some TFTs, OLEDs, BME280/BMP280)\n\n" +
               "**Always check the module's datasheet for its VCC (power) and logic level specifications!**"
@@ -342,6 +321,30 @@ export default {
           {
             name: "Proper Powering is Also Key!",
             value: "Besides logic levels, ensure your 3.3V module is also **powered** with 3.3V ( The 3.3V pin on your Arduino is only rated for 50ma in many cases and so it can NOT be used to power esp's or cellphone modules or other power hungry devices. In most cases use a dedicated 3.3V regulator). Do NOT power a 3.3V module with 5V VCC unless its datasheet explicitly states it has an onboard regulator that can handle 5V input."
+          }
+        )
+    ]
+  },
+  wiki: {
+    embeds: [
+      new EmbedBuilder(universalEmbed)
+        .setTitle("The arduino wiki has lots of information about Arduino basics")
+        .addFields(
+          {
+            name: "Learn how to combine sketches",
+            value: "Take two sketches and merge them together, or learn how to use libraries."
+          },
+          {
+            name: "Learn how Calculate resistor values for LEDs, why do you need resistors for leds?",
+            value: "Learn how to calculate the resistor value for LEDs, and how to use them in your projects."
+          },
+          {
+            name: "Learn how breadboards work",
+            value: "Learn how to use breadboards, and how to connect components together on them. Also learn how to use jumper wires, and how to connect them to your Arduino."
+          },
+          {
+            name: "Learn A lot more, all of the wiki is created by discord users like you!",
+            value: "https://wiki.arduinodiscord.cc/ is the place to go for more information about Arduino basics, and how to use them in your projects."
           }
         )
     ]
