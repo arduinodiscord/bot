@@ -280,7 +280,7 @@ export default {
         .addFields(
           {
             name: "Dies quickly",
-            value: "Nine-volt batteries are not very useful for powering Arduinos or other electronics. They have a low capacity and will die quickly, especially if you are using them to power an Arduino. They do not have enough power to drive motors or servos. They rarely have a usefull purpose in the Arduino world, and are not recommended for use with Arduinos, even though many kits come with them. https://odysee.com/@Maderdash:2/9vBattery:0"
+            value: "Nine-volt batteries are not very useful for powering Arduinos or other electronics. They have a low capacity and will die quickly 15 minutes or less, especially if you are using them to power an Arduino. They do not have enough power to drive motors or servos. They rarely have a usefull purpose in the Arduino world, and are not recommended for use with Arduinos, even though many kits come with them. https://odysee.com/@Maderdash:2/9vBattery:0"
           }
         ),
     ],
