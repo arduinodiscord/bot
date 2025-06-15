@@ -30,10 +30,12 @@ export class TagCommand extends Command {
               { name: 'espcomm', value: 'espcomm' },
               { name: 'hid', value: 'hid' },
               { name: 'language', value: 'language' },
+              { name: 'levelShifter', value: 'levelShifter' },
               { name: 'libmissing', value: 'libmissing' },
+              { name: 'ninevolt', value: 'ninevolt' },
               { name: 'power', value: 'power' },
               { name: 'pullup', value: 'pullup' },
-              //{ name: 'template', value: 'template' }
+              { name: 'wiki', value: 'wiki' }
             )
         );
     });
