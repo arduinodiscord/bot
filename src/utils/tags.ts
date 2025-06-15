@@ -46,7 +46,7 @@ export default {
         .setDescription("__avrdude: stk500__ ... Error is very common, and can be caused by many different things. Here are some steps to try to fix it. If you have tried all of these and it still doesn't work, please ask for help in the **\#general-help channel.**")
         .addFields(
           {
-            name: "1. Is your Serial monitor open?",
+            name: "1. Is your Serial monitor, or any 3D printer software open?",
             value: "If it is, close it. This allows your IDE to upload sketches without conflicts with the Serial Monitor. Only have one IDE open at a time, as having multiple IDEs open can cause issues with the IDE. So close them all before uploading a sketch, and try restarting your PC."
 
           },
@@ -167,7 +167,7 @@ export default {
   hid: {
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
-        .setTitle('Can Your Arduino Be Used as a Keyboard or Mouse?')
+        .setTitle("Can Your Arduino Be Used as a Keyboard or Mouse?")
         .setDescription("You want to use your Arduino for a Human Interface Device? HID")
         .addFields(
           {
@@ -190,7 +190,7 @@ export default {
   language: {
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
-        .setTitle('What Coding Language Does Arduino IDE Use? What Language Should You Learn?')
+        .setTitle("What Coding Language Does Arduino IDE Use? What Language Should You Learn?")
         .addFields(
           { name: "Arduino IDE code is normally C++14",
             value: "The language most often used in the Arduino IDE for programming is primarily **C++14**. There are some added functions that are very useful for using the Arduino platform, which can be found at https://www.arduino.cc/reference/en/. MicroPython and other Python types are sometimes used; however, they are extremely limited in both the boards that support them and the library selection that is offered. Also, the community, examples, and tutorials are extremely limited, so they are rarely used in this community and never used in real-world **commercial or industrial** applications. Finding help for them is also very difficult, so we do not recommend using them unless you are already familiar with them and have a specific reason to use them. If possible, we recommend learning C++14, as it is the most widely used language in the Arduino community and is also used in many other applications, such as game development, web development, and more." }
@@ -205,7 +205,7 @@ export default {
       .addFields(
         {
           name: "The Problem: Voltage Mismatch",
-          value: "Many popular Arduino boards like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins send out 5V for a 'HIGH' signal.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant**. https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel"
+          value: "Many popular Arduino boards, like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins operate at 5V for a 'HIGH' signal, and they expect 5v in return **3.3v will not be reconized**.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant** and they can NOT repibably send 5v devices either. https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel"
         },
         {
           name: "What Happens if You Connect 5V to a 3.3V Pin?",
@@ -243,11 +243,11 @@ export default {
   libmissing: {
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
-        .setTitle('Solving Library Errors (Such as "yourlib.h not found")')
+        .setTitle("Solving Library Errors (Such as \"yourlib.h not found\")")
         .addFields(
           {
             name: "1. Is your library installed?",
-            value: "Go to the **Library Manager** (Sketch -> Include Library -> Manage Libraries), search for the library, and install it. If it is already installed, try reinstalling it through the Library Manager. Make sure your working directory is not a cloud-based folder like ONEDRIVE or DROPBOX, if it is reinstall to a local drive on your computer. "
+            value: "Go to the **Library Manager** (Sketch -> Include Library -> Manage Libraries), search for the library, and install it. If it is already installed, try reinstalling it through the Library Manager. Make sure your working directory is not a cloud-based folder like ONEDRIVE or DROPBOX, if it is, reinstall it to a local drive on your computer. "
 
           },
           {
@@ -259,11 +259,7 @@ export default {
             value: "If you downloaded it from GitHub or somewhere else and it came as a zip file, do not open the zip. Instead, open the IDE, go to Libraries -> Install from ZIP, then point to the zip folder and install. Then close all IDEs you have open, wait 20 seconds, then open the IDE, go to Libraries and see if it's now listed there. It should be."
           },
           {
-            name: "4. #include <yourlib.h> vs #include \"yourlib.h\"",
-            value: "If you are using a library that is in the Library Manager, you need to use `#include <yourlib.h>`. If you are using a library that is not in the Library Manager (for example, one you downloaded manually), you should use `#include \"yourlib.h\"`."
-          },
-          {
-            name: "5. Are you using the correct board?",
+            name: "4. Are you using the correct board?",
             value: "Some libraries are only compatible with certain boards. Make sure you have selected the correct board in **Tools** -> **Board**."
 
           },
@@ -272,11 +268,11 @@ export default {
         ),
     ],
   },
-  nine:{
+  ninevolt:{
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
-        .setTitle('Nine Volt usefulness')
-        .setDescription("Not very usefull")
+        .setTitle("Nine Volt usefullness")
+        .setDescription("Not very useful")
         .addFields(
           {
             name: "Dies quickly",
@@ -289,7 +285,7 @@ export default {
   power: {
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
-        .setTitle('Powering an Arduino')
+        .setTitle("Powering an Arduino")
         .addFields(
           {
             name: "1. How much power can an Arduino provide?",
