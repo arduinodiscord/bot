@@ -69,7 +69,6 @@ export class TagCommand extends Command {
       });
     }
 
-    let messageContent: string | undefined;
     let messagePayload: any = {};
 
     if (typeof tag === 'object') {
@@ -78,19 +77,23 @@ export class TagCommand extends Command {
         messagePayload.content = `<@${user.id}>`;
       }
     } else {
-      // tag is a string
-      messageContent = tag;
-      if (user) {
-        messageContent = `<@${user.id}> ${tag}`;
-      }
-      messagePayload.content = messageContent;
+      messagePayload.content = user ? `<@${user.id}> ${tag}` : tag;
     }
 
     await botCommandsChannel.send(messagePayload);
 
-    return interaction.reply({
-      content: 'Tag information posted to the #bot-commands channel.',
-      ephemeral: true,
-    });
+    if (user) {
+      // My goal is to  Notify the user in the original channel (not ephemeral)
+      return interaction.reply({
+        content: `Hey <@${user.id}>, check the <#${BOT_COMMANDS_CHANNEL_ID}> channel for info!`,
+        ephemeral: false,
+      });
+    } else {
+      // Ephemeral reply for normal tag
+      return interaction.reply({
+        content: 'Tag information posted to the #bot-commands channel.',
+        ephemeral: true,
+      });
+    }
   }
 }

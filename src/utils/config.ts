@@ -10,11 +10,11 @@ const missingEnv = requiredEnvironment.filter((req) => !process.env[req]);
 if (missingEnv.length > 0)
   throw new Error(
     'Missing required environment variables: \n- ' +
-      missingEnv.reduce((a, b) => (b += `\n- ${a}`))
+      missingEnv.join('\n- ')
   );
-
+// This should be the server and the bot commands channel id's.
 export const {
   BOT_TOKEN = '',
-  SERVER_ID = '420594746990526466', // default: Arduino Official
-  BOT_COMMANDS_CHANNEL_ID = 'YOUR_BOT_COMMANDS_CHANNEL_ID',
+  SERVER_ID = '420594746990526466',
+  BOT_COMMANDS_CHANNEL_ID = '451158319361556491',
 } = process.env;
