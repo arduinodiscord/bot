@@ -14,10 +14,10 @@ The Arduino Bot provides helpful information, troubleshooting steps, and communi
 
 All commands are used as Discord slash commands (type `/` in Discord):
 
-| Command   | Usage Example         | Description                                      |
-|-----------|----------------------|--------------------------------------------------|
-| `/about`  | `/about`             | Shows information about the bot.                 |
-| `/tag`    | `/tag name:<tag>`    | Sends an informational tag ephemerally.          |
+| Command   | Usage Example              | Description                                                        |
+|-----------|---------------------------|--------------------------------------------------------------------|
+| `/about`  | `/about`                  | Shows information about the bot.                                   |
+| `/tag`    | `/tag name:<tag> [user:@username]` | Sends an informational tag to the bot-commands channel, optionally pinging a user. |
 
 ### `/tag` options (alphabetical)
 
@@ -34,7 +34,15 @@ All commands are used as Discord slash commands (type `/` in Discord):
 - `wiki` — Link to the Arduino Discord community wiki.
 
 **Example:**  
-`/tag name:power` — Sends information about powering Arduino boards.
+`/tag name:power` — Sends information about powering Arduino boards to the bot-commands channel.
+`/tag name:avrdude user:@someuser` — Sends AVRDUDE troubleshooting info to the bot-commands channel and pings `@someuser`.
+
+## Environment Variables
+
+This bot requires the following environment variables to be set:
+
+-   `BOT_TOKEN`: Your Discord bot token.
+-   `BOT_COMMANDS_CHANNEL_ID`: The ID of the channel where the bot will send responses for commands like `/tag`. This channel should be configured in your server.
 
 ## Contributing
 
