@@ -113,6 +113,60 @@ export default {
   codeblock: {
     content: "```ino\n// Please right-click on this message (long-press on mobile)\n// then select \"Copy Text.\"\n\n// After that, copy your code; then paste it in place of this comment\n```",
   },
+  
+  debounce: {
+    embeds: [
+      new EmbedBuilder(universalEmbed)
+        .setTitle("🔘 Taming Bouncy Buttons: Understanding Debouncing")
+        .setImage("https://thecustomizewindows.cachefly.net/wp-content/uploads/2024/05/Read-a-Pushbutton-with-Arduino-with-Interrupts-and-Debounce.png")
+        .addFields(
+          {
+            name: "The Problem: \"Bouncy\" Switches",
+            value: "When you press a mechanical button or switch, the metal contacts inside don't make a single, clean connection. Instead, they 'bounce' a few times, rapidly opening and closing the circuit before settling.\n\nAn Arduino is fast enough to see these bounces as multiple separate presses!"
+          },
+          {
+            name: "What Happens Without Debouncing?",
+            value: "If you're trying to count presses or toggle an LED, you'll get erratic behavior: one physical press might register as 2, 3, or even more presses, or an LED might flicker unpredictably."
+          },
+          {
+            name: "The Solution: Debouncing",
+            value: "Debouncing is a technique to ensure that only one action is registered for a single intentional press.\n\n**Common Software Debounce Method:**\n" +
+                   "1. Detect an initial button press (e.g., pin goes LOW).\n" +
+                   "2. Wait for a short period (e.g., 20-50 milliseconds).\n" +
+                   "3. After the delay, check the button state again.\n" +
+                   "4. If it's still in the pressed state, then consider it a valid press."
+          },
+          {
+            name: "Simple Code Logic (Conceptual)",
+            value: "```cpp\n" +
+                   "// Previous button state\n" +
+                   "bool lastButtonState = HIGH;\n" +
+                   "unsigned long lastDebounceTime = 0;\n" +
+                   "unsigned long debounceDelay = 50; // 50ms\n\n" +
+                   "// In your loop():\n" +
+                   "bool reading = digitalRead(buttonPin);\n\n" +
+                   "if (reading != lastButtonState) {\n" +
+                   "  lastDebounceTime = millis(); // Reset debounce timer\n" +
+                   "}\n\n" +
+                   "if ((millis() - lastDebounceTime) > debounceDelay) {\n" +
+                   "  // If current reading has been stable for longer than the delay\n" +
+                   "  if (reading == LOW) { // Assuming button pulls LOW when pressed\n" +
+                   "    // Button is considered pressed\n" +
+                   "    // Your action here (e.g., toggle LED, count press)\n" +
+                   "    // Make sure to only act on state change (e.g. if it *was* HIGH and *is now* LOW)\n" +
+                   "  }\n" +
+                   "}\n" +
+                   "lastButtonState = reading;\n" +
+                   "```\n" +
+                   "*Note: This is a common approach. Libraries can also simplify debouncing.*"
+          },
+          {
+            name: "Key Takeaway",
+            value: "If your project uses buttons, switches, or any mechanical contact that triggers an action, you almost certainly need to implement debouncing for reliable operation."
+          }
+        )
+    ]
+  },
 
   espcomm: {
     embeds: [

@@ -27,6 +27,7 @@ export class TagCommand extends Command {
               { name: 'ask', value: 'ask' },
               { name: 'avrdude', value: 'avrdude' },
               { name: 'codeblock', value: 'codeblock' },
+              { name: 'debounce', value: 'debounce' },
               { name: 'espcomm', value: 'espcomm' },
               { name: 'hid', value: 'hid' },
               { name: 'language', value: 'language' },
