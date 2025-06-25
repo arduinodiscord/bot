@@ -37,12 +37,14 @@ All commands are used as Discord slash commands (type `/` in Discord):
 `/tag name:power` — Sends information about powering Arduino boards to the bot-commands channel.
 `/tag name:avrdude user:@someuser` — Sends AVRDUDE troubleshooting info to the bot-commands channel and pings `@someuser`.
 
-## Environment Variables
+## Environment Variables & Configuration
 
 This bot requires the following environment variables to be set:
 
 -   `BOT_TOKEN`: Your Discord bot token.
--   `BOT_COMMANDS_CHANNEL_ID`: The ID of the channel where the bot will send responses for commands like `/tag`. This channel should be configured in your server.
+
+> Additional configuration options can be set in `config.ts`.
+
 
 ## Contributing
 
