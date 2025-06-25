@@ -87,7 +87,8 @@ export class TagCommand extends Command {
         ephemeral: false,
         embeds: [
           new EmbedBuilder(universalEmbed)
-          .setTitle("Tag Sent in <#${BOT_COMMANDS_CHANNEL_ID}>")
+          .setTitle("Tag Sent")
+          .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`)
         ],
       });
     } else {
@@ -97,7 +98,8 @@ export class TagCommand extends Command {
         ephemeral: true,
         embeds: [
           new EmbedBuilder(universalEmbed)
-          .setTitle("Tag Sent in <#${BOT_COMMANDS_CHANNEL_ID}>")
+          .setTitle("Tag Sent")
+          .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`)
         ],
       });
     }
