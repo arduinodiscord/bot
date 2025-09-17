@@ -272,7 +272,7 @@ export default {
       .addFields(
         {
           name: "The Problem: Voltage Mismatch",
-          value: "Many popular Arduino boards, like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins operate at 5V for a 'HIGH' signal, and they expect 5v in return **3.3v will not be reconized**.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant** and they can NOT repibably send 5v devices either. https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel"
+          value: "Many popular Arduino boards, like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins operate at 5V for a 'HIGH' signal, and they expect 5v in return **3.3v will not be reconized**.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant** and they can NOT repibably send 5v devices either.\n\n Its like some one whispering softly to someone that is hard of hearing. They can not commonunicate consistantly.  https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel"
         },
         {
           name: "What Happens if You Connect 5V to a 3.3V Pin?",
