@@ -424,6 +424,11 @@ export default {
           }
         ),
     ],
+  // },
+  //   restrictedtag: {
+  //   content: "This is a restricted tag.",
+  //   requiredRoles: ['Admin', 'Moderator'], // Role names or IDs
+  // },
   }
 };
 
