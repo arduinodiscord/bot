@@ -58,6 +58,20 @@ export class TagCommand extends Command {
     const tag = tags[tagName];
     const botCommandsOnly = tag.botCommandsOnly !== false; // Defaults to true if missing
 
+    //     // Role restriction check
+    // if (tag.requiredRoles) {
+    //   const member = await interaction.guild?.members.fetch(interaction.user.id);
+    //   const hasRole = member?.roles.cache.some(role =>
+    //     tag.requiredRoles.includes(role.name) || tag.requiredRoles.includes(role.id)
+    //   );
+    //   if (!hasRole) {
+    //     return interaction.reply({
+    //       content: "You do not have permission to use this tag.",
+    //       ephemeral: true,
+    //     });
+    //   }
+    // }
+    
     if (!botCommandsOnly) {
       if (typeof tag === "object" && tag.content) {
         return interaction.reply({ content: tag.content, ephemeral: false });
