@@ -27,6 +27,7 @@ export class TagCommand extends Command {
             .setRequired(true)
             .addChoices(
               // Keep existing choices
+              { name: 'AI', value: 'ai' },
               { name: 'ask', value: 'ask' },
               { name: 'avrdude', value: 'avrdude' },
               { name: 'codeblock', value: 'codeblock' },
