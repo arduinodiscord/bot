@@ -353,7 +353,7 @@ export default {
           },
           {
             name: "3. Powering the Arduino properly",
-            value: "On most Arduino boards, there will be a pin marked **VIN**. This stands for Voltage Input. You can provide the maximum power rating for your board on this pin. An UNO will accept 7-12V. If you have a regulated 5-volt power supply, you can sometimes use the 5V pin to power the Arduino. You should **NOT** connect batteries to the 5V or 3.3V pins. You can also power Arduinos via USB plugs or the barrel jack on some boards."
+            value: "On most Arduino boards, there will be a pin marked **VIN**. This stands for Voltage Input. You can provide the maximum power rating for your board on this pin. An UNO will accept 7-12V. The voltage reagulator requires around 2v above what is trying to be supplied out. 5v plus 2v for the overhead = 7v+. Also the more voltage you supply to this pin, the less current you can get out of the board. Example: 7v you can get 400ma out of the reagulator. 12v you can get 100ma. 24v might over heat the reagulator useing just the board its self. If you have a regulated 5-volt power supply, you can sometimes use the 5V pin to power the Arduino. You should **NOT** connect batteries to the 5V or 3.3V pins. You can also power Arduinos via USB, this is conected directly to the 5v PIN on the board, or the barrel jack, that is conected directly to the VIN pin on some boards."
 
           },
           {
