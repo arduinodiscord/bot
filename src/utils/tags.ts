@@ -212,7 +212,7 @@ export default {
           },
           {
             name: "6. Have you tried holding down the BOOT/IO0/FLASH button?",
-            value: "Try holding down the BOOT/IO0/FLASH button before uploading."
+            value: "Unhook the board, wait 10 secconds, then try holding down the BOOT/IO0/FLASH button. Keep holding it down untill **AFTER** its done compileing, and the IDE says \"uploading\".\n\nThen release the button. This puts the board into flash mode, and can sometimes help with communication issues.\n\nThe boards are so bad sometimes the buttons are labeled backwords, so try again with the other button if it has one."
           },
           {
             name: "7. Are there any problems with your wiring?",
