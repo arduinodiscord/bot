@@ -21,13 +21,12 @@ export class TagCommand extends Command {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .addStringOption((option) => 
+        .addStringOption((option) =>
           option
             .setName('name')
             .setDescription('Tag to see')
             .setRequired(true)
             .addChoices(
-              // Keep existing choices
               { name: 'AI', value: 'ai' },
               { name: 'ask', value: 'ask' },
               { name: 'avrdude', value: 'avrdude' },
@@ -38,6 +37,7 @@ export class TagCommand extends Command {
               { name: 'language', value: 'language' },
               { name: 'levelShifter', value: 'levelShifter' },
               { name: 'libmissing', value: 'libmissing' },
+              { name: 'needinfo', value: 'needinfo' },
               { name: 'ninevolt', value: 'ninevolt' },
               { name: 'power', value: 'power' },
               { name: 'pullup', value: 'pullup' },
@@ -60,7 +60,7 @@ export class TagCommand extends Command {
     const tag = tags[tagName];
     const botCommandsOnly = tag.botCommandsOnly !== false; // Defaults to true if missing
 
-    //     // Role restriction check
+    // Role restriction check (uncomment and use if needed)
     // if (tag.requiredRoles) {
     //   const member = await interaction.guild?.members.fetch(interaction.user.id);
     //   const hasRole = member?.roles.cache.some(role =>
@@ -73,14 +73,24 @@ export class TagCommand extends Command {
     //     });
     //   }
     // }
-    
+
+    // If tag is allowed in any channel, reply there
     if (!botCommandsOnly) {
-      if (typeof tag === "object" && tag.content) {
-        return interaction.reply({ content: tag.content, ephemeral: false });
-      } else if (typeof tag === "string") {
+      if (typeof tag === 'object' && tag.content) {
+        return interaction.reply({ content: typeof tag.content === 'function' ? tag.content(user?.id) : tag.content, ephemeral: false });
+      } else if (typeof tag === 'string') {
         return interaction.reply({ content: tag, ephemeral: false });
       }
     }
+
+
+    // Tag not found
+    if (!tag) {
+      return interaction.reply({ content: 'That tag does not exist.', ephemeral: true });
+    }
+
+    // Fetch bot-commands channel
+
 
     const botCommandsChannel = await interaction.guild?.channels.fetch(BOT_COMMANDS_CHANNEL_ID);
 
@@ -95,7 +105,13 @@ export class TagCommand extends Command {
 
     if (typeof tag === 'object') {
       messagePayload = { ...tag };
-      if (user) {
+      // If tag.content is a function, call it with user id
+      if (tag.content) {
+        messagePayload.content = typeof tag.content === 'function'
+          ? tag.content(user?.id)
+          : tag.content;
+      }
+      if (user && !messagePayload.content) {
         messagePayload.content = `<@${user.id}>`;
       }
     } else {
