@@ -27,6 +27,7 @@ export class TagCommand extends Command {
             .setRequired(true)
             .addChoices(
               // Keep existing choices
+              { name: 'AI', value: 'ai' },
               { name: 'ask', value: 'ask' },
               { name: 'avrdude', value: 'avrdude' },
               { name: 'codeblock', value: 'codeblock' },
@@ -55,6 +56,29 @@ export class TagCommand extends Command {
     const tagName = interaction.options.getString('name', true) as keyof typeof tags;
     const user = interaction.options.getUser('user');
     const tag = tags[tagName];
+    const botCommandsOnly = tag.botCommandsOnly !== false; // Defaults to true if missing
+
+    //     // Role restriction check
+    // if (tag.requiredRoles) {
+    //   const member = await interaction.guild?.members.fetch(interaction.user.id);
+    //   const hasRole = member?.roles.cache.some(role =>
+    //     tag.requiredRoles.includes(role.name) || tag.requiredRoles.includes(role.id)
+    //   );
+    //   if (!hasRole) {
+    //     return interaction.reply({
+    //       content: "You do not have permission to use this tag.",
+    //       ephemeral: true,
+    //     });
+    //   }
+    // }
+    
+    if (!botCommandsOnly) {
+      if (typeof tag === "object" && tag.content) {
+        return interaction.reply({ content: tag.content, ephemeral: false });
+      } else if (typeof tag === "string") {
+        return interaction.reply({ content: tag, ephemeral: false });
+      }
+    }
 
     if (!tag) {
       return interaction.reply({ content: 'That tag does not exist.', ephemeral: true });
