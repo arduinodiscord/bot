@@ -83,12 +83,15 @@ export class TagCommand extends Command {
       }
     }
 
+
     // Tag not found
     if (!tag) {
       return interaction.reply({ content: 'That tag does not exist.', ephemeral: true });
     }
 
     // Fetch bot-commands channel
+
+
     const botCommandsChannel = await interaction.guild?.channels.fetch(BOT_COMMANDS_CHANNEL_ID);
 
     if (!botCommandsChannel || !(botCommandsChannel instanceof TextChannel)) {
@@ -118,7 +121,6 @@ export class TagCommand extends Command {
     await botCommandsChannel.send(messagePayload);
 
     if (user) {
-      // Notify the user in the original channel (not ephemeral)
       // Notify the user in the original channel (not ephemeral)
       return interaction.reply({
         content: `<@${user.id}>`,
