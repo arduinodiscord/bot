@@ -1,7 +1,8 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { TextChannel } from 'discord.js';
-import { BOT_COMMANDS_CHANNEL_ID } from '../../utils/config';
+import { TextChannel, EmbedBuilder } from 'discord.js';
+import { BOT_COMMANDS_CHANNEL_ID } from '../utils/config';
 import tags from '../utils/tags';
+import universalEmbed from '../index'
 
 
 export class TagCommand extends Command {
@@ -46,14 +47,15 @@ export class TagCommand extends Command {
         .addUserOption((option) =>
           option
             .setName('user')
-            .setDescription('User to ping in the bot-commands channel')
+            .setDescription('User to ping in the bot commands channel.')
             .setRequired(false)
         );
     });
   }
 
   public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
-    const tagName = interaction.options.getString('name', true) as keyof typeof tags;
+    const option = interaction.options.get('name');
+    const tagName = option?.value as keyof typeof tags;
     const user = interaction.options.getUser('user');
     const tag = tags[tagName];
     const botCommandsOnly = tag.botCommandsOnly !== false; // Defaults to true if missing
@@ -80,10 +82,6 @@ export class TagCommand extends Command {
       }
     }
 
-    if (!tag) {
-      return interaction.reply({ content: 'That tag does not exist.', ephemeral: true });
-    }
-
     const botCommandsChannel = await interaction.guild?.channels.fetch(BOT_COMMANDS_CHANNEL_ID);
 
     if (!botCommandsChannel || !(botCommandsChannel instanceof TextChannel)) {
@@ -107,16 +105,26 @@ export class TagCommand extends Command {
     await botCommandsChannel.send(messagePayload);
 
     if (user) {
-      // My goal is to  Notify the user in the original channel (not ephemeral)
+      // Notify the user in the original channel (not ephemeral)
       return interaction.reply({
-        content: `Hey <@${user.id}>, check the <#${BOT_COMMANDS_CHANNEL_ID}> channel for info!`,
+        content: `<@${user.id}>`,
         ephemeral: false,
+        embeds: [
+          new EmbedBuilder(universalEmbed)
+          .setTitle("Tag Sent")
+          .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`)
+        ],
       });
     } else {
       // Ephemeral reply for normal tag
       return interaction.reply({
-        content: 'Tag information posted to the #bot-commands channel.',
+        content: ``,
         ephemeral: true,
+        embeds: [
+          new EmbedBuilder(universalEmbed)
+          .setTitle("Tag Sent")
+          .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`)
+        ],
       });
     }
   }
