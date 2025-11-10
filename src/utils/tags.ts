@@ -245,6 +245,24 @@ export default {
     ],
   },
 
+  lab: {
+    embeds: [
+      new EmbedBuilder({ ...universalEmbed })
+        .setTitle("🧪 What Should I Get for My Lab? 🧪")
+        .setDescription("Building a good electronics lab is key to being a successful maker. Here are some recommendations for essential tools and supplies.")
+        .addFields(
+          {
+            name: "Essential Lab Equipment",
+            value: "For detailed information on Multimeters, Oscilloscopes, Power Supplies, Components, and Soldering Supplies, please visit our server's Wiki.",
+          },
+          {
+            name: "Wiki Link",
+            value: "[Click here to visit the Lab Supplies section of our Wiki](https://wiki.arduinodiscord.cc/gettingStarted/lab-supplies)",
+          }
+        ),
+    ],
+  },
+
   language: {
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
@@ -265,7 +283,7 @@ export default {
         .addFields(
           {
             name: "The Problem: Voltage Mismatch",
-            value: "Many popular Arduino boards, like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins operate at 5V for a 'HIGH' signal, and they expect 5v in return **3.3v will not be reconized**.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their input pins are often **NOT 5V tolerant** and they can NOT repibably send 5v devices either.\n\n Its like some one whispering softly to someone that is hard of hearing. They can not commonunicate consistantly.  https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel",
+            value: "Many popular Arduino boards, like the Uno and Mega operate at **5 Volts (5V)**. This means their digital pins operate at 5V for a 'HIGH' signal, and they expect 5v in return **3.3v will not be reconized**.\n\nHowever, a lot of modern modules and sensors (like the NRF24L01, ESP8266, SD cards) are designed to operate at **3.3 Volts (3.3V)**. Their **input or GPIO** pins are often **NOT 5V tolerant** and they can **NOT repibably send 5v to devices** either.\n\n Its like some one whispering softly to someone that is hard of hearing. They can not commonunicate consistantly.  https://wiki.arduinodiscord.cc/hardwareGuides/logiclevel",
           },
           {
             name: "What Happens if You Connect 5V to a 3.3V Pin?",
@@ -307,7 +325,7 @@ export default {
         .addFields(
           {
             name: "1. Is your library installed?",
-            value: "Go to the **Library Manager** (Sketch -> Include Library -> Manage Libraries), search for the library, and install it. If it is already installed, try reinstalling it through the Library Manager. Make sure your working directory is not a cloud-based folder like ONEDRIVE or DROPBOX, if it is, reinstall it to a local drive on your computer. ",
+            value: "Go to the **Library Manager** (Sketch -> Include Library -> Manage Libraries), search for the library, and install it. If it is already installed, try reinstalling it through the **Library Manager**. Make sure your working directory is not a cloud-based folder like **ONEDRIVE** or **DROPBOX**, if it is, *reinstall* it to a local drive on your computer. ",
           },
           {
             name: "2. Is your `#include` statement spelled correctly?",
@@ -418,7 +436,47 @@ export default {
     ],
   },
 
-  wiki: {
+  reinstall: {
+    embeds: [
+      new EmbedBuilder(universalEmbed)
+        .setTitle("🔄 How to Reinstall the Arduino IDE 🔄")
+        .setDescription("A clean reinstall of the Arduino IDE can often resolve unexpected issues. Follow these steps carefully to ensure a complete reinstallation.")
+        .addFields(
+          {
+            name: "1️⃣ Download the Latest Version",
+            value: "Before you begin, download the latest official Arduino IDE from the [Arduino website](https://www.arduino.cc/en/Main/Software). This ensures you have the installer ready to go.",
+          },
+          {
+            name: "2️⃣ Uninstall the Current Version",
+            value: "Use your operating system's standard procedure to uninstall the Arduino IDE. This usually involves the 'Add or remove programs' on Windows or dragging the application to the Trash on macOS.",
+          },
+          {
+            name: "3️⃣ Remove Old Configuration Files",
+            value: "This is a crucial step to remove any corrupted settings. **Please back up any custom files or sketches you have saved in these folders before deleting.**\n\n" +
+                   "**Windows:**\n" +
+                   "• `%LOCALAPPDATA%\\Arduino15`\n" +
+                   "• `%USERPROFILE%\\Documents\\Arduino\\libraries` (optional, for a completely clean library state)\n" +
+                   "• `C:\\Users\\<username>\\AppData\\Local\\Programs\\Arduino IDE`\n\n" +
+                   "**macOS:**\n" +
+                   "• `~/Library/Arduino15`\n" +
+                   "• `~/Documents/Arduino/libraries` (optional)\n\n" +
+                   "**Linux:**\n" +
+                   "• `~/.arduino15`\n" +
+                   "• `~/Arduino/libraries` (optional)",
+          },
+          {
+            name: "4️⃣ Install the New Version",
+            value: "Run the installer you downloaded in the first step. Follow the on-screen instructions to complete the installation. **NOTE:** *Do NOT install it to a cloud storage location like Google Drive or Dropbox.*",
+          },
+          {
+            name: "5️⃣ Verify the Installation",
+            value: "Once installed, open the Arduino IDE to ensure it starts correctly. You may need to reinstall your boards and libraries through the Boards Manager and Library Manager.",
+          }
+        ),
+    ],
+  },
+
+  wiki {
     embeds: [
       new EmbedBuilder(universalEmbed)
         .setTitle("The Arduino wiki has lots of information about Arduino basics")
@@ -443,4 +501,3 @@ export default {
   //   requiredRoles: ['Admin', 'Moderator'], // Role names or IDs
   // },
 };
-
