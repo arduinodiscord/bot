@@ -2,8 +2,7 @@ import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
 import { TextChannel, EmbedBuilder } from 'discord.js';
 import { BOT_COMMANDS_CHANNEL_ID } from '../utils/config';
 import tags from '../utils/tags';
-import universalEmbed from '../index'
-
+import universalEmbed from '../index';
 
 export class TagCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
@@ -15,7 +14,7 @@ export class TagCommand extends Command {
   }
 
   public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry
+    registry: ApplicationCommandRegistry,
   ) {
     registry.registerChatInputCommand((builder) => {
       builder
@@ -33,7 +32,9 @@ export class TagCommand extends Command {
               { name: 'codeblock', value: 'codeblock' },
               { name: 'debounce', value: 'debounce' },
               { name: 'espcomm', value: 'espcomm' },
+              { name: 'help', value: 'help' },
               { name: 'hid', value: 'hid' },
+              { name: 'lab', value: 'lab' },
               { name: 'language', value: 'language' },
               { name: 'levelShifter', value: 'levelShifter' },
               { name: 'libmissing', value: 'libmissing' },
@@ -41,19 +42,22 @@ export class TagCommand extends Command {
               { name: 'ninevolt', value: 'ninevolt' },
               { name: 'power', value: 'power' },
               { name: 'pullup', value: 'pullup' },
-              { name: 'wiki', value: 'wiki' }
-            )
+              { name: 'reinstall', value: 'reinstall' },
+              { name: 'wiki', value: 'wiki' },
+            ),
         )
         .addUserOption((option) =>
           option
             .setName('user')
             .setDescription('User to ping in the bot commands channel.')
-            .setRequired(false)
+            .setRequired(false),
         );
     });
   }
 
-  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+  public override async chatInputRun(
+    interaction: Command.ChatInputCommandInteraction,
+  ) {
     const option = interaction.options.get('name');
     const tagName = option?.value as keyof typeof tags;
     const user = interaction.options.getUser('user');
@@ -77,22 +81,31 @@ export class TagCommand extends Command {
     // If tag is allowed in any channel, reply there
     if (!botCommandsOnly) {
       if (typeof tag === 'object' && tag.content) {
-        return interaction.reply({ content: typeof tag.content === 'function' ? tag.content(user?.id) : tag.content, ephemeral: false });
+        return interaction.reply({
+          content:
+            typeof tag.content === 'function'
+              ? tag.content(user?.id)
+              : tag.content,
+          ephemeral: false,
+        });
       } else if (typeof tag === 'string') {
         return interaction.reply({ content: tag, ephemeral: false });
       }
     }
 
-
     // Tag not found
     if (!tag) {
-      return interaction.reply({ content: 'That tag does not exist.', ephemeral: true });
+      return interaction.reply({
+        content: 'That tag does not exist.',
+        ephemeral: true,
+      });
     }
 
     // Fetch bot-commands channel
 
-
-    const botCommandsChannel = await interaction.guild?.channels.fetch(BOT_COMMANDS_CHANNEL_ID);
+    const botCommandsChannel = await interaction.guild?.channels.fetch(
+      BOT_COMMANDS_CHANNEL_ID,
+    );
 
     if (!botCommandsChannel || !(botCommandsChannel instanceof TextChannel)) {
       return interaction.reply({
@@ -107,9 +120,10 @@ export class TagCommand extends Command {
       messagePayload = { ...tag };
       // If tag.content is a function, call it with user id
       if (tag.content) {
-        messagePayload.content = typeof tag.content === 'function'
-          ? tag.content(user?.id)
-          : tag.content;
+        messagePayload.content =
+          typeof tag.content === 'function'
+            ? tag.content(user?.id)
+            : tag.content;
       }
       if (user && !messagePayload.content) {
         messagePayload.content = `<@${user.id}>`;
@@ -127,8 +141,8 @@ export class TagCommand extends Command {
         ephemeral: false,
         embeds: [
           new EmbedBuilder(universalEmbed)
-          .setTitle("Tag Sent")
-          .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`)
+            .setTitle('Tag Sent')
+            .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`),
         ],
       });
     } else {
@@ -138,8 +152,8 @@ export class TagCommand extends Command {
         ephemeral: true,
         embeds: [
           new EmbedBuilder(universalEmbed)
-          .setTitle("Tag Sent")
-          .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`)
+            .setTitle('Tag Sent')
+            .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`),
         ],
       });
     }
