@@ -39,7 +39,10 @@ export class PingCommand extends Command {
           value: this.formatUptime(process.uptime()),
           inline: false 
         }
-      ]);
+      ])
+    	.setFooter({ text: 'Arduino server' })
+      .setTimestap();
+
     
     return interaction.editReply({ embeds: [embed] });
   }
