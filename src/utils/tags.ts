@@ -77,6 +77,7 @@ export default {
           {
             name: "6. Is your cable faulty or capable of sending data?",
             value: "Some USB cables aren't capable of transferring data, and some may be faulty, so make sure to try a different one to see if it works! You should try plugging another device into the cable to see if data can pass through it.\n" + "APPLE computers sometimes have issues with there usb adapters. You need to try other adaptors or buy an official one for your MAC."
+			
           },
           {
             name: "7. Is the power LED lit on your board?",
@@ -84,8 +85,8 @@ export default {
 
           },
           {
-            name: "8. Do you have a Nano or other Atmega 328p-based board?",
-            value: "If so, try using the old bootloader. In the Arduino IDE, go to Tools -> Processor and select 328p (old bootloader). *If your board doesn't have an Atmega 328p, you can skip this step.*"
+            name: "8. Do you have a Nano or similar Atmega 328p-based board?",
+            value: "If so, try using the old bootloader. In the Arduino IDE, go to Tools -> Processor and select 328p (old bootloader). This only applies to Nanos and Nano variants. *Boards this applies to will show the Processor option in the Tools menu. Otherwise, you can skip this step.*"
 
           },
           {
