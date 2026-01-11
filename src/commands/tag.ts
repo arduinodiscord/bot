@@ -137,12 +137,12 @@ export class TagCommand extends Command {
     if (user) {
       // Notify the user in the original channel (not ephemeral)
       return interaction.reply({
-        content: `<@${user.id}>`,
+        content: `<@${user.id}> you've been tagged with standard helpful info.`,
         ephemeral: false,
         embeds: [
           new EmbedBuilder(universalEmbed)
-            .setTitle('Tag Sent')
-            .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`),
+            .setTitle('Your answer is in the Bot-Commands Channel...')
+            .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`), //todo: 'info about <@$tagName}>!' would be better
         ],
       });
     } else {
@@ -152,8 +152,10 @@ export class TagCommand extends Command {
         ephemeral: true,
         embeds: [
           new EmbedBuilder(universalEmbed)
-            .setTitle('Tag Sent')
-            .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}>`),
+            .setTitle('Requested info was sent in the Bot-Commands Channel')
+            .setDescription(
+              `See <#${BOT_COMMANDS_CHANNEL_ID}>... only you can see this message...`,
+            ),
         ],
       });
     }
