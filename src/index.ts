@@ -26,4 +26,4 @@ const client = new SapphireClient({
 logger.info('Attempting to connect to discord client...')
 client.login(BOT_TOKEN)
 
-export default (new EmbedBuilder().setFooter({ text: 'Arduino Bot • Submit bugs on GitHub!' }).setColor('#dc5b05').toJSON())
+export default (new EmbedBuilder().setFooter({ text: 'Arduino Bot • GPL-3.0 • /tag' }).setColor('#dc5b05').toJSON())
