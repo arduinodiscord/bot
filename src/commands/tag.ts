@@ -1,5 +1,5 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { TextChannel, EmbedBuilder } from 'discord.js';
+import { TextChannel, EmbedBuilder, MessageFlags } from 'discord.js';
 import { BOT_COMMANDS_CHANNEL_ID } from '../utils/config';
 import tags from '../utils/tags';
 import universalEmbed from '../index'
@@ -63,7 +63,7 @@ export class TagCommand extends Command {
     if (!botCommandsChannel || !(botCommandsChannel instanceof TextChannel)) {
       return interaction.reply({
         content: 'Bot commands channel not found or is not a text channel.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -84,7 +84,6 @@ export class TagCommand extends Command {
       // Notify the user in the original channel (not ephemeral)
       return interaction.reply({
         content: `<@${user.id}> you've been tagged with standard helpful info.`,
-        ephemeral: false,
         embeds: [
           new EmbedBuilder(universalEmbed)
           .setTitle("Your answer is in the Bot-Commands Channel...")
@@ -95,7 +94,7 @@ export class TagCommand extends Command {
       // Ephemeral reply for normal tag
       return interaction.reply({
         content: ``,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
         embeds: [
           new EmbedBuilder(universalEmbed)
           .setTitle("Requested info was sent in the Bot-Commands Channel")
