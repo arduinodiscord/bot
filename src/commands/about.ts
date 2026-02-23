@@ -27,7 +27,7 @@ export class AboutCommand extends Command {
           { name: 'Node Version', value: process.version, inline: true },
           {
             name: 'Contributing',
-            value: '[GitHub](https://github.com/BluLightShow/arduino-bot)',
+            value: '[GitHub](https://github.com/arduinodiscord/bot)',
             inline: true
           },
         ]),

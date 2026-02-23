@@ -111,9 +111,9 @@ export default {
               'If it is, unplug and re-plug your board, then check for blinking LEDs. If only the Power LED or no LEDs light up, ask for further assistance (not for all boards).',
           },
           {
-            name: '8. Do you have a Nano or other Atmega 328p-based board?',
+            name: '8. Do you have a Nano or similar Atmega 328p-based board?',
             value:
-              "If so, try using the old bootloader. In the Arduino IDE, go to Tools -> Processor and select 328p (old bootloader). *If your board doesn't have an Atmega 328p, you can skip this step.*",
+              'If so, try using the old bootloader. In the Arduino IDE, go to Tools -> Processor and select 328p (old bootloader). This only applies to Nanos and Nano variants. *Boards this applies to will show the Processor option in the Tools menu. Otherwise, you can skip this step.*',
           },
           {
             name: '9. Does your onboard LED blink when you press the reset button?',
