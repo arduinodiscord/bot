@@ -7,7 +7,7 @@ export class MemberRemoveListener extends Listener {
     super(context, { ...options, event: Events.GuildMemberRemove });
   }
 
-  public async run(member: GuildMember) {
+  public async run(_member: GuildMember) {
     // await prisma.memberAnalytics.create({
     //   data: { event: 'leave', memberId: member.user.id },
     // });

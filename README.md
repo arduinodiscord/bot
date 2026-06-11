@@ -37,13 +37,62 @@ All commands are used as Discord slash commands (type `/` in Discord):
 `/tag name:power` — Sends information about powering Arduino boards to the bot-commands channel.
 `/tag name:avrdude user:@someuser` — Sends AVRDUDE troubleshooting info to the bot-commands channel and pings `@someuser`.
 
+## Image-spam automod
+
+The bot watches for the image-spam pattern that has been slipping past our other
+filters: accounts (both freshly-joined and compromised long-time members)
+posting **clusters of images** to advertise. It complements YAGPDB rather than
+replacing it, and never disables image sharing for the server.
+
+**How it detects spam (no images are downloaded — it uses Discord's attachment
+metadata only):**
+
+- **Image burst** — several image messages from one user in a short window
+  (default: 3 in 60s). *Lower confidence → alerts moderators only.*
+- **Cross-channel fan-out** — the same image posted across multiple channels in
+  a short window (default: 2+ channels). This is the strongest signal and catches
+  compromised veterans, where account age is useless. *High confidence.*
+- **Known-spam blocklist** — once a moderator confirms an alert, that image's
+  fingerprint is blocklisted so repeat campaigns are caught instantly. *High
+  confidence.*
+
+**Tiered response:** high-confidence hits auto-delete the messages and timeout
+the user, then post an alert; bursts only post an alert. Every alert lands in the
+mod-log channel with action buttons — **Confirm spam / Timeout / Ban / Delete
+msgs / Not spam** — so a human stays in the loop. Members with Manage Messages
+(or a configured immune role) are never inspected.
+
+**Required bot permissions:** Manage Messages (delete), Moderate Members
+(timeout), Ban Members (ban), plus the **Message Content** privileged intent
+(already enabled in `index.ts`). Set `MOD_LOG_CHANNEL_ID` to enable the console;
+leaving it unset disables the automod entirely.
+
 ## Environment Variables & Configuration
 
 This bot requires the following environment variables to be set:
 
 -   `BOT_TOKEN`: Your Discord bot token.
+-   `MOD_LOG_CHANNEL_ID`: Channel for image-spam alerts. Required to enable the
+    automod; leave unset to disable it.
+
+Optional:
+
+-   `DATABASE_URL`: Postgres connection string. Without it the bot runs fully
+    in-memory and the spam-image blocklist resets on restart.
+-   Automod thresholds (`AUTOMOD_BURST_THRESHOLD`, `AUTOMOD_FANOUT_CHANNELS`,
+    `AUTOMOD_IMMUNE_ROLE_IDS`, …) — see [`.env.example`](.env.example).
 
 > Additional configuration options can be set in `config.ts`.
+
+### Running with Docker
+
+A [`docker-compose.yml`](docker-compose.yml) bundles the bot with a Postgres
+instance for blocklist persistence:
+
+```bash
+cp .env.example .env   # fill in BOT_TOKEN and MOD_LOG_CHANNEL_ID
+docker compose up -d   # applies DB migrations, then starts the bot
+```
 
 
 ## Contributing

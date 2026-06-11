@@ -7,7 +7,7 @@ export class MemberAddListener extends Listener {
     super(context, { ...options, event: Events.GuildMemberAdd });
   }
 
-  public async run(member: GuildMember) {
+  public async run(_member: GuildMember) {
     // await prisma.memberAnalytics.create({
     //   data: { event: 'join', memberId: member.user.id },
     // });

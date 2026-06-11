@@ -6,7 +6,19 @@ import {
 } from 'discord.js';
 import universalEmbed from '../index';
 
-export default {
+/**
+ * Shape of a single tag. Every field is optional because tags vary: most are
+ * rich embeds, a few are plain (or templated) text, and some opt out of the
+ * bot-commands-channel-only behaviour.
+ */
+export interface Tag {
+  embeds?: EmbedBuilder[];
+  components?: ActionRowBuilder<ButtonBuilder>[];
+  content?: string | ((user?: string) => string);
+  botCommandsOnly?: boolean;
+}
+
+const tags: Record<string, Tag> = {
   ai: {
     embeds: [
       new EmbedBuilder(universalEmbed)
@@ -610,3 +622,5 @@ export default {
   //   requiredRoles: ['Admin', 'Moderator'], // Role names or IDs
   // },
 };
+
+export default tags;

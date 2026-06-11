@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node ./dist/src/index.js",
     "build": "tsc -p .",
-    "dev": "tsnd --respawn --transpile-only --exit-child ."
+    "dev": "tsnd --respawn --transpile-only --exit-child .",
+    "postinstall": "prisma generate"
   },
   "repository": {
     "type": "git",

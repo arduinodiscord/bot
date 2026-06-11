@@ -1,0 +1,43 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Pulled from the .env file (see .env.example). DATABASE_URL points at
+      # the bundled Postgres service below.
+      BOT_TOKEN: ${BOT_TOKEN}
+      SERVER_ID: ${SERVER_ID:-}
+      BOT_COMMANDS_CHANNEL_ID: ${BOT_COMMANDS_CHANNEL_ID:-}
+      MOD_LOG_CHANNEL_ID: ${MOD_LOG_CHANNEL_ID:-}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-arduino}:${POSTGRES_PASSWORD:-arduino}@db:5432/${POSTGRES_DB:-arduino}
+      # Optional automod tunables (defaults live in src/utils/config.ts)
+      AUTOMOD_BURST_THRESHOLD: ${AUTOMOD_BURST_THRESHOLD:-}
+      AUTOMOD_BURST_WINDOW_MS: ${AUTOMOD_BURST_WINDOW_MS:-}
+      AUTOMOD_FANOUT_CHANNELS: ${AUTOMOD_FANOUT_CHANNELS:-}
+      AUTOMOD_FANOUT_WINDOW_MS: ${AUTOMOD_FANOUT_WINDOW_MS:-}
+      AUTOMOD_TIMEOUT_MS: ${AUTOMOD_TIMEOUT_MS:-}
+      AUTOMOD_ALERT_COOLDOWN_MS: ${AUTOMOD_ALERT_COOLDOWN_MS:-}
+      AUTOMOD_IMMUNE_ROLE_IDS: ${AUTOMOD_IMMUNE_ROLE_IDS:-}
+    # Apply any pending Prisma migrations, then start the bot.
+    command: sh -c "npx prisma migrate deploy && npm start"
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-arduino}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arduino}
+      POSTGRES_DB: ${POSTGRES_DB:-arduino}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-arduino}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

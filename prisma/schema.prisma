@@ -28,3 +28,22 @@ enum MemberAnalyticsEvent {
   join
   leave
 }
+
+/// Blocklist of image fingerprints confirmed to be spam by a moderator.
+/// New uploads matching one of these are auto-actioned.
+model SpamSignature {
+  signature String   @id @db.VarChar
+  addedBy   String   @db.VarChar
+  reason    String?  @db.VarChar
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// Audit trail of automod-related moderation actions.
+model ModerationAction {
+  id          String   @id @default(uuid())
+  time        DateTime @default(now()) @db.Timestamptz(6)
+  moderatorId String   @db.VarChar
+  targetId    String   @db.VarChar
+  action      String   @db.VarChar
+  reason      String?  @db.VarChar
+}

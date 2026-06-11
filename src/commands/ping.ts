@@ -19,7 +19,7 @@ export class PingCommand extends Command {
     });
   }
 
-  public override chatInputRun(interaction: Command.ChatInputCommandInteraction) {
+  public override async chatInputRun(interaction: Command.ChatInputCommandInteraction) {
     const sent = await interaction.deferReply({ fetchReply: true });
     
     const latency = sent.createdTimestamp - interaction.createdTimestamp;
@@ -41,7 +41,7 @@ export class PingCommand extends Command {
         }
       ])
     	.setFooter({ text: 'Arduino server' })
-      .setTimestap();
+      .setTimestamp();
 
     
     return interaction.editReply({ embeds: [embed] });

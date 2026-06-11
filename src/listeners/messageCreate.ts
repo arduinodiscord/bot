@@ -1,6 +1,23 @@
-import { Events, Listener } from '@sapphire/framework';
-import type { Message } from 'discord.js';
-// import { prisma } from '../utils/db';
+import { Events, Listener, container } from '@sapphire/framework';
+import { PermissionFlagsBits, type GuildMember, type Message } from 'discord.js';
+import { SERVER_ID, MOD_LOG_CHANNEL_ID, automodConfig } from '../utils/config';
+import { imageSignatures } from '../utils/automod/signature';
+import {
+  recordImageMessage,
+  shouldAlert,
+  markAlerted,
+} from '../utils/automod/tracker';
+import { isBlocklisted } from '../utils/automod/blocklist';
+import {
+  createIncident,
+  type Incident,
+  type IncidentLevel,
+} from '../utils/automod/incidents';
+import {
+  buildAlertPayload,
+  deleteIncidentMessages,
+  timeoutMember,
+} from '../utils/automod/console';
 
 export class MessageCreateListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
@@ -8,8 +25,101 @@ export class MessageCreateListener extends Listener {
   }
 
   public async run(message: Message) {
-    // await prisma.messageAnalytics.create({
-    //   data: { memberId: message.author.id, channelId: message.channel.id },
-    // });
+    if (!message.inGuild() || message.author.bot) return;
+    if (message.guildId !== SERVER_ID) return;
+    // Without a console channel there is nowhere to surface alerts.
+    if (!MOD_LOG_CHANNEL_ID) return;
+    if (message.member && this.isImmune(message.member)) return;
+
+    const signatures = imageSignatures(message);
+    if (signatures.length === 0) return;
+
+    const now = Date.now();
+    const detection = recordImageMessage(message.author.id, {
+      at: now,
+      channelId: message.channelId,
+      messageId: message.id,
+      signatures,
+    });
+
+    const { blocked, matched } = await isBlocklisted(signatures);
+
+    let level: IncidentLevel | null = null;
+    if (blocked) level = 'blocklist';
+    else if (detection.level !== 'none') level = detection.level;
+    if (!level) return;
+
+    if (!shouldAlert(message.author.id, now)) return;
+    markAlerted(message.author.id, now);
+
+    // For blocklist-only hits the detector found no cluster, so the incident is
+    // just the current message; otherwise use the contributing events.
+    const messages =
+      detection.level === 'none'
+        ? [{ channelId: message.channelId, messageId: message.id }]
+        : detection.events.map((e) => ({
+            channelId: e.channelId,
+            messageId: e.messageId,
+          }));
+
+    const incident = createIncident({
+      userId: message.author.id,
+      guildId: message.guildId,
+      level,
+      reason:
+        level === 'blocklist'
+          ? `Matched ${matched.length} known spam image${matched.length === 1 ? '' : 's'}`
+          : detection.reason,
+      messages,
+      signatures: level === 'blocklist' ? matched : detection.signatures,
+    });
+
+    // Tiered enforcement: high-confidence signals act immediately; a
+    // same-channel burst only alerts and waits for a human.
+    const highConfidence = level === 'fanout' || level === 'blocklist';
+    let autoActed = false;
+    if (highConfidence) {
+      const deleted = await deleteIncidentMessages(
+        container.client,
+        incident
+      ).catch(() => 0);
+      const timedOut = await timeoutMember(
+        message.guild,
+        message.author.id,
+        `Automod: ${incident.reason}`
+      ).catch(() => false);
+      autoActed = deleted > 0 || timedOut;
+    }
+
+    await this.postAlert(message, incident, autoActed);
+  }
+
+  private isImmune(member: GuildMember): boolean {
+    if (member.permissions.has(PermissionFlagsBits.ManageMessages)) return true;
+    return automodConfig.immuneRoleIds.some((roleId) =>
+      member.roles.cache.has(roleId)
+    );
+  }
+
+  private async postAlert(
+    message: Message<true>,
+    incident: Incident,
+    autoActed: boolean
+  ): Promise<void> {
+    const channel = await container.client.channels
+      .fetch(MOD_LOG_CHANNEL_ID)
+      .catch(() => null);
+    if (!channel || !channel.isSendable()) {
+      container.logger.warn(
+        `Automod: MOD_LOG_CHANNEL_ID ${MOD_LOG_CHANNEL_ID} is not a sendable channel; cannot post alert.`
+      );
+      return;
+    }
+
+    const member =
+      message.member ??
+      (await message.guild.members.fetch(message.author.id).catch(() => null));
+
+    await channel.send(buildAlertPayload(incident, member, autoActed));
   }
 }
