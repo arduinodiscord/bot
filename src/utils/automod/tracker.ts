@@ -38,6 +38,14 @@ const retentionMs = () =>
 
 const unique = <T>(values: T[]): T[] => [...new Set(values)];
 
+export interface DetectionOptions {
+  /**
+   * Override for the same-channel burst threshold. Used to apply a stricter
+   * threshold to new members. Falls back to the configured default.
+   */
+  burstThreshold?: number;
+}
+
 /**
  * Record an image-bearing message and evaluate whether the user's recent
  * activity now constitutes spam. Fan-out (same image across channels) takes
@@ -46,8 +54,10 @@ const unique = <T>(values: T[]): T[] => [...new Set(values)];
  */
 export function recordImageMessage(
   userId: string,
-  event: ImageEvent
+  event: ImageEvent,
+  options: DetectionOptions = {}
 ): Detection {
+  const burstThreshold = options.burstThreshold ?? automodConfig.burstThreshold;
   const horizon = event.at - retentionMs();
   const events = (userEvents.get(userId) ?? []).filter((e) => e.at >= horizon);
   events.push(event);
@@ -86,7 +96,7 @@ export function recordImageMessage(
   // --- Burst: N+ image messages within the burst window ---
   const burstFrom = event.at - automodConfig.burstWindowMs;
   const burstEvents = events.filter((e) => e.at >= burstFrom);
-  if (burstEvents.length >= automodConfig.burstThreshold) {
+  if (burstEvents.length >= burstThreshold) {
     return {
       level: 'burst',
       reason: `${burstEvents.length} image messages in ${Math.round(

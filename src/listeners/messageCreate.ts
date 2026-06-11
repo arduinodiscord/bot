@@ -35,12 +35,25 @@ export class MessageCreateListener extends Listener {
     if (signatures.length === 0) return;
 
     const now = Date.now();
-    const detection = recordImageMessage(message.author.id, {
-      at: now,
-      channelId: message.channelId,
-      messageId: message.id,
-      signatures,
-    });
+    // New members get a stricter burst threshold so join-then-spam trips
+    // faster; tenure is useless for compromised veterans, who are instead
+    // caught by the fan-out/blocklist signals below.
+    const isNewMember = Boolean(
+      message.member?.joinedTimestamp &&
+        now - message.member.joinedTimestamp < automodConfig.newMemberWindowMs
+    );
+    const detection = recordImageMessage(
+      message.author.id,
+      {
+        at: now,
+        channelId: message.channelId,
+        messageId: message.id,
+        signatures,
+      },
+      isNewMember
+        ? { burstThreshold: automodConfig.newMemberBurstThreshold }
+        : {}
+    );
 
     const { blocked, matched } = await isBlocklisted(signatures);
 

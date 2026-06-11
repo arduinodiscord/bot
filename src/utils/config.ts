@@ -56,4 +56,14 @@ export const automodConfig = {
   alertCooldownMs: posInt(process.env.AUTOMOD_ALERT_COOLDOWN_MS, 30_000),
   /** Roles whose members are never inspected or actioned by the automod. */
   immuneRoleIds: idList(process.env.AUTOMOD_IMMUNE_ROLE_IDS),
+  /**
+   * How long after joining (ms) a member is treated as "new", so their image
+   * posts are scrutinised harder. Default 72 hours.
+   */
+  newMemberWindowMs: posInt(process.env.AUTOMOD_NEW_MEMBER_WINDOW_MS, 72 * 60 * 60 * 1000),
+  /**
+   * Stricter burst threshold applied to new members (catches join-then-spam
+   * faster). Should be <= burstThreshold. Default 2.
+   */
+  newMemberBurstThreshold: posInt(process.env.AUTOMOD_NEW_MEMBER_BURST_THRESHOLD, 2),
 };
