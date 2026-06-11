@@ -15,8 +15,10 @@ export interface Incident {
   level: IncidentLevel;
   reason: string;
   messages: IncidentMessage[];
-  /** Image signatures to blocklist if a moderator confirms this is spam. */
+  /** Metadata signatures to blocklist if a moderator confirms this is spam. */
   signatures: string[];
+  /** Perceptual hashes to blocklist if a moderator confirms this is spam. */
+  hashes: string[];
   createdAt: number;
 }
 

@@ -44,17 +44,23 @@ filters: accounts (both freshly-joined and compromised long-time members)
 posting **clusters of images** to advertise. It complements YAGPDB rather than
 replacing it, and never disables image sharing for the server.
 
-**How it detects spam (no images are downloaded — it uses Discord's attachment
-metadata only):**
+**How it detects spam:**
 
 - **Image burst** — several image messages from one user in a short window
-  (default: 3 in 60s). *Lower confidence → alerts moderators only.*
+  (default: 3 in 60s; stricter for new members). *Lower confidence → alerts
+  moderators only.*
 - **Cross-channel fan-out** — the same image posted across multiple channels in
   a short window (default: 2+ channels). This is the strongest signal and catches
   compromised veterans, where account age is useless. *High confidence.*
 - **Known-spam blocklist** — once a moderator confirms an alert, that image's
-  fingerprint is blocklisted so repeat campaigns are caught instantly. *High
+  fingerprints are blocklisted so repeat campaigns are caught instantly. *High
   confidence.*
+
+Each image gets two fingerprints: a cheap, download-free **metadata signature**
+(content type + size + dimensions) that catches byte-identical re-uploads, and a
+**perceptual hash** (dHash, computed from a tiny media-proxy thumbnail) that
+catches re-encoded or resized copies via Hamming-distance matching. New members
+(joined within the last 72h by default) are held to a stricter burst threshold.
 
 **Tiered response:** high-confidence hits auto-delete the messages and timeout
 the user, then post an alert; bursts only post an alert. Every alert lands in the

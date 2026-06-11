@@ -1,10 +1,14 @@
 import { automodConfig } from '../config';
+import { hammingDistance } from './phash';
 
 export interface ImageEvent {
   at: number;
   channelId: string;
   messageId: string;
+  /** Cheap metadata fingerprints (one per image attachment). */
   signatures: string[];
+  /** Perceptual hashes (one per image attachment, best-effort). */
+  hashes: string[];
 }
 
 export type DetectionLevel = 'none' | 'burst' | 'fanout';
@@ -16,8 +20,10 @@ export interface Detection {
   events: ImageEvent[];
   /** Distinct channels involved. */
   channels: string[];
-  /** Distinct image signatures involved. */
+  /** Distinct metadata signatures involved. */
   signatures: string[];
+  /** Distinct perceptual hashes involved. */
+  hashes: string[];
 }
 
 const NONE: Detection = {
@@ -26,6 +32,7 @@ const NONE: Detection = {
   events: [],
   channels: [],
   signatures: [],
+  hashes: [],
 };
 
 /** Per-user recent image events, pruned to the longest detection window. */
@@ -63,35 +70,13 @@ export function recordImageMessage(
   events.push(event);
   userEvents.set(userId, events);
 
-  // --- Fan-out: one signature seen across N+ distinct channels ---
+  // --- Fan-out: the same image seen across N+ distinct channels ---
   const fanoutFrom = event.at - automodConfig.fanoutWindowMs;
   const fanoutEvents = events.filter((e) => e.at >= fanoutFrom);
-  const channelsBySignature = new Map<string, Set<string>>();
-  for (const e of fanoutEvents)
-    for (const signature of e.signatures) {
-      const channels = channelsBySignature.get(signature) ?? new Set<string>();
-      channels.add(e.channelId);
-      channelsBySignature.set(signature, channels);
-    }
 
-  const fannedSignatures = [...channelsBySignature.entries()].filter(
-    ([, channels]) => channels.size >= automodConfig.fanoutChannels
-  );
-
-  if (fannedSignatures.length > 0) {
-    const signatures = fannedSignatures.map(([signature]) => signature);
-    const contributing = fanoutEvents.filter((e) =>
-      e.signatures.some((s) => signatures.includes(s))
-    );
-    const channels = unique(contributing.map((e) => e.channelId));
-    return {
-      level: 'fanout',
-      reason: `Identical image posted across ${channels.length} channels`,
-      events: contributing,
-      channels,
-      signatures,
-    };
-  }
+  const fanout =
+    detectExactFanout(fanoutEvents) ?? detectPerceptualFanout(fanoutEvents);
+  if (fanout) return fanout;
 
   // --- Burst: N+ image messages within the burst window ---
   const burstFrom = event.at - automodConfig.burstWindowMs;
@@ -105,10 +90,73 @@ export function recordImageMessage(
       events: burstEvents,
       channels: unique(burstEvents.map((e) => e.channelId)),
       signatures: unique(burstEvents.flatMap((e) => e.signatures)),
+      hashes: unique(burstEvents.flatMap((e) => e.hashes)),
     };
   }
 
   return NONE;
+}
+
+/** Fan-out by exact metadata signature (catches byte-identical re-uploads). */
+function detectExactFanout(events: ImageEvent[]): Detection | null {
+  const channelsBySignature = new Map<string, Set<string>>();
+  for (const e of events)
+    for (const signature of e.signatures) {
+      const channels = channelsBySignature.get(signature) ?? new Set<string>();
+      channels.add(e.channelId);
+      channelsBySignature.set(signature, channels);
+    }
+
+  const fanned = [...channelsBySignature.entries()].filter(
+    ([, channels]) => channels.size >= automodConfig.fanoutChannels
+  );
+  if (fanned.length === 0) return null;
+
+  const signatures = fanned.map(([signature]) => signature);
+  const contributing = events.filter((e) =>
+    e.signatures.some((s) => signatures.includes(s))
+  );
+  const channels = unique(contributing.map((e) => e.channelId));
+  return {
+    level: 'fanout',
+    reason: `Identical image posted across ${channels.length} channels`,
+    events: contributing,
+    channels,
+    signatures,
+    hashes: unique(contributing.flatMap((e) => e.hashes)),
+  };
+}
+
+/**
+ * Fan-out by perceptual hash (catches re-encoded/resized copies of the same
+ * image that have different metadata signatures per channel). For each hash we
+ * cluster all near-duplicates within the configured Hamming distance and check
+ * whether that cluster spans enough distinct channels.
+ */
+function detectPerceptualFanout(events: ImageEvent[]): Detection | null {
+  const hashed = events.flatMap((e) =>
+    e.hashes.map((hash) => ({ hash, event: e }))
+  );
+
+  for (const anchor of hashed) {
+    const cluster = hashed.filter(
+      ({ hash }) =>
+        hammingDistance(hash, anchor.hash) <= automodConfig.phashThreshold
+    );
+    const channels = unique(cluster.map(({ event }) => event.channelId));
+    if (channels.length >= automodConfig.fanoutChannels) {
+      const contributing = unique(cluster.map(({ event }) => event));
+      return {
+        level: 'fanout',
+        reason: `Near-identical image posted across ${channels.length} channels`,
+        events: contributing,
+        channels,
+        signatures: unique(contributing.flatMap((e) => e.signatures)),
+        hashes: unique(cluster.map(({ hash }) => hash)),
+      };
+    }
+  }
+  return null;
 }
 
 /** Whether enough time has passed since the last alert for this user. */

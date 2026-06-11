@@ -29,9 +29,12 @@ enum MemberAnalyticsEvent {
 }
 
 /// Blocklist of image fingerprints confirmed to be spam by a moderator.
-/// New uploads matching one of these are auto-actioned.
+/// New uploads matching one of these are auto-actioned. `kind` is "meta" for
+/// exact metadata signatures or "phash" for perceptual hashes (matched by
+/// Hamming distance).
 model SpamSignature {
   signature String   @id @db.VarChar
+  kind      String   @default("meta") @db.VarChar
   addedBy   String   @db.VarChar
   reason    String?  @db.VarChar
   createdAt DateTime @default(now()) @db.Timestamptz(6)

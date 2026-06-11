@@ -80,13 +80,15 @@ export class SpamModerationHandler extends InteractionHandler {
         );
         await addToBlocklist(
           incident.signatures,
+          incident.hashes,
           moderator.id,
           'confirmed image spam'
         );
         clearUser(incident.userId);
+        const fingerprints = incident.signatures.length + incident.hashes.length;
         summary = `✅ Confirmed spam — deleted ${deleted} message(s), ${
           timedOut ? 'timed out the user' : '**could not** time out the user'
-        }, and blocklisted ${incident.signatures.length} image signature(s).`;
+        }, and blocklisted ${fingerprints} image fingerprint(s).`;
         break;
       }
       case 'timeout': {

@@ -31,6 +31,7 @@
     "@sapphire/utilities": "^3.18.2",
     "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
+    "jimp": "^1.6.1",
     "pg": "^8.21.0"
   },
   "devDependencies": {

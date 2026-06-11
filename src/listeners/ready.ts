@@ -1,6 +1,7 @@
 import { Events, Listener } from '@sapphire/framework';
 import type { Client } from 'discord.js';
 import { initDatabase } from '../utils/db';
+import { loadBlocklist } from '../utils/automod/blocklist';
 
 export class ReadyListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
@@ -15,5 +16,7 @@ export class ReadyListener extends Listener {
 
     // Connect persistence if configured; the bot runs in-memory otherwise.
     await initDatabase();
+    // Warm the automod blocklist from the database (no-op without one).
+    await loadBlocklist();
   }
 }

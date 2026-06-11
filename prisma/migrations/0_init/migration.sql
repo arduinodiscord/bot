@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "MemberAnalyticsEvent" AS ENUM ('join', 'leave');
 
@@ -30,6 +33,7 @@ CREATE TABLE "CommandAnalytics" (
 -- CreateTable
 CREATE TABLE "SpamSignature" (
     "signature" VARCHAR NOT NULL,
+    "kind" VARCHAR NOT NULL DEFAULT 'meta',
     "addedBy" VARCHAR NOT NULL,
     "reason" VARCHAR,
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,

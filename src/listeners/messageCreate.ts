@@ -2,6 +2,7 @@ import { Events, Listener, container } from '@sapphire/framework';
 import { PermissionFlagsBits, type GuildMember, type Message } from 'discord.js';
 import { SERVER_ID, MOD_LOG_CHANNEL_ID, automodConfig } from '../utils/config';
 import { imageSignatures } from '../utils/automod/signature';
+import { perceptualHashes } from '../utils/automod/phash';
 import {
   recordImageMessage,
   shouldAlert,
@@ -35,6 +36,9 @@ export class MessageCreateListener extends Listener {
     if (signatures.length === 0) return;
 
     const now = Date.now();
+    // Perceptual hashes are best-effort (network fetch + decode); the metadata
+    // signatures still cover anything that fails to hash.
+    const hashes = await perceptualHashes(message);
     // New members get a stricter burst threshold so join-then-spam trips
     // faster; tenure is useless for compromised veterans, who are instead
     // caught by the fan-out/blocklist signals below.
@@ -49,13 +53,14 @@ export class MessageCreateListener extends Listener {
         channelId: message.channelId,
         messageId: message.id,
         signatures,
+        hashes,
       },
       isNewMember
         ? { burstThreshold: automodConfig.newMemberBurstThreshold }
         : {}
     );
 
-    const { blocked, matched } = await isBlocklisted(signatures);
+    const { blocked, matched } = isBlocklisted(signatures, hashes);
 
     let level: IncidentLevel | null = null;
     if (blocked) level = 'blocklist';
@@ -84,7 +89,10 @@ export class MessageCreateListener extends Listener {
           ? `Matched ${matched.length} known spam image${matched.length === 1 ? '' : 's'}`
           : detection.reason,
       messages,
-      signatures: level === 'blocklist' ? matched : detection.signatures,
+      // For a fresh detection, blocklist the fingerprints that triggered it.
+      // For a blocklist hit, reinforce with this message's fingerprints.
+      signatures: level === 'blocklist' ? signatures : detection.signatures,
+      hashes: level === 'blocklist' ? hashes : detection.hashes,
     });
 
     // Tiered enforcement: high-confidence signals act immediately; a

@@ -48,6 +48,11 @@ export const automodConfig = {
   burstWindowMs: posInt(process.env.AUTOMOD_BURST_WINDOW_MS, 60_000),
   /** Distinct channels the same image must appear in to flag a fan-out. */
   fanoutChannels: posInt(process.env.AUTOMOD_FANOUT_CHANNELS, 2),
+  /**
+   * Max Hamming distance (out of 64) for two perceptual hashes to count as the
+   * same image. Higher = more lenient/near-duplicate matching. Default 6.
+   */
+  phashThreshold: posInt(process.env.AUTOMOD_PHASH_THRESHOLD, 6),
   /** Sliding window (ms) for detecting cross-channel fan-out. */
   fanoutWindowMs: posInt(process.env.AUTOMOD_FANOUT_WINDOW_MS, 120_000),
   /** How long (ms) auto-applied/console timeouts last. Default 1 hour. */
