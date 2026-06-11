@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { container } from '@sapphire/framework';
 import { DATABASE_URL } from './config';
 
@@ -16,6 +17,9 @@ export const getPrisma = (): PrismaClient | null => prisma;
  * Attempt to connect to the database. Safe to call when `DATABASE_URL` is
  * unset (logs a notice and leaves the bot in in-memory mode) and when the
  * connection fails (logs the error and continues without persistence).
+ *
+ * Prisma 7 connects through a driver adapter rather than an embedded engine,
+ * so we hand it a `pg` connection backed by `DATABASE_URL`.
  */
 export async function initDatabase(): Promise<void> {
   if (!DATABASE_URL) {
@@ -25,7 +29,8 @@ export async function initDatabase(): Promise<void> {
     return;
   }
 
-  const client = new PrismaClient();
+  const adapter = new PrismaPg(DATABASE_URL);
+  const client = new PrismaClient({ adapter });
   try {
     await client.$connect();
     prisma = client;
