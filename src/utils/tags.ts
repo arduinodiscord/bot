@@ -67,7 +67,7 @@ const tags: Record<string, Tag> = {
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId('codeblock')
+          .setCustomId('tag:codeblock')
           .setLabel('Learn How to Share Code')
           .setStyle(ButtonStyle.Primary),
       ),
