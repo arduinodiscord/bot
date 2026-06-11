@@ -17,20 +17,29 @@ All commands are used as Discord slash commands (type `/` in Discord):
 | Command   | Usage Example              | Description                                                        |
 |-----------|---------------------------|--------------------------------------------------------------------|
 | `/about`  | `/about`                  | Shows information about the bot.                                   |
+| `/ping`   | `/ping`                   | Bot/API latency and uptime.                                       |
 | `/tag`    | `/tag name:<tag> [user:@username]` | Sends an informational tag to the bot-commands channel, optionally pinging a user. |
+| `/say`    | `/say channel:<#channel> title:<text> description:<text>` | Staff-only (Manage Server): send a custom embed to a channel. Optional `fields` (one `name \| value` per line) and `thumbnail`. |
 
 ### `/tag` options (alphabetical)
 
+- `ai` — The server's no-AI policy.
 - `ask` — Guidance on how to ask good questions.
 - `avrdude` — AVRDUDE error troubleshooting.
 - `codeblock` — How to format code in Discord.
+- `debounce` — Debouncing bouncy buttons/switches.
 - `espcomm` — ESP board communication troubleshooting.
+- `help` — How to use the bot and list of tags.
 - `hid` — Info about Arduino HID (keyboard/mouse) support.
+- `lab` — Recommended electronics lab equipment.
 - `language` — What language Arduino uses.
 - `levelShifter` — Logic level shifter explanation.
 - `libmissing` — Fixing missing library errors.
+- `needinfo` — Ask a user for the details needed to help them.
+- `ninevolt` — Why 9V batteries are a poor choice.
 - `power` — Powering Arduino safely.
 - `pullup` — Pull-up/pull-down resistor explanation.
+- `reinstall` — How to cleanly reinstall the Arduino IDE.
 - `wiki` — Link to the Arduino Discord community wiki.
 
 **Example:**  
@@ -72,6 +81,26 @@ msgs / Not spam** — so a human stays in the loop. Members with Manage Messages
 (timeout), Ban Members (ban), plus the **Message Content** privileged intent
 (already enabled in `index.ts`). Set `MOD_LOG_CHANNEL_ID` to enable the console;
 leaving it unset disables the automod entirely.
+
+## Server management
+
+These ambient features were ported from the legacy bot and modernized. Each
+**self-disables** until its channel/role id is configured (see
+[`.env.example`](.env.example)):
+
+- **Auto-crosspost** — automatically publishes messages in configured
+  announcement channels and logs the result (`CROSSPOST_CHANNEL_IDS`).
+- **Join/leave logging** — posts member join (with invite-source attribution)
+  and leave embeds to a log channel, and records best-effort join/leave
+  analytics when a database is configured (`JOIN_LEAVE_LOG_CHANNEL_ID`).
+- **Role-select buttons** — buttons on a configured message let members toggle
+  the event / server-update opt-in roles (`ROLE_SELECT_MESSAGE_ID`).
+- **Message-link flattening** — when someone posts a link to another message in
+  the server, the bot quotes that message inline for context.
+
+> The legacy file-extension attachment filter and `maintenance` mode were
+> intentionally dropped in favour of Discord-native AutoMod and modern
+> redeploy/hosting workflows.
 
 ## Environment Variables & Configuration
 

@@ -1,7 +1,8 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { TextChannel, EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, MessageFlags } from 'discord.js';
 import { BOT_COMMANDS_CHANNEL_ID } from '../utils/config';
 import tags from '../utils/tags';
+import { resolveTag } from '../utils/resolveTag';
 import universalEmbed from '../index';
 
 export class TagCommand extends Command {
@@ -56,108 +57,48 @@ export class TagCommand extends Command {
   }
 
   public override async chatInputRun(
-    interaction: Command.ChatInputCommandInteraction,
+    interaction: Command.ChatInputCommandInteraction
   ) {
-    const option = interaction.options.get('name');
-    const tagName = option?.value as keyof typeof tags;
+    const tagName = interaction.options.getString('name', true);
     const user = interaction.options.getUser('user');
+
     const tag = tags[tagName];
-    const botCommandsOnly = tag.botCommandsOnly !== false; // Defaults to true if missing
-
-    // Role restriction check (uncomment and use if needed)
-    // if (tag.requiredRoles) {
-    //   const member = await interaction.guild?.members.fetch(interaction.user.id);
-    //   const hasRole = member?.roles.cache.some(role =>
-    //     tag.requiredRoles.includes(role.name) || tag.requiredRoles.includes(role.id)
-    //   );
-    //   if (!hasRole) {
-    //     return interaction.reply({
-    //       content: "You do not have permission to use this tag.",
-    //       ephemeral: true,
-    //     });
-    //   }
-    // }
-
-    // If tag is allowed in any channel, reply there
-    if (!botCommandsOnly) {
-      if (typeof tag === 'object' && tag.content) {
-        return interaction.reply({
-          content:
-            typeof tag.content === 'function'
-              ? tag.content(user?.id)
-              : tag.content,
-          ephemeral: false,
-        });
-      } else if (typeof tag === 'string') {
-        return interaction.reply({ content: tag, ephemeral: false });
-      }
-    }
-
-    // Tag not found
-    if (!tag) {
+    const payload = resolveTag(tagName, user?.id);
+    if (!tag || !payload)
       return interaction.reply({
         content: 'That tag does not exist.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
-    }
 
-    // Fetch bot-commands channel
+    // Ping the requested user when the tag didn't already include a mention.
+    if (user && !payload.content) payload.content = `<@${user.id}>`;
 
-    const botCommandsChannel = await interaction.guild?.channels.fetch(
-      BOT_COMMANDS_CHANNEL_ID,
-    );
+    // Tags default to bot-commands-channel-only unless they opt out.
+    if (tag.botCommandsOnly === false) return interaction.reply(payload);
 
-    if (!botCommandsChannel || !(botCommandsChannel instanceof TextChannel)) {
+    const botCommandsChannel = await interaction.client.channels
+      .fetch(BOT_COMMANDS_CHANNEL_ID)
+      .catch(() => null);
+    if (!botCommandsChannel?.isSendable())
       return interaction.reply({
-        content: 'Bot commands channel not found or is not a text channel.',
-        ephemeral: true,
+        content: 'The bot-commands channel is unavailable.',
+        flags: MessageFlags.Ephemeral,
       });
-    }
 
-    let messagePayload: any = {};
+    await botCommandsChannel.send(payload);
 
-    if (typeof tag === 'object') {
-      messagePayload = { ...tag };
-      // If tag.content is a function, call it with user id
-      if (tag.content) {
-        messagePayload.content =
-          typeof tag.content === 'function'
-            ? tag.content(user?.id)
-            : tag.content;
-      }
-      if (user && !messagePayload.content) {
-        messagePayload.content = `<@${user.id}>`;
-      }
-    } else {
-      messagePayload.content = user ? `<@${user.id}> ${tag}` : tag;
-    }
+    const pointer = new EmbedBuilder(universalEmbed)
+      .setTitle('Requested info was sent in the Bot-Commands Channel')
+      .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`);
 
-    await botCommandsChannel.send(messagePayload);
-
-    if (user) {
-      // Notify the user in the original channel (not ephemeral)
+    if (user)
       return interaction.reply({
         content: `<@${user.id}> you've been tagged with standard helpful info.`,
-        ephemeral: false,
-        embeds: [
-          new EmbedBuilder(universalEmbed)
-            .setTitle('Your answer is in the Bot-Commands Channel...')
-            .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`), //todo: 'info about <@$tagName}>!' would be better
-        ],
+        embeds: [pointer],
       });
-    } else {
-      // Ephemeral reply for normal tag
-      return interaction.reply({
-        content: ``,
-        ephemeral: true,
-        embeds: [
-          new EmbedBuilder(universalEmbed)
-            .setTitle('Requested info was sent in the Bot-Commands Channel')
-            .setDescription(
-              `See <#${BOT_COMMANDS_CHANNEL_ID}>... only you can see this message...`,
-            ),
-        ],
-      });
-    }
+    return interaction.reply({
+      embeds: [pointer],
+      flags: MessageFlags.Ephemeral,
+    });
   }
 }
