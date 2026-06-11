@@ -22,6 +22,12 @@ export const {
   // Optional: persistence for the spam-image blocklist. When unset the bot
   // runs fully in-memory and the blocklist resets on restart.
   DATABASE_URL = '',
+  // Server-management features. Each self-disables when its id is unset.
+  JOIN_LEAVE_LOG_CHANNEL_ID = '', // member join/leave + invite-source logging
+  CROSSPOST_LOG_CHANNEL_ID = '', // where auto-crosspost results are logged
+  ROLE_SELECT_MESSAGE_ID = '', // message whose buttons toggle opt-in roles
+  EVENT_NOTIFS_ROLE_ID = '', // role toggled by the "events" button
+  SERVER_UPDATE_NOTIFS_ROLE_ID = '', // role toggled by the "server_updates" button
 } = process.env;
 
 /** Parse a positive integer from the environment, falling back to a default. */
@@ -36,6 +42,9 @@ const idList = (value: string | undefined): string[] =>
     .split(',')
     .map((id) => id.trim())
     .filter((id) => id.length > 0);
+
+/** Announcement/feed channels whose messages are auto-published (crossposted). */
+export const crosspostChannelIds = idList(process.env.CROSSPOST_CHANNEL_IDS);
 
 /**
  * Tunables for the image-spam detector. Every value is overridable via the
