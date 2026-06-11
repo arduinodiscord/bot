@@ -87,17 +87,21 @@ export class TagCommand extends Command {
 
     await botCommandsChannel.send(payload);
 
-    const pointer = new EmbedBuilder(universalEmbed)
-      .setTitle('Requested info was sent in the Bot-Commands Channel')
-      .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`);
-
     if (user)
       return interaction.reply({
         content: `<@${user.id}> you've been tagged with standard helpful info.`,
-        embeds: [pointer],
+        embeds: [
+          new EmbedBuilder(universalEmbed)
+            .setTitle('Your answer is in the Bot-Commands Channel...')
+            .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`),
+        ],
       });
     return interaction.reply({
-      embeds: [pointer],
+      embeds: [
+        new EmbedBuilder(universalEmbed)
+          .setTitle('Requested info was sent in the Bot-Commands Channel')
+          .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`),
+      ],
       flags: MessageFlags.Ephemeral,
     });
   }
