@@ -81,6 +81,7 @@ All commands are Discord **slash commands** — type `/` in the server.
 |---|---|
 | `/tag name:<tag> [user:@user]` | Post a curated troubleshooting guide, optionally pinging someone |
 | `/solved [helper:@user]` | Mark the current help post solved (and thank a helper); closes the thread |
+| `/openposts` | List open help posts waiting for an answer, oldest first (ephemeral) |
 | `/about` | Bot, Node, and version info |
 | `/ping` | Latency & uptime |
 | `/say channel:<#ch> title:… description:…` | **Staff only** — send a custom embed (optional `fields` as `name \| value` per line, and `thumbnail`) |
@@ -173,22 +174,34 @@ Ambient helpers, each self-disabling until configured:
 Features aimed at taking repetitive load off the community members who answer
 the most questions:
 
-- **Keyword → tag suggestions** — when a message contains a known error
-  signature (AVRDUDE, missing-library, ESP upload…), the bot offers the matching
-  tag via a single button, so askers self-serve before a helper has to repeat a
-  canned answer. Per-user cooldown; toggle with `TAG_SUGGEST_ENABLED`.
+- **Keyword → tag suggestions** — when a message matches a known signature
+  (AVRDUDE, missing-library, ESP upload, level shifters, power, pull-ups, 9V,
+  HID, debounce…), the bot offers the matching tag via a single button, so
+  askers self-serve before a helper repeats a canned answer. Each trigger lives
+  next to its tag in `tags.ts`. Per-user cooldown; toggle with `TAG_SUGGEST_ENABLED`.
+- **Unformatted-code nudge** — detects code pasted as plain text and offers the
+  `codeblock` tag, the single most-repeated ask. Toggle `CODE_FORMAT_SUGGEST_ENABLED`.
+- **"Just ask" nudge** — replies to low-effort pings ("can I ask?", "anyone
+  here?") with the `ask` tag. Conservative patterns; toggle `ASK_SUGGEST_ENABLED`.
 - **"Request more info" context-menu** — right-click any message → *Request more
   info* to post the `needinfo` checklist to the asker in one click.
+- **Auto-needinfo on thin posts** — a new help-forum post with no code, image,
+  or detail auto-gets the `needinfo` checklist (`HELP_AUTO_NEEDINFO`).
 - **Solve workflow** — a **Mark Solved** button on new help-forum posts (set
   `HELP_FORUM_CHANNEL_IDS`) plus `/solved [helper:@user]`, which closes the post
   and credits whoever helped.
+- **Stale-post nudge & auto-archive** — abandoned help posts get a "still need
+  help?" nudge after a day, then auto-archive if no one replies
+  (`HELP_STALE_NUDGE_HOURS` / `HELP_STALE_ARCHIVE_HOURS`).
+- **`/openposts`** — an ephemeral digest of open help posts, oldest-waiting
+  first, so helpers can pick up whatever's been waiting longest.
 
 ## 🏗️ Project structure
 
 ```
 src/
 ├── index.ts                 # client bootstrap (intents, presence, login)
-├── commands/                # slash commands (about, ping, tag, say)
+├── commands/                # slash commands (about, ping, tag, say, solved, openposts)
 ├── listeners/               # gateway events (ready, messages, members, invites…)
 ├── interaction-handlers/    # button handlers (spam console, role-select, tag buttons)
 └── utils/

@@ -6,54 +6,110 @@ import {
   EmbedBuilder,
   type Message,
 } from 'discord.js';
-import { SERVER_ID, tagSuggestEnabled } from '../utils/config';
+import {
+  SERVER_ID,
+  tagSuggestEnabled,
+  codeFormatSuggestEnabled,
+  askSuggestEnabled,
+} from '../utils/config';
+import tags, { type Tag, type TagSuggestion } from '../utils/tags';
 import universalEmbed from '../utils/embed';
 
 interface Suggestion {
-  pattern: RegExp;
   tag: string;
   prompt: string;
+  /** Label for the button that reveals the tag. */
+  label: string;
 }
 
-// High-precision signatures for the most-repeated questions. Kept conservative
-// to avoid false positives; the suggestion is a single button, never the full
-// answer dumped into the channel.
-const SUGGESTIONS: Suggestion[] = [
-  {
-    pattern: /stk500|avrdude[:\s]|not in sync/i,
-    tag: 'avrdude',
-    prompt: 'Looks like an **AVRDUDE upload error**.',
-  },
-  {
-    pattern:
-      /no such file or directory|fatal error:.*\.h|\.h: No such file|library.*(not found|is not installed|missing)/i,
-    tag: 'libmissing',
-    prompt: 'Looks like a **missing library / header** error.',
-  },
-  {
-    pattern:
-      /espcomm|esptool|failed to connect to esp|wrong boot mode|a fatal error occurred.*(packet|connect|timed out)/i,
-    tag: 'espcomm',
-    prompt: 'Looks like an **ESP upload / connection** problem.',
-  },
-];
+// Keyword -> tag signatures, collected from the tags that declare a `suggest`
+// rule. Co-locating the trigger with the tag keeps adding one a single edit.
+const keywordSuggestions = Object.entries(tags)
+  .filter(
+    (entry): entry is [string, Tag & { suggest: TagSuggestion }] =>
+      Boolean(entry[1].suggest)
+  )
+  .map(([tag, t]) => ({ tag, pattern: t.suggest.pattern, prompt: t.suggest.prompt }));
 
 const COOLDOWN_MS = 5 * 60_000;
 const lastSuggested = new Map<string, number>();
 
+const ARDUINO_CODE =
+  /\b(void\s+setup\s*\(|void\s+loop\s*\(|#include\s*[<"]|pinMode\s*\(|digital(Write|Read)\s*\(|analog(Write|Read)\s*\(|Serial\.(begin|print))/;
+
+/**
+ * Heuristic for code pasted as plain text. Conservative: an unmistakable
+ * Arduino signature in a multi-line paste, or a sizeable multi-line blob dense
+ * with code punctuation. Anything already in a code fence is left alone.
+ */
+function looksLikeUnformattedCode(content: string): boolean {
+  if (content.includes('```')) return false;
+  const lines = content.split('\n').length;
+  const semicolons = (content.match(/;/g) ?? []).length;
+  const braces = (content.match(/[{}]/g) ?? []).length;
+  if (ARDUINO_CODE.test(content) && (lines >= 4 || semicolons >= 2)) return true;
+  return lines >= 5 && semicolons >= 3 && braces >= 2;
+}
+
+// Short messages that are a request to ask / a ping for attention rather than
+// an actual question. Anchored and length-bounded to limit false positives.
+const LOW_EFFORT_ASK = [
+  /^(can|could|may) (i|someone|anyone|u|you)\b.{0,20}\b(help|ask)\b/i,
+  /^(can|may) i ask( a)?( quick)?( question)?\s*\??$/i,
+  /^(is\s+)?(any\s?(one|body)|some\s?(one|body))\s+(here|around|online|there|available)\s*\??$/i,
+  /\b(any\s?(one|body)|some\s?(one|body))\b.{0,30}\b(good with|know about|help with)\b/i,
+  /^(help|help me|need help|i need help|pls help|please help)\b[!.\s]*$/i,
+];
+
+function looksLikeLowEffortAsk(content: string): boolean {
+  const text = content.trim();
+  if (text.length > 80) return false;
+  return LOW_EFFORT_ASK.some((p) => p.test(text));
+}
+
+/** Pick at most one suggestion, in priority order, honouring per-type toggles. */
+function detect(content: string): Suggestion | null {
+  if (tagSuggestEnabled) {
+    const match = keywordSuggestions.find((s) => s.pattern.test(content));
+    if (match)
+      return { tag: match.tag, prompt: match.prompt, label: 'Show steps' };
+  }
+  if (codeFormatSuggestEnabled && looksLikeUnformattedCode(content))
+    return {
+      tag: 'codeblock',
+      prompt: 'That looks like **unformatted code**.',
+      label: 'How to format code',
+    };
+  if (askSuggestEnabled && looksLikeLowEffortAsk(content))
+    return {
+      tag: 'ask',
+      prompt:
+        'No need to ask to ask — just **post your question with details** and someone will help.',
+      label: 'How to ask',
+    };
+  return null;
+}
+
+/**
+ * Watches messages and, when one matches a high-precision signature, offers the
+ * relevant tag via a single button (never the full answer). Three detectors —
+ * keyword/error signatures, unformatted code, and low-effort "can I ask" pings —
+ * share one reply, one priority order, and one per-user cooldown.
+ */
 export class TagSuggestListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
     super(context, { ...options, event: Events.MessageCreate });
   }
 
   public async run(message: Message) {
-    if (!tagSuggestEnabled) return;
+    if (!tagSuggestEnabled && !codeFormatSuggestEnabled && !askSuggestEnabled)
+      return;
     if (!message.inGuild() || message.author.bot) return;
     if (message.guildId !== SERVER_ID) return;
     if (message.content.length < 10) return;
 
-    const match = SUGGESTIONS.find((s) => s.pattern.test(message.content));
-    if (!match) return;
+    const suggestion = detect(message.content);
+    if (!suggestion) return;
 
     const now = Date.now();
     const last = lastSuggested.get(message.author.id);
@@ -61,12 +117,12 @@ export class TagSuggestListener extends Listener {
     lastSuggested.set(message.author.id, now);
 
     const embed = new EmbedBuilder(universalEmbed).setDescription(
-      `💡 ${match.prompt} Tap below for troubleshooting steps.`
+      `💡 ${suggestion.prompt} Tap below for the details.`
     );
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setCustomId(`tag:${match.tag}`)
-        .setLabel('Show steps')
+        .setCustomId(`tag:${suggestion.tag}`)
+        .setLabel(suggestion.label)
         .setStyle(ButtonStyle.Primary)
     );
 

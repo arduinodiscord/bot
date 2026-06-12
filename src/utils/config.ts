@@ -55,6 +55,30 @@ export const helpForumChannelIds = idList(process.env.HELP_FORUM_CHANNEL_IDS);
 /** Whether the keyword -> tag auto-suggester is active (on unless "false"). */
 export const tagSuggestEnabled = process.env.TAG_SUGGEST_ENABLED !== 'false';
 
+/** Whether to nudge users who paste unformatted code toward the codeblock tag. */
+export const codeFormatSuggestEnabled =
+  process.env.CODE_FORMAT_SUGGEST_ENABLED !== 'false';
+
+/** Whether to nudge "can I ask?" / "anyone here?" non-questions toward the ask tag. */
+export const askSuggestEnabled = process.env.ASK_SUGGEST_ENABLED !== 'false';
+
+/**
+ * Help-forum quality-of-life knobs. The auto-needinfo and stale-post sweep only
+ * do anything when `helpForumChannelIds` is configured.
+ */
+export const helpAssistConfig = {
+  /** Auto-post the needinfo checklist when a new help post is too thin. */
+  autoNeedinfo: process.env.HELP_AUTO_NEEDINFO !== 'false',
+  /** A starter message shorter than this (and without code) counts as "thin". */
+  needinfoMinChars: posInt(process.env.HELP_NEEDINFO_MIN_CHARS, 60),
+  /** Whether the stale-post nudge/auto-archive sweep runs. */
+  staleSweepEnabled: process.env.HELP_STALE_SWEEP_ENABLED !== 'false',
+  /** Idle time (ms) before an open help post gets a "still need help?" nudge. */
+  staleNudgeMs: posInt(process.env.HELP_STALE_NUDGE_HOURS, 24) * 60 * 60 * 1000,
+  /** Idle time (ms) after a nudge, with no human reply, before auto-archiving. */
+  staleArchiveMs: posInt(process.env.HELP_STALE_ARCHIVE_HOURS, 72) * 60 * 60 * 1000,
+};
+
 /**
  * Tunables for the image-spam detector. Every value is overridable via the
  * environment so moderators can adjust thresholds without a redeploy.

@@ -11,11 +11,23 @@ import universalEmbed from './embed';
  * rich embeds, a few are plain (or templated) text, and some opt out of the
  * bot-commands-channel-only behaviour.
  */
+/**
+ * An optional auto-suggest rule for a tag. When a user's message matches
+ * `pattern`, the suggestion engine offers this tag via a single button with
+ * `prompt` as the lead-in. Co-locating the trigger with the tag means adding a
+ * suggestible tag is a one-place change.
+ */
+export interface TagSuggestion {
+  pattern: RegExp;
+  prompt: string;
+}
+
 export interface Tag {
   embeds?: EmbedBuilder[];
   components?: ActionRowBuilder<ButtonBuilder>[];
   content?: string | ((user?: string) => string);
   botCommandsOnly?: boolean;
+  suggest?: TagSuggestion;
 }
 
 const tags: Record<string, Tag> = {
@@ -75,6 +87,10 @@ const tags: Record<string, Tag> = {
   },
 
   avrdude: {
+    suggest: {
+      pattern: /stk500|avrdude[:\s]|not in sync/i,
+      prompt: 'Looks like an **AVRDUDE upload error**.',
+    },
     embeds: [
       new EmbedBuilder(universalEmbed)
         .setTitle('Solving AVRDUDE Communication Errors (Try These in Order)')
@@ -158,6 +174,11 @@ const tags: Record<string, Tag> = {
   },
 
   debounce: {
+    suggest: {
+      pattern:
+        /debounc|button.*(bounc|multiple|several times|twice)|reading (multiple|several) (presses|times)/i,
+      prompt: 'Sounds like a **switch debouncing** problem.',
+    },
     embeds: [
       new EmbedBuilder(universalEmbed)
         .setTitle('🔘 Taming Bouncy Buttons: Understanding Debouncing')
@@ -219,6 +240,11 @@ const tags: Record<string, Tag> = {
   },
 
   espcomm: {
+    suggest: {
+      pattern:
+        /espcomm|esptool|failed to connect to esp|wrong boot mode|a fatal error occurred.*(packet|connect|timed out)/i,
+      prompt: 'Looks like an **ESP upload / connection** problem.',
+    },
     embeds: [
       new EmbedBuilder(universalEmbed)
         .setTitle(
@@ -300,6 +326,11 @@ const tags: Record<string, Tag> = {
   },
 
   hid: {
+    suggest: {
+      pattern:
+        /\bhid\b|keyboard\.h|mouse\.h|emulat(e|ing) (a )?(keyboard|mouse)|act as a (keyboard|mouse)/i,
+      prompt: 'Looks like a **USB HID (keyboard/mouse)** question.',
+    },
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
         .setTitle('Can Your Arduino Be Used as a Keyboard or Mouse?')
@@ -364,6 +395,11 @@ const tags: Record<string, Tag> = {
   },
 
   levelShifter: {
+    suggest: {
+      pattern:
+        /level\s?shift|logic[- ]?level|3\.3\s?v?\s*(to|->|→)\s*5\s?v|5\s?v?\s*(to|->|→)\s*3\.3\s?v/i,
+      prompt: 'Sounds like a **logic-level / voltage-level** question.',
+    },
     embeds: [
       new EmbedBuilder(universalEmbed)
         .setTitle('Logic Level Shifters: Protecting Your 3.3V Modules')
@@ -411,6 +447,11 @@ const tags: Record<string, Tag> = {
   },
 
   libmissing: {
+    suggest: {
+      pattern:
+        /no such file or directory|fatal error:.*\.h|\.h: No such file|library.*(not found|is not installed|missing)/i,
+      prompt: 'Looks like a **missing library / header** error.',
+    },
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
         .setTitle('Solving Library Errors (Such as "yourlib.h not found")')
@@ -469,6 +510,10 @@ const tags: Record<string, Tag> = {
   },
 
   ninevolt: {
+    suggest: {
+      pattern: /\b9\s?v(olt)?\b.*batter|batter.*\b9\s?v(olt)?\b|smoke (alarm|detector) batter/i,
+      prompt: 'Heads up — this looks like the **9V battery** pitfall.',
+    },
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
         .setTitle('Nine Volt usefulness')
@@ -482,6 +527,11 @@ const tags: Record<string, Tag> = {
   },
 
   power: {
+    suggest: {
+      pattern:
+        /brown\s?out|not enough (power|current)|voltage drop|how (do i|to) power (my|the|a)|powering (my|the|a) (board|arduino|esp|nano|uno|mega)/i,
+      prompt: 'Looks like a **powering your board** question.',
+    },
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
         .setTitle('Powering an Arduino')
@@ -516,6 +566,11 @@ const tags: Record<string, Tag> = {
   },
 
   pullup: {
+    suggest: {
+      pattern:
+        /pull[\s-]?up|pull[\s-]?down|floating (pin|input)|button.*(random|float|noisy)|reads? (randomly|high and low)/i,
+      prompt: 'Sounds like a **pull-up / floating input** issue.',
+    },
     embeds: [
       new EmbedBuilder({ ...universalEmbed })
         .setTitle('What does pull-up (or pull-down) mean, and how do I use it?')

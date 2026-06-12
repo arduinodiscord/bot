@@ -3,6 +3,7 @@ import type { Client } from 'discord.js';
 import { initDatabase } from '../utils/db';
 import { loadBlocklist } from '../utils/automod/blocklist';
 import { seedInviteCache } from '../utils/inviteCache';
+import { startStaleHelpSweep } from '../utils/staleHelpSweep';
 import { JOIN_LEAVE_LOG_CHANNEL_ID, SERVER_ID } from '../utils/config';
 
 export class ReadyListener extends Listener {
@@ -22,6 +23,8 @@ export class ReadyListener extends Listener {
     await loadBlocklist();
     // Seed the invite-use cache so join logging can attribute the source.
     await this.fillInviteCache(client);
+    // Begin nudging/auto-archiving stale help posts (no-op unless configured).
+    startStaleHelpSweep(client);
   }
 
   private async fillInviteCache(client: Client<true>): Promise<void> {

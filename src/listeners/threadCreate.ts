@@ -6,13 +6,18 @@ import {
   EmbedBuilder,
   type AnyThreadChannel,
 } from 'discord.js';
-import { helpForumChannelIds } from '../utils/config';
+import { helpForumChannelIds, helpAssistConfig } from '../utils/config';
+import { resolveTag } from '../utils/resolveTag';
 import universalEmbed from '../utils/embed';
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
- * Posts a "Mark Solved" button when a new post is created in a configured help
- * forum, so the asker can close it (and credit a helper) in one click. Disabled
- * unless HELP_FORUM_CHANNEL_IDS is set.
+ * On a new post in a configured help forum:
+ *  - posts a "Mark Solved" button so the asker can close it in one click, and
+ *  - if the opening post is too thin (short, no code, no image), auto-posts the
+ *    `needinfo` checklist so helpers don't have to ask for the basics.
+ * Disabled unless HELP_FORUM_CHANNEL_IDS is set.
  */
 export class ThreadCreateListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
@@ -36,5 +41,34 @@ export class ThreadCreateListener extends Listener {
     );
 
     await thread.send({ embeds: [embed], components: [row] }).catch(() => null);
+
+    if (helpAssistConfig.autoNeedinfo) await this.maybeRequestInfo(thread);
+  }
+
+  /** Post the needinfo checklist when the opening message lacks substance. */
+  private async maybeRequestInfo(thread: AnyThreadChannel): Promise<void> {
+    // The starter message can lag a moment behind ThreadCreate for forum posts.
+    let starter = await thread.fetchStarterMessage().catch(() => null);
+    if (!starter) {
+      await delay(1500);
+      starter = await thread.fetchStarterMessage().catch(() => null);
+    }
+    if (!starter) return; // can't judge it — leave it alone
+
+    const hasImage = starter.attachments.size > 0;
+    const hasCode = starter.content.includes('```');
+    const tooShort =
+      starter.content.trim().length < helpAssistConfig.needinfoMinChars;
+    if (hasImage || hasCode || !tooShort) return;
+
+    const payload = resolveTag('needinfo', starter.author.id);
+    if (!payload?.content) return;
+
+    await thread
+      .send({
+        content: payload.content,
+        allowedMentions: { users: [starter.author.id] },
+      })
+      .catch(() => null);
   }
 }
