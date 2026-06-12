@@ -80,9 +80,13 @@ All commands are Discord **slash commands** — type `/` in the server.
 | Command | Description |
 |---|---|
 | `/tag name:<tag> [user:@user]` | Post a curated troubleshooting guide, optionally pinging someone |
+| `/solved [helper:@user]` | Mark the current help post solved (and thank a helper); closes the thread |
 | `/about` | Bot, Node, and version info |
 | `/ping` | Latency & uptime |
 | `/say channel:<#ch> title:… description:…` | **Staff only** — send a custom embed (optional `fields` as `name \| value` per line, and `thumbnail`) |
+
+Plus a **"Request more info"** right-click (message context-menu) action that
+posts the `needinfo` checklist to an asker in one click.
 
 <details>
 <summary><strong>📚 Available <code>/tag</code> topics</strong></summary>
@@ -130,6 +134,21 @@ Ambient helpers, each self-disabling until configured:
 - **Message-link flattening** — quote a linked message inline for context.
 
 ---
+
+## 🙌 Helper assist
+
+Features aimed at taking repetitive load off the community members who answer
+the most questions:
+
+- **Keyword → tag suggestions** — when a message contains a known error
+  signature (AVRDUDE, missing-library, ESP upload…), the bot offers the matching
+  tag via a single button, so askers self-serve before a helper has to repeat a
+  canned answer. Per-user cooldown; toggle with `TAG_SUGGEST_ENABLED`.
+- **"Request more info" context-menu** — right-click any message → *Request more
+  info* to post the `needinfo` checklist to the asker in one click.
+- **Solve workflow** — a **Mark Solved** button on new help-forum posts (set
+  `HELP_FORUM_CHANNEL_IDS`) plus `/solved [helper:@user]`, which closes the post
+  and credits whoever helped.
 
 ## 🏗️ Project structure
 

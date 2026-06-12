@@ -47,6 +47,15 @@ const idList = (value: string | undefined): string[] =>
 export const crosspostChannelIds = idList(process.env.CROSSPOST_CHANNEL_IDS);
 
 /**
+ * Forum channels treated as "help" forums: new posts get a "Mark Solved" button.
+ * The /solved command works in any thread regardless of this list.
+ */
+export const helpForumChannelIds = idList(process.env.HELP_FORUM_CHANNEL_IDS);
+
+/** Whether the keyword -> tag auto-suggester is active (on unless "false"). */
+export const tagSuggestEnabled = process.env.TAG_SUGGEST_ENABLED !== 'false';
+
+/**
  * Tunables for the image-spam detector. Every value is overridable via the
  * environment so moderators can adjust thresholds without a redeploy.
  */
