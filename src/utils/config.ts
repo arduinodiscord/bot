@@ -111,4 +111,32 @@ export const automodConfig = {
    * we only alert moderators and let them decide.
    */
   floodAutoTimeout: process.env.AUTOMOD_FLOOD_AUTO_TIMEOUT === 'true',
+
+  // --- Cross-channel question-spam detector ---
+  /** Whether the cross-channel question-spam detector is active (on unless "false"). */
+  crosspostEnabled: process.env.AUTOMOD_CROSSPOST_ENABLED !== 'false',
+  /**
+   * Distinct channels the same (or near-identical) message must span within
+   * `crosspostWindowMs` to flag a cross-channel repeat. Applies at any tenure.
+   */
+  crosspostChannels: posInt(process.env.AUTOMOD_CROSSPOST_CHANNELS, 2),
+  /**
+   * Distinct channels a *new* member must post substantive messages in within
+   * the window to flag content-agnostic "shotgunning" (they reworded enough to
+   * dodge the similarity check but are clearly asking everywhere at once).
+   */
+  crosspostSpreadChannels: posInt(process.env.AUTOMOD_CROSSPOST_SPREAD_CHANNELS, 3),
+  /** Sliding window (ms) for cross-channel detection. Default 2 minutes. */
+  crosspostWindowMs: posInt(process.env.AUTOMOD_CROSSPOST_WINDOW_MS, 120_000),
+  /**
+   * Minimum trimmed length for a message to be considered a "question" worth
+   * tracking — keeps greetings/reactions ("hi", "ok") from tripping the
+   * detector. Default 12.
+   */
+  crosspostMinChars: posInt(process.env.AUTOMOD_CROSSPOST_MIN_CHARS, 12),
+  /**
+   * Token-overlap (Jaccard) percentage at which two messages count as the
+   * "same" question. Higher = stricter. Default 80%.
+   */
+  crosspostSimilarityPct: posInt(process.env.AUTOMOD_CROSSPOST_SIMILARITY_PCT, 80),
 };

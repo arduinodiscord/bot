@@ -13,6 +13,12 @@ import {
   shouldAlertFlood,
   markFloodAlerted,
 } from '../utils/automod/flood';
+import {
+  recordTextMessage,
+  shouldAlertCrosspost,
+  markCrosspostAlerted,
+  tokenize,
+} from '../utils/automod/crosspost';
 import { isBlocklisted } from '../utils/automod/blocklist';
 import {
   createIncident,
@@ -37,9 +43,10 @@ export class MessageCreateListener extends Listener {
     if (!MOD_LOG_CHANNEL_ID) return;
     if (message.member && this.isImmune(message.member)) return;
 
-    // Text-flooding runs independently of the image automod below: a user
-    // fragmenting one thought across many tiny messages rarely posts images.
+    // Text-flooding and cross-channel question spam run independently of the
+    // image automod below: they key off message text, not attachments.
     await this.runFlood(message);
+    await this.runCrosspost(message);
 
     const signatures = imageSignatures(message);
     if (signatures.length === 0) return;
@@ -51,10 +58,7 @@ export class MessageCreateListener extends Listener {
     // New members get a stricter burst threshold so join-then-spam trips
     // faster; tenure is useless for compromised veterans, who are instead
     // caught by the fan-out/blocklist signals below.
-    const isNewMember = Boolean(
-      message.member?.joinedTimestamp &&
-        now - message.member.joinedTimestamp < automodConfig.newMemberWindowMs
-    );
+    const isNewMember = this.isNewMember(message.member, now);
     const detection = recordImageMessage(
       message.author.id,
       {
@@ -173,10 +177,76 @@ export class MessageCreateListener extends Listener {
     await this.postAlert(message, incident, autoActed);
   }
 
+  /**
+   * Detect a user fanning the same question across many channels — the classic
+   * new-joiner "ask everywhere at once" pattern. High-confidence near-identical
+   * repeats auto-delete the duplicate copies (keeping the first); the broader
+   * new-member spread signal only alerts. Tenure is read the same way as the
+   * image automod: new members are scrutinised harder.
+   */
+  private async runCrosspost(message: Message<true>): Promise<void> {
+    if (!automodConfig.crosspostEnabled) return;
+
+    const content = message.content.trim();
+    if (content.length < automodConfig.crosspostMinChars) return;
+
+    const now = Date.now();
+    const detection = recordTextMessage(
+      message.author.id,
+      {
+        at: now,
+        channelId: message.channelId,
+        messageId: message.id,
+        tokens: tokenize(content),
+      },
+      { isNewMember: this.isNewMember(message.member, now) }
+    );
+    if (!detection) return;
+    if (!shouldAlertCrosspost(message.author.id, now)) return;
+    markCrosspostAlerted(message.author.id, now);
+
+    const messages = detection.messages.map((m) => ({
+      channelId: m.channelId,
+      messageId: m.messageId,
+    }));
+    const incident = createIncident({
+      userId: message.author.id,
+      guildId: message.guildId,
+      level: 'crosspost',
+      reason: detection.reason,
+      messages,
+      // Cross-posting leaves no image fingerprints to blocklist.
+      signatures: [],
+      hashes: [],
+    });
+
+    // Auto-delete only genuine duplicates: for a near-identical fan-out, drop
+    // every copy but the first. The content-agnostic spread signal isn't a set
+    // of duplicates, so it only alerts and waits for a human.
+    let autoActed = false;
+    if (detection.kind === 'similar' && messages.length > 1) {
+      const deleted = await deleteIncidentMessages(container.client, {
+        ...incident,
+        messages: messages.slice(1),
+      }).catch(() => 0);
+      autoActed = deleted > 0;
+    }
+
+    await this.postAlert(message, incident, autoActed);
+  }
+
   private isImmune(member: GuildMember): boolean {
     if (member.permissions.has(PermissionFlagsBits.ManageMessages)) return true;
     return automodConfig.immuneRoleIds.some((roleId) =>
       member.roles.cache.has(roleId)
+    );
+  }
+
+  /** Whether a member is still within the configured "new member" window. */
+  private isNewMember(member: GuildMember | null, now: number): boolean {
+    return Boolean(
+      member?.joinedTimestamp &&
+        now - member.joinedTimestamp < automodConfig.newMemberWindowMs
     );
   }
 

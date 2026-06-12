@@ -5,7 +5,12 @@ import { randomUUID } from 'node:crypto';
  * and `blocklist` come from the image-spam detector; `flood` from the
  * text-flooding detector.
  */
-export type IncidentLevel = 'burst' | 'fanout' | 'blocklist' | 'flood';
+export type IncidentLevel =
+  | 'burst'
+  | 'fanout'
+  | 'blocklist'
+  | 'flood'
+  | 'crosspost';
 
 export interface IncidentMessage {
   channelId: string;

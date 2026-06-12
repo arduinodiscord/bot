@@ -20,6 +20,7 @@ const LEVEL_COLOR: Record<IncidentLevel, number> = {
   blocklist: 0xe03131,
   burst: 0xf08c00, // needs review — amber
   flood: 0xf08c00, // needs review — amber
+  crosspost: 0xe03131, // cross-channel — red
 };
 
 const LEVEL_LABEL: Record<IncidentLevel, string> = {
@@ -27,6 +28,7 @@ const LEVEL_LABEL: Record<IncidentLevel, string> = {
   blocklist: 'Known spam image',
   burst: 'Image burst',
   flood: 'Message flooding',
+  crosspost: 'Cross-channel question spam',
 };
 
 /** Headline shown at the top of an alert, by incident kind. */
@@ -35,6 +37,19 @@ const LEVEL_TITLE: Record<IncidentLevel, string> = {
   blocklist: '🚨 Possible image spam',
   burst: '🚨 Possible image spam',
   flood: '🚨 Possible message flooding',
+  crosspost: '🚨 Possible cross-channel question spam',
+};
+
+/** What an automatic action did, shown when the bot acted before a human. */
+const HIGH_CONFIDENCE_NOTE =
+  'High-confidence signal: the messages were deleted and the user was timed out automatically. Review and escalate or reverse below.';
+const AUTO_ACTION_NOTE: Record<IncidentLevel, string> = {
+  fanout: HIGH_CONFIDENCE_NOTE,
+  blocklist: HIGH_CONFIDENCE_NOTE,
+  burst: HIGH_CONFIDENCE_NOTE,
+  flood: 'The user was timed out automatically. Review and escalate or reverse below.',
+  crosspost:
+    'The duplicate crossposts were deleted automatically (the first copy was kept). Review and escalate or reverse below.',
 };
 
 /** One moderation action button bound to an incident id. */
@@ -107,10 +122,7 @@ export function buildAlertPayload(
   if (autoActed)
     embed.addFields({
       name: '🔒 Auto-action taken',
-      value:
-        incident.level === 'flood'
-          ? 'The user was timed out automatically. Review and escalate or reverse below.'
-          : 'High-confidence signal: the messages were deleted and the user was timed out automatically. Review and escalate or reverse below.',
+      value: AUTO_ACTION_NOTE[incident.level],
     });
 
   const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(

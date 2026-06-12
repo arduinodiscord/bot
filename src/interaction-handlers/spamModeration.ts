@@ -23,6 +23,7 @@ import {
 } from '../utils/automod/console';
 import { clearUser } from '../utils/automod/tracker';
 import { clearFloodUser } from '../utils/automod/flood';
+import { clearCrosspostUser } from '../utils/automod/crosspost';
 
 interface ParsedButton {
   action: string;
@@ -87,6 +88,7 @@ export class SpamModerationHandler extends InteractionHandler {
         );
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
+        clearCrosspostUser(incident.userId);
         const fingerprints = incident.signatures.length + incident.hashes.length;
         const blocklisted = fingerprints
           ? `, and blocklisted ${fingerprints} image fingerprint(s)`
@@ -115,6 +117,7 @@ export class SpamModerationHandler extends InteractionHandler {
         );
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
+        clearCrosspostUser(incident.userId);
         summary = ok
           ? '🔨 User banned and recent messages purged.'
           : '⚠️ Could not ban the user (check role hierarchy and permissions).';
@@ -131,6 +134,7 @@ export class SpamModerationHandler extends InteractionHandler {
       case 'dismiss': {
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
+        clearCrosspostUser(incident.userId);
         summary =
           '👌 Marked as not spam. Cleared tracking for this user; no action taken.';
         break;

@@ -138,6 +138,25 @@ Members with *Manage Messages* (or a configured immune role) are never flagged.
 
 ---
 
+## 📡 Cross-channel question-spam automod
+
+New members often fire the *same* question into every channel at once instead
+of the one that fits. Two tenure-aware signals catch this (`AUTOMOD_CROSSPOST_*`):
+
+- **Near-identical fan-out** (any tenure) — the same question (token-overlap ≥
+  `SIMILARITY_PCT`, default 80%) across `CHANNELS`+ channels (default 2) inside
+  the window. High confidence, so the bot **auto-deletes the duplicate copies,
+  keeping the first**, then alerts.
+- **New-member spread** (recent joiners only) — posting substantive messages in
+  `SPREAD_CHANNELS`+ channels (default 3) at once, even when reworded enough to
+  dodge the similarity check. Alerts only — these aren't strict duplicates.
+
+Both surface in the same mod-log console with the usual action buttons, reuse
+the existing new-member window, and respect the immune-role/permission checks.
+Short greetings and reactions (below `MIN_CHARS`) are ignored.
+
+---
+
 ## 🧰 Server management
 
 Ambient helpers, each self-disabling until configured:
@@ -173,7 +192,7 @@ src/
 ├── listeners/               # gateway events (ready, messages, members, invites…)
 ├── interaction-handlers/    # button handlers (spam console, role-select, tag buttons)
 └── utils/
-    ├── automod/             # spam detection: tracker, flood, phash, blocklist, console, incidents
+    ├── automod/             # spam detection: tracker, flood, crosspost, phash, blocklist, console, incidents
     ├── config.ts            # env-driven configuration
     ├── db.ts                # optional Prisma (pg driver adapter) with in-memory fallback
     ├── tags.ts              # tag content + schema
