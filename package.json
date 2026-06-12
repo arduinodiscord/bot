@@ -1,7 +1,7 @@
 {
   "name": "arduino-bot",
   "description": "The new and improved custom discord bot to power the official Arduino discord server @ https://arduino.cc/discord",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "main": "./dist/src/index.js",
   "scripts": {
     "start": "node ./dist/src/index.js",
@@ -11,12 +11,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/max-bromberg/arduino-bot.git"
+    "url": "git+https://github.com/arduinodiscord/bot.git"
   },
   "bugs": {
-    "url": "https://github.com/max-bromberg/arduino-bot/issues"
+    "url": "https://github.com/arduinodiscord/bot/issues"
   },
-  "homepage": "https://github.com/max-bromberg/arduino-bot#readme",
+  "homepage": "https://github.com/arduinodiscord/bot#readme",
   "author": "Max Bromberg and Contributors",
   "license": "GPL-3.0-or-later",
   "dependencies": {

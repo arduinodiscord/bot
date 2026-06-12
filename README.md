@@ -1,153 +1,172 @@
-# Arduino Discord Bot
+<div align="center">
 
-> Now with slash commands!
+# 🤖 Arduino Discord Bot
+
+### The community bot powering the official **[Arduino Discord](https://arduino.cc/discord)**
+
+Helpful tags, image-spam moderation, and server automation — built for the people who keep the server running.
+
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![discord.js](https://img.shields.io/badge/discord.js-14-5865F2?logo=discord&logoColor=white)](https://discord.js.org)
+[![Sapphire](https://img.shields.io/badge/framework-Sapphire-1e88e5)](https://www.sapphirejs.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Node](https://img.shields.io/badge/Node-LTS-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+
+</div>
 
 ---
 
-This is the custom Discord bot powering the official Arduino Discord server at [https://arduino.cc/discord](https://arduino.cc/discord).
+## ✨ Highlights
 
-## What does this bot do?
+| | |
+|---|---|
+| 🏷️ **Slash-command tags** | Curated troubleshooting guides (`/tag`) — AVRDUDE errors, level shifters, powering boards, and more |
+| 🛡️ **Image-spam automod** | Catches the image-cluster spam wave with burst + cross-channel fan-out + perceptual-hash detection, and a one-click moderator console |
+| 🧰 **Server automation** | Auto-crosspost, join/leave + invite-source logging, role-select buttons, message-link quoting |
+| 🗣️ **Staff tooling** | `/say` to broadcast rich embeds as the bot |
+| 🐳 **One-command deploy** | `docker compose up` — bot + Postgres, migrations applied automatically |
 
-The Arduino Bot provides helpful information, troubleshooting steps, and community resources for Arduino users. It responds to slash commands with detailed guides, tips, and links, making it easier for users to get help and learn about Arduino topics.
+---
 
-## Current Slash Commands
+## 🚀 Quick start
 
-All commands are used as Discord slash commands (type `/` in Discord):
-
-| Command   | Usage Example              | Description                                                        |
-|-----------|---------------------------|--------------------------------------------------------------------|
-| `/about`  | `/about`                  | Shows information about the bot.                                   |
-| `/ping`   | `/ping`                   | Bot/API latency and uptime.                                       |
-| `/tag`    | `/tag name:<tag> [user:@username]` | Sends an informational tag to the bot-commands channel, optionally pinging a user. |
-| `/say`    | `/say channel:<#channel> title:<text> description:<text>` | Staff-only (Manage Server): send a custom embed to a channel. Optional `fields` (one `name \| value` per line) and `thumbnail`. |
-
-### `/tag` options (alphabetical)
-
-- `ai` — The server's no-AI policy.
-- `ask` — Guidance on how to ask good questions.
-- `avrdude` — AVRDUDE error troubleshooting.
-- `codeblock` — How to format code in Discord.
-- `debounce` — Debouncing bouncy buttons/switches.
-- `espcomm` — ESP board communication troubleshooting.
-- `help` — How to use the bot and list of tags.
-- `hid` — Info about Arduino HID (keyboard/mouse) support.
-- `lab` — Recommended electronics lab equipment.
-- `language` — What language Arduino uses.
-- `levelShifter` — Logic level shifter explanation.
-- `libmissing` — Fixing missing library errors.
-- `needinfo` — Ask a user for the details needed to help them.
-- `ninevolt` — Why 9V batteries are a poor choice.
-- `power` — Powering Arduino safely.
-- `pullup` — Pull-up/pull-down resistor explanation.
-- `reinstall` — How to cleanly reinstall the Arduino IDE.
-- `wiki` — Link to the Arduino Discord community wiki.
-
-**Example:**  
-`/tag name:power` — Sends information about powering Arduino boards to the bot-commands channel.
-`/tag name:avrdude user:@someuser` — Sends AVRDUDE troubleshooting info to the bot-commands channel and pings `@someuser`.
-
-## Image-spam automod
-
-The bot watches for the image-spam pattern that has been slipping past our other
-filters: accounts (both freshly-joined and compromised long-time members)
-posting **clusters of images** to advertise. It complements YAGPDB rather than
-replacing it, and never disables image sharing for the server.
-
-**How it detects spam:**
-
-- **Image burst** — several image messages from one user in a short window
-  (default: 3 in 60s; stricter for new members). *Lower confidence → alerts
-  moderators only.*
-- **Cross-channel fan-out** — the same image posted across multiple channels in
-  a short window (default: 2+ channels). This is the strongest signal and catches
-  compromised veterans, where account age is useless. *High confidence.*
-- **Known-spam blocklist** — once a moderator confirms an alert, that image's
-  fingerprints are blocklisted so repeat campaigns are caught instantly. *High
-  confidence.*
-
-Each image gets two fingerprints: a cheap, download-free **metadata signature**
-(content type + size + dimensions) that catches byte-identical re-uploads, and a
-**perceptual hash** (dHash, computed from a tiny media-proxy thumbnail) that
-catches re-encoded or resized copies via Hamming-distance matching. New members
-(joined within the last 72h by default) are held to a stricter burst threshold.
-
-**Tiered response:** high-confidence hits auto-delete the messages and timeout
-the user, then post an alert; bursts only post an alert. Every alert lands in the
-mod-log channel with action buttons — **Confirm spam / Timeout / Ban / Delete
-msgs / Not spam** — so a human stays in the loop. Members with Manage Messages
-(or a configured immune role) are never inspected.
-
-**Required bot permissions:** Manage Messages (delete), Moderate Members
-(timeout), Ban Members (ban), plus the **Message Content** privileged intent
-(already enabled in `index.ts`). Set `MOD_LOG_CHANNEL_ID` to enable the console;
-leaving it unset disables the automod entirely.
-
-## Server management
-
-These ambient features were ported from the legacy bot and modernized. Each
-**self-disables** until its channel/role id is configured (see
-[`.env.example`](.env.example)):
-
-- **Auto-crosspost** — automatically publishes messages in configured
-  announcement channels and logs the result (`CROSSPOST_CHANNEL_IDS`).
-- **Join/leave logging** — posts member join (with invite-source attribution)
-  and leave embeds to a log channel, and records best-effort join/leave
-  analytics when a database is configured (`JOIN_LEAVE_LOG_CHANNEL_ID`).
-- **Role-select buttons** — buttons on a configured message let members toggle
-  the event / server-update opt-in roles (`ROLE_SELECT_MESSAGE_ID`).
-- **Message-link flattening** — when someone posts a link to another message in
-  the server, the bot quotes that message inline for context.
-
-> The legacy file-extension attachment filter and `maintenance` mode were
-> intentionally dropped in favour of Discord-native AutoMod and modern
-> redeploy/hosting workflows.
-
-## Environment Variables & Configuration
-
-This bot requires the following environment variables to be set:
-
--   `BOT_TOKEN`: Your Discord bot token.
--   `MOD_LOG_CHANNEL_ID`: Channel for image-spam alerts. Required to enable the
-    automod; leave unset to disable it.
-
-Optional:
-
--   `DATABASE_URL`: Postgres connection string. Without it the bot runs fully
-    in-memory and the spam-image blocklist resets on restart.
--   Automod thresholds (`AUTOMOD_BURST_THRESHOLD`, `AUTOMOD_FANOUT_CHANNELS`,
-    `AUTOMOD_IMMUNE_ROLE_IDS`, …) — see [`.env.example`](.env.example).
-
-> Additional configuration options can be set in `config.ts`.
-
-### Running with Docker
-
-A [`docker-compose.yml`](docker-compose.yml) bundles the bot with a Postgres
-instance for blocklist persistence:
+### With Docker (recommended)
 
 ```bash
-cp .env.example .env   # fill in BOT_TOKEN and MOD_LOG_CHANNEL_ID
-docker compose up -d   # applies DB migrations, then starts the bot
+git clone https://github.com/arduinodiscord/bot.git
+cd bot
+cp .env.example .env          # add your BOT_TOKEN (+ any feature channel IDs)
+docker compose up -d          # builds the bot, starts Postgres, applies migrations
 ```
 
+That's it — the bot connects, registers its slash commands, and is ready.
 
-## Contributing
+### Local development
 
-Want to add a new tag or feature? It’s easy!
+```bash
+npm install
+cp .env.example .env          # set BOT_TOKEN
+npm run dev                   # hot-reloading dev server (ts-node-dev)
+```
 
-1. **Clone the repo** and create a new branch.
-2. **Add your tag:**  
-   - Edit [`src/utils/tags.ts`](src/utils/tags.ts) and add your tag object to the exported object.
-   - If adding a new command, create a new file in [`src/commands/`](src/commands/).
-3. **Register your tag:**  
-   - For `/tag`, add your tag to the `.addChoices()` list in [`src/commands/tag.ts`](src/commands/tag.ts).
-4. **Test your changes** locally.
-5. **Make a Pull Request:**  
-   - Push your branch and open a PR on GitHub.  
-   - Clearly describe your changes.
-
-If you find a bug or want to request a feature, please [open an issue](https://github.com/max-bromberg/arduino-bot/issues).
+> **Privileged intents:** enable **Message Content** and **Server Members** for
+> your application in the [Discord Developer Portal](https://discord.com/developers/applications).
+> For invite-source logging the bot also needs the **Manage Server** permission.
 
 ---
-06-13-2025 Update
-**License:** GPL-3.0-or-later  
-See [LICENSE](LICENSE) for details.
+
+## ⚙️ Configuration
+
+Everything is driven by environment variables (see [`.env.example`](.env.example)).
+Only `BOT_TOKEN` is required; **every other feature self-disables** until you
+give it a channel or role id, so you can adopt them one at a time.
+
+| Variable | Purpose |
+|---|---|
+| `BOT_TOKEN` | **Required.** Your Discord bot token |
+| `MOD_LOG_CHANNEL_ID` | Enables the image-spam automod console |
+| `DATABASE_URL` | Postgres connection (optional — runs in-memory without it; wired automatically by Docker) |
+| `JOIN_LEAVE_LOG_CHANNEL_ID` | Member join/leave + invite-source logging |
+| `CROSSPOST_CHANNEL_IDS` · `CROSSPOST_LOG_CHANNEL_ID` | Auto-publish announcement channels |
+| `ROLE_SELECT_MESSAGE_ID` · `EVENT_NOTIFS_ROLE_ID` · `SERVER_UPDATE_NOTIFS_ROLE_ID` | Button-based opt-in roles |
+| `AUTOMOD_*` | Detector thresholds & timeouts (sensible defaults; see `.env.example`) |
+
+---
+
+## 💬 Commands
+
+All commands are Discord **slash commands** — type `/` in the server.
+
+| Command | Description |
+|---|---|
+| `/tag name:<tag> [user:@user]` | Post a curated troubleshooting guide, optionally pinging someone |
+| `/about` | Bot, Node, and version info |
+| `/ping` | Latency & uptime |
+| `/say channel:<#ch> title:… description:…` | **Staff only** — send a custom embed (optional `fields` as `name \| value` per line, and `thumbnail`) |
+
+<details>
+<summary><strong>📚 Available <code>/tag</code> topics</strong></summary>
+
+`ai` · `ask` · `avrdude` · `codeblock` · `debounce` · `espcomm` · `help` ·
+`hid` · `lab` · `language` · `levelShifter` · `libmissing` · `needinfo` ·
+`ninevolt` · `power` · `pullup` · `reinstall` · `wiki`
+
+</details>
+
+---
+
+## 🛡️ Image-spam automod
+
+A wave of spam — both freshly-joined accounts and **compromised long-time
+members** — posts *clusters of images* to advertise. This bot targets exactly
+that pattern without ever disabling image sharing server-wide.
+
+**Detection**
+- **Burst** — several image messages from one user in a short window (stricter for new members) → *alerts mods*.
+- **Cross-channel fan-out** — the same image across multiple channels → *high confidence* (this is what catches compromised veterans, where account age tells you nothing).
+- **Known-spam blocklist** — once a mod confirms an alert, that image is fingerprinted and future copies are caught instantly.
+
+Each image gets a cheap **metadata signature** (catches identical re-uploads)
+*and* a **perceptual hash** (dHash from a tiny thumbnail — catches re-encoded /
+resized copies via Hamming distance).
+
+**Response (tiered):** high-confidence hits auto-delete + timeout and then
+alert; bursts only alert. Every alert lands in the mod-log channel with
+**Confirm / Timeout / Ban / Delete / Not spam** buttons — a human stays in the
+loop. Members with *Manage Messages* (or a configured immune role) are never
+inspected.
+
+> Complements your existing YAGPDB AutoMod rather than replacing them.
+
+---
+
+## 🧰 Server management
+
+Ambient helpers, each self-disabling until configured:
+
+- **Auto-crosspost** announcement channels, with logging.
+- **Join/leave logging** with invite-source attribution (+ optional analytics when a DB is present).
+- **Role-select buttons** to toggle event / server-update opt-in roles.
+- **Message-link flattening** — quote a linked message inline for context.
+
+---
+
+## 🏗️ Project structure
+
+```
+src/
+├── index.ts                 # client bootstrap (intents, presence, login)
+├── commands/                # slash commands (about, ping, tag, say)
+├── listeners/               # gateway events (ready, messages, members, invites…)
+├── interaction-handlers/    # button handlers (spam console, role-select, tag buttons)
+└── utils/
+    ├── automod/             # spam detection: tracker, phash, blocklist, console, incidents
+    ├── config.ts            # env-driven configuration
+    ├── db.ts                # optional Prisma (pg driver adapter) with in-memory fallback
+    ├── tags.ts              # tag content + schema
+    └── embed.ts             # shared base embed
+prisma/                      # schema + migrations
+```
+
+**Stack:** [discord.js v14](https://discord.js.org) · [Sapphire framework](https://www.sapphirejs.dev) · TypeScript 6 · Prisma 7 (+ Postgres, optional).
+
+---
+
+## 🤝 Contributing
+
+Want to add a tag or a feature? PRs welcome!
+
+1. Fork & branch.
+2. **Add a tag:** edit [`src/utils/tags.ts`](src/utils/tags.ts) and add it to the `.addChoices()` list in [`src/commands/tag.ts`](src/commands/tag.ts).
+3. `npm run build` to type-check.
+4. Open a PR against `staging` with a clear description.
+
+Found a bug or have an idea? [Open an issue](https://github.com/arduinodiscord/bot/issues).
+
+---
+
+<div align="center">
+
+**License:** [GPL-3.0-or-later](LICENSE) · Made with ❤️ by the Arduino Discord community
+
+</div>
