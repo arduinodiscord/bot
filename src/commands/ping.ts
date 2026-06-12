@@ -1,6 +1,6 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
 import { EmbedBuilder } from 'discord.js';
-import universalEmbed from '../index';
+import universalEmbed from '../utils/embed';
 
 export class PingCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {

@@ -8,7 +8,7 @@ import {
 import { JOIN_LEAVE_LOG_CHANNEL_ID } from '../utils/config';
 import { getInviteUses, setInviteUses } from '../utils/inviteCache';
 import { getPrisma } from '../utils/db';
-import universalEmbed from '../index';
+import universalEmbed from '../utils/embed';
 
 export class MemberAddListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {

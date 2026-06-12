@@ -1,7 +1,7 @@
 import { Events, Listener, container } from '@sapphire/framework';
 import { EmbedBuilder, type Message } from 'discord.js';
 import { CROSSPOST_LOG_CHANNEL_ID, crosspostChannelIds } from '../utils/config';
-import universalEmbed from '../index';
+import universalEmbed from '../utils/embed';
 
 /**
  * Auto-publishes (crossposts) messages in configured announcement/feed channels

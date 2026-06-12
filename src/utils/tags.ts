@@ -4,7 +4,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
 } from 'discord.js';
-import universalEmbed from '../index';
+import universalEmbed from './embed';
 
 /**
  * Shape of a single tag. Every field is optional because tags vary: most are

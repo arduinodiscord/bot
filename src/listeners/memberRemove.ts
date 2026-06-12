@@ -8,7 +8,7 @@ import {
 } from 'discord.js';
 import { JOIN_LEAVE_LOG_CHANNEL_ID } from '../utils/config';
 import { getPrisma } from '../utils/db';
-import universalEmbed from '../index';
+import universalEmbed from '../utils/embed';
 
 export class MemberRemoveListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {

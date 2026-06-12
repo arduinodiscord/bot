@@ -5,7 +5,7 @@ import {
   MessageFlags,
   PermissionFlagsBits,
 } from 'discord.js';
-import universalEmbed from '../index';
+import universalEmbed from '../utils/embed';
 
 const MAX_FIELDS = 25;
 

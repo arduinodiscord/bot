@@ -3,7 +3,7 @@ import { EmbedBuilder, MessageFlags } from 'discord.js';
 import { BOT_COMMANDS_CHANNEL_ID } from '../utils/config';
 import tags from '../utils/tags';
 import { resolveTag } from '../utils/resolveTag';
-import universalEmbed from '../index';
+import universalEmbed from '../utils/embed';
 
 export class TagCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {

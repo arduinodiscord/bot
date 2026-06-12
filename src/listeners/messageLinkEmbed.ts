@@ -1,6 +1,6 @@
 import { Events, Listener } from '@sapphire/framework';
 import { EmbedBuilder, type Message } from 'discord.js';
-import universalEmbed from '../index';
+import universalEmbed from '../utils/embed';
 
 // Matches https://discord.com/channels/<guild>/<channel>/<message> (and the
 // canary/ptb subdomains). IDs are 17-20 digits to be future-proof.

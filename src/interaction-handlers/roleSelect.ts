@@ -13,7 +13,7 @@ import {
   ROLE_SELECT_MESSAGE_ID,
   SERVER_UPDATE_NOTIFS_ROLE_ID,
 } from '../utils/config';
-import universalEmbed from '../index';
+import universalEmbed from '../utils/embed';
 
 interface RoleToggle {
   roleId: string;
