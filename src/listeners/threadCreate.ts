@@ -6,18 +6,19 @@ import {
   EmbedBuilder,
   type AnyThreadChannel,
 } from 'discord.js';
-import { helpForumChannelIds, helpAssistConfig } from '../utils/config';
+import { helpChannelIds, helpAssistConfig } from '../utils/config';
 import { resolveTag } from '../utils/resolveTag';
 import universalEmbed from '../utils/embed';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * On a new post in a configured help forum:
+ * On a new help thread — a forum post, or a thread opened inside a text help
+ * channel — this:
  *  - posts a "Mark Solved" button so the asker can close it in one click, and
  *  - if the opening post is too thin (short, no code, no image), auto-posts the
  *    `needinfo` checklist so helpers don't have to ask for the basics.
- * Disabled unless HELP_FORUM_CHANNEL_IDS is set.
+ * Disabled unless a help channel is configured (HELP_CHANNEL_IDS).
  */
 export class ThreadCreateListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
@@ -26,9 +27,8 @@ export class ThreadCreateListener extends Listener {
 
   public async run(thread: AnyThreadChannel, newlyCreated: boolean) {
     if (!newlyCreated) return;
-    if (helpForumChannelIds.length === 0) return;
-    if (!thread.parentId || !helpForumChannelIds.includes(thread.parentId))
-      return;
+    if (helpChannelIds.length === 0) return;
+    if (!thread.parentId || !helpChannelIds.includes(thread.parentId)) return;
 
     const embed = new EmbedBuilder(universalEmbed).setDescription(
       'When your question is answered, the original poster or a moderator can click **Mark Solved** to close this post. Use `/solved helper:@user` to also thank whoever helped. 🛠️'

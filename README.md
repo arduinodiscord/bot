@@ -185,16 +185,24 @@ the most questions:
   here?") with the `ask` tag. Conservative patterns; toggle `ASK_SUGGEST_ENABLED`.
 - **"Request more info" context-menu** — right-click any message → *Request more
   info* to post the `needinfo` checklist to the asker in one click.
-- **Auto-needinfo on thin posts** — a new help-forum post with no code, image,
-  or detail auto-gets the `needinfo` checklist (`HELP_AUTO_NEEDINFO`).
-- **Solve workflow** — a **Mark Solved** button on new help-forum posts (set
-  `HELP_FORUM_CHANNEL_IDS`) plus `/solved [helper:@user]`, which closes the post
-  and credits whoever helped.
+- **Auto-needinfo on thin posts** — a new help thread with no code, image, or
+  detail auto-gets the `needinfo` checklist (`HELP_AUTO_NEEDINFO`).
+- **Solve workflow** — a **Mark Solved** button on new help threads (set
+  `HELP_CHANNEL_IDS`) plus `/solved [helper:@user]`, which closes the post and
+  credits whoever helped.
 - **Stale-post nudge & auto-archive** — abandoned help posts get a "still need
-  help?" nudge after a day, then auto-archive if no one replies
-  (`HELP_STALE_NUDGE_HOURS` / `HELP_STALE_ARCHIVE_HOURS`).
+  help?" nudge after a few days, then auto-archive only if no one replies for a
+  while longer (defaults 3 then 7 days — helpers often take a while; tune with
+  `HELP_STALE_NUDGE_HOURS` / `HELP_STALE_ARCHIVE_HOURS`).
 - **`/openposts`** — an ephemeral digest of open help posts, oldest-waiting
   first, so helpers can pick up whatever's been waiting longest.
+
+> **Help channels can be forum *or* text channels.** List both kinds in
+> `HELP_CHANNEL_IDS` — forum posts and threads opened inside text help channels
+> get the same Mark-Solved / needinfo / stale-sweep / `/openposts` treatment.
+> The keyword/code/ask suggestions and *Request more info* work server-wide
+> regardless of channel type. (Plain, thread-less messages in a text channel
+> can't be archived, so the thread lifecycle simply doesn't apply to them.)
 
 ## 🏗️ Project structure
 

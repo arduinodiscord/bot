@@ -14,7 +14,7 @@ import {
 import universalEmbed from '../utils/embed';
 import { applySolved, canMarkSolved } from '../utils/solveThread';
 
-/** Handles the "Mark Solved" button posted in help-forum threads. */
+/** Handles the "Mark Solved" button posted in help threads (forum or text). */
 export class SolvedButtonHandler extends InteractionHandler {
   public constructor(
     context: InteractionHandler.LoaderContext,

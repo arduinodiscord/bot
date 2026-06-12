@@ -6,7 +6,7 @@ import {
   type Client,
 } from 'discord.js';
 import { container } from '@sapphire/framework';
-import { helpForumChannelIds, helpAssistConfig } from './config';
+import { helpChannelIds, helpAssistConfig } from './config';
 import { fetchOpenHelpPosts } from './helpPosts';
 import universalEmbed from './embed';
 
@@ -63,13 +63,13 @@ async function sweepOnce(client: Client): Promise<void> {
 }
 
 /**
- * Start the periodic stale-help-post sweep. No-op unless help forums are
+ * Start the periodic stale-help-post sweep. No-op unless help channels are
  * configured and the sweep is enabled. The interval is unref'd so it never
  * keeps the process alive on its own.
  */
 export function startStaleHelpSweep(client: Client): void {
   if (!helpAssistConfig.staleSweepEnabled) return;
-  if (helpForumChannelIds.length === 0) return;
+  if (helpChannelIds.length === 0) return;
 
   const run = () =>
     sweepOnce(client).catch((error) =>

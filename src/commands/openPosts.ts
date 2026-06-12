@@ -5,7 +5,7 @@ import {
   TimestampStyles,
   time,
 } from 'discord.js';
-import { helpForumChannelIds } from '../utils/config';
+import { helpChannelIds } from '../utils/config';
 import { fetchOpenHelpPosts } from '../utils/helpPosts';
 import universalEmbed from '../utils/embed';
 
@@ -39,9 +39,9 @@ export class OpenPostsCommand extends Command {
   public override async chatInputRun(
     interaction: Command.ChatInputCommandInteraction
   ) {
-    if (helpForumChannelIds.length === 0)
+    if (helpChannelIds.length === 0)
       return interaction.reply({
-        content: 'No help forums are configured.',
+        content: 'No help channels are configured.',
         flags: MessageFlags.Ephemeral,
       });
 

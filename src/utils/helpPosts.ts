@@ -1,5 +1,5 @@
 import type { Client, ThreadChannel } from 'discord.js';
-import { SERVER_ID, helpForumChannelIds } from './config';
+import { SERVER_ID, helpChannelIds } from './config';
 import { SOLVED_PREFIX } from './solveThread';
 
 export interface OpenHelpPost {
@@ -16,13 +16,14 @@ export const isSolved = (thread: ThreadChannel): boolean =>
 
 /**
  * Find the currently-open (active, unsolved) posts across the configured help
- * forums, annotated with last-activity info. Shared by the stale-post sweep and
- * the `/openposts` digest. Best-effort: per-thread fetch failures are skipped.
+ * channels, annotated with last-activity info. Works for threads under both
+ * forum and text help channels. Shared by the stale-post sweep and the
+ * `/openposts` digest. Best-effort: per-thread fetch failures are skipped.
  */
 export async function fetchOpenHelpPosts(
   client: Client
 ): Promise<OpenHelpPost[]> {
-  if (helpForumChannelIds.length === 0) return [];
+  if (helpChannelIds.length === 0) return [];
 
   const guild = await client.guilds.fetch(SERVER_ID).catch(() => null);
   if (!guild) return [];
@@ -32,7 +33,7 @@ export async function fetchOpenHelpPosts(
 
   const posts: OpenHelpPost[] = [];
   for (const thread of active.threads.values()) {
-    if (!thread.parentId || !helpForumChannelIds.includes(thread.parentId))
+    if (!thread.parentId || !helpChannelIds.includes(thread.parentId))
       continue;
     if (thread.archived || isSolved(thread)) continue;
 

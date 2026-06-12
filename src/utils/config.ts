@@ -47,10 +47,21 @@ const idList = (value: string | undefined): string[] =>
 export const crosspostChannelIds = idList(process.env.CROSSPOST_CHANNEL_IDS);
 
 /**
- * Forum channels treated as "help" forums: new posts get a "Mark Solved" button.
- * The /solved command works in any thread regardless of this list.
+ * Channels treated as "help" channels. Entries may be **forum** channels (each
+ * post is a thread) or **regular text** channels (threads opened inside them get
+ * the same treatment): new help threads get a "Mark Solved" button and, when
+ * thin, the needinfo checklist, and the stale-post sweep / `/openposts` track
+ * them. The /solved command works in any thread regardless of this list.
+ *
+ * Reads HELP_CHANNEL_IDS (preferred) and the legacy HELP_FORUM_CHANNEL_IDS,
+ * merged and de-duplicated, so existing configs keep working.
  */
-export const helpForumChannelIds = idList(process.env.HELP_FORUM_CHANNEL_IDS);
+export const helpChannelIds = [
+  ...new Set([
+    ...idList(process.env.HELP_CHANNEL_IDS),
+    ...idList(process.env.HELP_FORUM_CHANNEL_IDS),
+  ]),
+];
 
 /** Whether the keyword -> tag auto-suggester is active (on unless "false"). */
 export const tagSuggestEnabled = process.env.TAG_SUGGEST_ENABLED !== 'false';
@@ -63,8 +74,8 @@ export const codeFormatSuggestEnabled =
 export const askSuggestEnabled = process.env.ASK_SUGGEST_ENABLED !== 'false';
 
 /**
- * Help-forum quality-of-life knobs. The auto-needinfo and stale-post sweep only
- * do anything when `helpForumChannelIds` is configured.
+ * Help-channel quality-of-life knobs. The auto-needinfo and stale-post sweep
+ * only do anything when `helpChannelIds` is configured.
  */
 export const helpAssistConfig = {
   /** Auto-post the needinfo checklist when a new help post is too thin. */
@@ -73,10 +84,17 @@ export const helpAssistConfig = {
   needinfoMinChars: posInt(process.env.HELP_NEEDINFO_MIN_CHARS, 60),
   /** Whether the stale-post nudge/auto-archive sweep runs. */
   staleSweepEnabled: process.env.HELP_STALE_SWEEP_ENABLED !== 'false',
-  /** Idle time (ms) before an open help post gets a "still need help?" nudge. */
-  staleNudgeMs: posInt(process.env.HELP_STALE_NUDGE_HOURS, 24) * 60 * 60 * 1000,
-  /** Idle time (ms) after a nudge, with no human reply, before auto-archiving. */
-  staleArchiveMs: posInt(process.env.HELP_STALE_ARCHIVE_HOURS, 72) * 60 * 60 * 1000,
+  /**
+   * Idle time (ms) before an open help post gets a "still need help?" nudge.
+   * Default 72h (3 days) — helpers often take a while to reach a post.
+   */
+  staleNudgeMs: posInt(process.env.HELP_STALE_NUDGE_HOURS, 72) * 60 * 60 * 1000,
+  /**
+   * Idle time (ms) after a nudge, with no human reply, before auto-archiving.
+   * Default 168h (7 days) on top of the nudge wait, so nothing is archived from
+   * under a slow-but-active conversation.
+   */
+  staleArchiveMs: posInt(process.env.HELP_STALE_ARCHIVE_HOURS, 168) * 60 * 60 * 1000,
 };
 
 /**
