@@ -22,6 +22,7 @@ import {
   timeoutMember,
 } from '../utils/automod/console';
 import { clearUser } from '../utils/automod/tracker';
+import { clearFloodUser } from '../utils/automod/flood';
 
 interface ParsedButton {
   action: string;
@@ -85,10 +86,14 @@ export class SpamModerationHandler extends InteractionHandler {
           'confirmed image spam'
         );
         clearUser(incident.userId);
+        clearFloodUser(incident.userId);
         const fingerprints = incident.signatures.length + incident.hashes.length;
+        const blocklisted = fingerprints
+          ? `, and blocklisted ${fingerprints} image fingerprint(s)`
+          : '';
         summary = `✅ Confirmed spam — deleted ${deleted} message(s), ${
           timedOut ? 'timed out the user' : '**could not** time out the user'
-        }, and blocklisted ${fingerprints} image fingerprint(s).`;
+        }${blocklisted}.`;
         break;
       }
       case 'timeout': {
@@ -109,6 +114,7 @@ export class SpamModerationHandler extends InteractionHandler {
           `Automod review by ${moderator.tag}`
         );
         clearUser(incident.userId);
+        clearFloodUser(incident.userId);
         summary = ok
           ? '🔨 User banned and recent messages purged.'
           : '⚠️ Could not ban the user (check role hierarchy and permissions).';
@@ -124,6 +130,7 @@ export class SpamModerationHandler extends InteractionHandler {
       }
       case 'dismiss': {
         clearUser(incident.userId);
+        clearFloodUser(incident.userId);
         summary =
           '👌 Marked as not spam. Cleared tracking for this user; no action taken.';
         break;

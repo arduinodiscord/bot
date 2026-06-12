@@ -19,12 +19,22 @@ const LEVEL_COLOR: Record<IncidentLevel, number> = {
   fanout: 0xe03131, // high confidence — red
   blocklist: 0xe03131,
   burst: 0xf08c00, // needs review — amber
+  flood: 0xf08c00, // needs review — amber
 };
 
 const LEVEL_LABEL: Record<IncidentLevel, string> = {
   fanout: 'Cross-channel fan-out',
   blocklist: 'Known spam image',
   burst: 'Image burst',
+  flood: 'Message flooding',
+};
+
+/** Headline shown at the top of an alert, by incident kind. */
+const LEVEL_TITLE: Record<IncidentLevel, string> = {
+  fanout: '🚨 Possible image spam',
+  blocklist: '🚨 Possible image spam',
+  burst: '🚨 Possible image spam',
+  flood: '🚨 Possible message flooding',
 };
 
 /** One moderation action button bound to an incident id. */
@@ -61,7 +71,7 @@ export function buildAlertPayload(
 
   const embed = new EmbedBuilder()
     .setColor(LEVEL_COLOR[incident.level])
-    .setTitle('🚨 Possible image spam')
+    .setTitle(LEVEL_TITLE[incident.level])
     .setDescription(`<@${incident.userId}> \`${incident.userId}\``)
     .addFields(
       {
@@ -98,7 +108,9 @@ export function buildAlertPayload(
     embed.addFields({
       name: '🔒 Auto-action taken',
       value:
-        'High-confidence signal: the messages were deleted and the user was timed out automatically. Review and escalate or reverse below.',
+        incident.level === 'flood'
+          ? 'The user was timed out automatically. Review and escalate or reverse below.'
+          : 'High-confidence signal: the messages were deleted and the user was timed out automatically. Review and escalate or reverse below.',
     });
 
   const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(

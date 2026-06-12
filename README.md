@@ -124,6 +124,20 @@ inspected.
 
 ---
 
+## 🌊 Text-flooding automod
+
+Some users fragment a single thought across a stream of one-word messages
+instead of sending it as one message — which buries ongoing conversation and
+leaves no room to reply. The bot flags this pattern: **N short messages from
+one user inside a short window** (`AUTOMOD_FLOOD_*`, defaults: 5 messages ≤ 25
+chars in 15 s) lands a **Message flooding** alert in the same mod-log console as
+the image automod, with the same Confirm / Timeout / Ban / Delete / Not-spam
+buttons. By default it only alerts (flooding is usually a habit, not an attack);
+set `AUTOMOD_FLOOD_AUTO_TIMEOUT=true` to also time the user out automatically.
+Members with *Manage Messages* (or a configured immune role) are never flagged.
+
+---
+
 ## 🧰 Server management
 
 Ambient helpers, each self-disabling until configured:
@@ -159,7 +173,7 @@ src/
 ├── listeners/               # gateway events (ready, messages, members, invites…)
 ├── interaction-handlers/    # button handlers (spam console, role-select, tag buttons)
 └── utils/
-    ├── automod/             # spam detection: tracker, phash, blocklist, console, incidents
+    ├── automod/             # spam detection: tracker, flood, phash, blocklist, console, incidents
     ├── config.ts            # env-driven configuration
     ├── db.ts                # optional Prisma (pg driver adapter) with in-memory fallback
     ├── tags.ts              # tag content + schema

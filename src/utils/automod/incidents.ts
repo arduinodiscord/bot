@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import type { DetectionLevel } from './tracker';
 
-export type IncidentLevel = Exclude<DetectionLevel, 'none'> | 'blocklist';
+/**
+ * The kinds of incident the moderation console can surface. `burst`, `fanout`
+ * and `blocklist` come from the image-spam detector; `flood` from the
+ * text-flooding detector.
+ */
+export type IncidentLevel = 'burst' | 'fanout' | 'blocklist' | 'flood';
 
 export interface IncidentMessage {
   channelId: string;

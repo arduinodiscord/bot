@@ -8,6 +8,11 @@ import {
   shouldAlert,
   markAlerted,
 } from '../utils/automod/tracker';
+import {
+  recordShortMessage,
+  shouldAlertFlood,
+  markFloodAlerted,
+} from '../utils/automod/flood';
 import { isBlocklisted } from '../utils/automod/blocklist';
 import {
   createIncident,
@@ -31,6 +36,10 @@ export class MessageCreateListener extends Listener {
     // Without a console channel there is nowhere to surface alerts.
     if (!MOD_LOG_CHANNEL_ID) return;
     if (message.member && this.isImmune(message.member)) return;
+
+    // Text-flooding runs independently of the image automod below: a user
+    // fragmenting one thought across many tiny messages rarely posts images.
+    await this.runFlood(message);
 
     const signatures = imageSignatures(message);
     if (signatures.length === 0) return;
@@ -111,6 +120,55 @@ export class MessageCreateListener extends Listener {
       ).catch(() => false);
       autoActed = deleted > 0 || timedOut;
     }
+
+    await this.postAlert(message, incident, autoActed);
+  }
+
+  /**
+   * Detect text flooding: many short messages from one user in quick
+   * succession. Only short, non-empty text counts — pure-image messages are
+   * left to the image automod above so the two detectors don't double up.
+   */
+  private async runFlood(message: Message<true>): Promise<void> {
+    if (!automodConfig.floodEnabled) return;
+
+    const content = message.content.trim();
+    if (content.length === 0 || content.length > automodConfig.floodMaxChars)
+      return;
+
+    const now = Date.now();
+    const detection = recordShortMessage(message.author.id, {
+      at: now,
+      channelId: message.channelId,
+      messageId: message.id,
+    });
+    if (!detection.flooded) return;
+    if (!shouldAlertFlood(message.author.id, now)) return;
+    markFloodAlerted(message.author.id, now);
+
+    const incident = createIncident({
+      userId: message.author.id,
+      guildId: message.guildId,
+      level: 'flood',
+      reason: detection.reason,
+      messages: detection.messages.map((m) => ({
+        channelId: m.channelId,
+        messageId: m.messageId,
+      })),
+      // Flooding leaves no image fingerprints to blocklist.
+      signatures: [],
+      hashes: [],
+    });
+
+    // Flooding is usually a habit, not an attack, so we only auto-act when a
+    // server opts in; otherwise a human decides from the console.
+    let autoActed = false;
+    if (automodConfig.floodAutoTimeout)
+      autoActed = await timeoutMember(
+        message.guild,
+        message.author.id,
+        `Automod: ${incident.reason}`
+      ).catch(() => false);
 
     await this.postAlert(message, incident, autoActed);
   }

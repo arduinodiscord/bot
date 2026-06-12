@@ -89,4 +89,26 @@ export const automodConfig = {
    * faster). Should be <= burstThreshold. Default 2.
    */
   newMemberBurstThreshold: posInt(process.env.AUTOMOD_NEW_MEMBER_BURST_THRESHOLD, 2),
+
+  // --- Text-flooding detector ---
+  /** Whether the text-flooding detector is active (on unless "false"). */
+  floodEnabled: process.env.AUTOMOD_FLOOD_ENABLED !== 'false',
+  /**
+   * Number of short messages from one user within `floodWindowMs` to flag
+   * flooding (a user fragmenting one thought across many tiny messages).
+   */
+  floodThreshold: posInt(process.env.AUTOMOD_FLOOD_THRESHOLD, 5),
+  /** Sliding window (ms) for counting flood messages. Default 15s. */
+  floodWindowMs: posInt(process.env.AUTOMOD_FLOOD_WINDOW_MS, 15_000),
+  /**
+   * A message counts toward flooding only if its trimmed content length is at
+   * most this. Longer messages are treated as normal conversation. Default 25.
+   */
+  floodMaxChars: posInt(process.env.AUTOMOD_FLOOD_MAX_CHARS, 25),
+  /**
+   * When true, the bot also times the user out automatically on a flood hit.
+   * Off by default: flooding is usually a habit, not an attack, so by default
+   * we only alert moderators and let them decide.
+   */
+  floodAutoTimeout: process.env.AUTOMOD_FLOOD_AUTO_TIMEOUT === 'true',
 };
