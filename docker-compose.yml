@@ -6,23 +6,68 @@ services:
       db:
         condition: service_healthy
     environment:
-      # Pulled from the .env file (see .env.example). DATABASE_URL points at
-      # the bundled Postgres service below.
+      # ── Required ──────────────────────────────────────────────────────────
       BOT_TOKEN: ${BOT_TOKEN}
+
+      # ── Core IDs (defaults target the official Arduino server) ────────────
       SERVER_ID: ${SERVER_ID:-}
       BOT_COMMANDS_CHANNEL_ID: ${BOT_COMMANDS_CHANNEL_ID:-}
-      MOD_LOG_CHANNEL_ID: ${MOD_LOG_CHANNEL_ID:-}
+
+      # ── Database (wired to the bundled Postgres service) ──────────────────
       DATABASE_URL: postgresql://${POSTGRES_USER:-arduino}:${POSTGRES_PASSWORD:-arduino}@db:5432/${POSTGRES_DB:-arduino}
-      # Optional automod tunables (defaults live in src/utils/config.ts)
+
+      # ── Automod console ───────────────────────────────────────────────────
+      MOD_LOG_CHANNEL_ID: ${MOD_LOG_CHANNEL_ID:-}
+
+      # ── Server-management features ────────────────────────────────────────
+      JOIN_LEAVE_LOG_CHANNEL_ID: ${JOIN_LEAVE_LOG_CHANNEL_ID:-}
+      CROSSPOST_CHANNEL_IDS: ${CROSSPOST_CHANNEL_IDS:-}
+      CROSSPOST_LOG_CHANNEL_ID: ${CROSSPOST_LOG_CHANNEL_ID:-}
+      ROLE_SELECT_MESSAGE_ID: ${ROLE_SELECT_MESSAGE_ID:-}
+      EVENT_NOTIFS_ROLE_ID: ${EVENT_NOTIFS_ROLE_ID:-}
+      SERVER_UPDATE_NOTIFS_ROLE_ID: ${SERVER_UPDATE_NOTIFS_ROLE_ID:-}
+
+      # ── Helper-assist features ────────────────────────────────────────────
+      HELP_CHANNEL_IDS: ${HELP_CHANNEL_IDS:-}
+      HELP_FORUM_CHANNEL_IDS: ${HELP_FORUM_CHANNEL_IDS:-}
+      TAG_SUGGEST_ENABLED: ${TAG_SUGGEST_ENABLED:-}
+      CODE_FORMAT_SUGGEST_ENABLED: ${CODE_FORMAT_SUGGEST_ENABLED:-}
+      ASK_SUGGEST_ENABLED: ${ASK_SUGGEST_ENABLED:-}
+      HELP_AUTO_NEEDINFO: ${HELP_AUTO_NEEDINFO:-}
+      HELP_NEEDINFO_MIN_CHARS: ${HELP_NEEDINFO_MIN_CHARS:-}
+      HELP_STALE_SWEEP_ENABLED: ${HELP_STALE_SWEEP_ENABLED:-}
+      HELP_STALE_NUDGE_HOURS: ${HELP_STALE_NUDGE_HOURS:-}
+      HELP_STALE_ARCHIVE_HOURS: ${HELP_STALE_ARCHIVE_HOURS:-}
+
+      # ── Image-spam automod tunables ───────────────────────────────────────
       AUTOMOD_BURST_THRESHOLD: ${AUTOMOD_BURST_THRESHOLD:-}
       AUTOMOD_BURST_WINDOW_MS: ${AUTOMOD_BURST_WINDOW_MS:-}
       AUTOMOD_FANOUT_CHANNELS: ${AUTOMOD_FANOUT_CHANNELS:-}
       AUTOMOD_FANOUT_WINDOW_MS: ${AUTOMOD_FANOUT_WINDOW_MS:-}
+      AUTOMOD_PHASH_THRESHOLD: ${AUTOMOD_PHASH_THRESHOLD:-}
       AUTOMOD_TIMEOUT_MS: ${AUTOMOD_TIMEOUT_MS:-}
       AUTOMOD_ALERT_COOLDOWN_MS: ${AUTOMOD_ALERT_COOLDOWN_MS:-}
       AUTOMOD_IMMUNE_ROLE_IDS: ${AUTOMOD_IMMUNE_ROLE_IDS:-}
-    # Apply any pending Prisma migrations, then start the bot.
-    command: sh -c "npx prisma migrate deploy && npm start"
+      AUTOMOD_NEW_MEMBER_WINDOW_MS: ${AUTOMOD_NEW_MEMBER_WINDOW_MS:-}
+      AUTOMOD_NEW_MEMBER_BURST_THRESHOLD: ${AUTOMOD_NEW_MEMBER_BURST_THRESHOLD:-}
+
+      # ── Text-flooding automod tunables ────────────────────────────────────
+      AUTOMOD_FLOOD_ENABLED: ${AUTOMOD_FLOOD_ENABLED:-}
+      AUTOMOD_FLOOD_THRESHOLD: ${AUTOMOD_FLOOD_THRESHOLD:-}
+      AUTOMOD_FLOOD_WINDOW_MS: ${AUTOMOD_FLOOD_WINDOW_MS:-}
+      AUTOMOD_FLOOD_MAX_CHARS: ${AUTOMOD_FLOOD_MAX_CHARS:-}
+      AUTOMOD_FLOOD_AUTO_TIMEOUT: ${AUTOMOD_FLOOD_AUTO_TIMEOUT:-}
+
+      # ── Cross-channel question-spam automod tunables ──────────────────────
+      AUTOMOD_CROSSPOST_ENABLED: ${AUTOMOD_CROSSPOST_ENABLED:-}
+      AUTOMOD_CROSSPOST_CHANNELS: ${AUTOMOD_CROSSPOST_CHANNELS:-}
+      AUTOMOD_CROSSPOST_SPREAD_CHANNELS: ${AUTOMOD_CROSSPOST_SPREAD_CHANNELS:-}
+      AUTOMOD_CROSSPOST_WINDOW_MS: ${AUTOMOD_CROSSPOST_WINDOW_MS:-}
+      AUTOMOD_CROSSPOST_MIN_CHARS: ${AUTOMOD_CROSSPOST_MIN_CHARS:-}
+      AUTOMOD_CROSSPOST_SIMILARITY_PCT: ${AUTOMOD_CROSSPOST_SIMILARITY_PCT:-}
+
+    # Migrate the database schema, then start the bot.
+    command: sh -c "node_modules/.bin/prisma migrate deploy && npm start"
 
   db:
     image: postgres:16-alpine
