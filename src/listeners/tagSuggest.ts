@@ -11,6 +11,7 @@ import {
   tagSuggestEnabled,
   codeFormatSuggestEnabled,
   askSuggestEnabled,
+  suggestIgnoreChannelIds,
 } from '../utils/config';
 import tags, { type Tag, type TagSuggestion } from '../utils/tags';
 import universalEmbed from '../utils/embed';
@@ -107,6 +108,20 @@ export class TagSuggestListener extends Listener {
     if (!message.inGuild() || message.author.bot) return;
     if (message.guildId !== SERVER_ID) return;
     if (message.content.length < 10) return;
+
+    // Members with any server role (Trusted and above) are recognised community
+    // members — helpers, knowledgeable members, staff — who don't need suggestions.
+    if ((message.member?.roles.cache.size ?? 1) > 1) return;
+
+    // Respect the ignore-channel list. Check both the message's channel and,
+    // for threads, the parent channel so an entire forum can be suppressed.
+    if (suggestIgnoreChannelIds.length > 0) {
+      if (suggestIgnoreChannelIds.includes(message.channelId)) return;
+      const parentId = message.channel.isThread()
+        ? message.channel.parentId
+        : null;
+      if (parentId && suggestIgnoreChannelIds.includes(parentId)) return;
+    }
 
     const suggestion = detect(message.content);
     if (!suggestion) return;

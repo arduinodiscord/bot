@@ -186,11 +186,12 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | Variable | Default | Description |
 |---|---|---|
 | `HELP_CHANNEL_IDS` | *(disabled)* | Comma-separated forum or text channel IDs — enables solve button, auto-needinfo, stale sweep, and `/openposts` |
-| `TAG_SUGGEST_ENABLED` | `true` | Keyword → tag auto-suggestion |
-| `CODE_FORMAT_SUGGEST_ENABLED` | `true` | Nudge for unformatted code pastes |
-| `ASK_SUGGEST_ENABLED` | `true` | Nudge for "can I ask?" / "anyone here?" messages |
-| `HELP_AUTO_NEEDINFO` | `true` | Auto-post needinfo checklist on thin help posts |
-| `HELP_NEEDINFO_MIN_CHARS` | `60` | Opening post shorter than this (and with no code/image) counts as thin |
+| `TAG_SUGGEST_ENABLED` | `true` | Keyword → tag auto-suggestion (never fires for members with any server role) |
+| `CODE_FORMAT_SUGGEST_ENABLED` | `true` | Nudge for unformatted code pastes (same role exemption) |
+| `ASK_SUGGEST_ENABLED` | `true` | Nudge for "can I ask?" / "anyone here?" messages (same role exemption) |
+| `SUGGEST_IGNORE_CHANNEL_IDS` | *(none)* | Comma-separated channel IDs where suggestions are suppressed entirely (e.g. staff channels). Listing a forum channel's ID silences all its threads. |
+| `HELP_AUTO_NEEDINFO` | `false` | Set `true` to auto-post a concise checklist when a new help post is thin. Off by default — enable after observing the Mark Solved rollout. |
+| `HELP_NEEDINFO_MIN_CHARS` | `120` | Combined character count (thread title + post body) below which a post counts as thin. Posts with a code block, inline code, image, or URL are never considered thin. |
 | `HELP_STALE_SWEEP_ENABLED` | `true` | Nudge + auto-archive abandoned help posts |
 | `HELP_STALE_NUDGE_HOURS` | `72` | Hours idle before a "still need help?" nudge (3 days) |
 | `HELP_STALE_ARCHIVE_HOURS` | `168` | Hours after the nudge with no human reply before auto-archiving (7 days) |

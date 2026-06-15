@@ -47,6 +47,13 @@ const idList = (value: string | undefined): string[] =>
 export const crosspostChannelIds = idList(process.env.CROSSPOST_CHANNEL_IDS);
 
 /**
+ * Channels (and forum-channel parents) where tag/code/ask suggestions are
+ * suppressed. Useful for staff channels, announcements, or any channel where
+ * bot suggestions would be unwelcome. Comma-separated channel IDs.
+ */
+export const suggestIgnoreChannelIds = idList(process.env.SUGGEST_IGNORE_CHANNEL_IDS);
+
+/**
  * Channels treated as "help" channels. Entries may be **forum** channels (each
  * post is a thread) or **regular text** channels (threads opened inside them get
  * the same treatment): new help threads get a "Mark Solved" button and, when
@@ -79,9 +86,14 @@ export const askSuggestEnabled = process.env.ASK_SUGGEST_ENABLED !== 'false';
  */
 export const helpAssistConfig = {
   /** Auto-post the needinfo checklist when a new help post is too thin. */
-  autoNeedinfo: process.env.HELP_AUTO_NEEDINFO !== 'false',
-  /** A starter message shorter than this (and without code) counts as "thin". */
-  needinfoMinChars: posInt(process.env.HELP_NEEDINFO_MIN_CHARS, 60),
+  autoNeedinfo: process.env.HELP_AUTO_NEEDINFO === 'true',
+  /**
+   * Combined character threshold (forum title + post body) below which a new
+   * help post counts as "thin" for auto-needinfo. Posts that also contain a
+   * code block, inline code, image, or URL are never considered thin regardless
+   * of length. Default 120 — conservative to minimise false positives.
+   */
+  needinfoMinChars: posInt(process.env.HELP_NEEDINFO_MIN_CHARS, 120),
   /** Whether the stale-post nudge/auto-archive sweep runs. */
   staleSweepEnabled: process.env.HELP_STALE_SWEEP_ENABLED !== 'false',
   /**

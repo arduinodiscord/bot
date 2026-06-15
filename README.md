@@ -179,14 +179,24 @@ the most questions:
   HID, debounce…), the bot offers the matching tag via a single button, so
   askers self-serve before a helper repeats a canned answer. Each trigger lives
   next to its tag in `tags.ts`. Per-user cooldown; toggle with `TAG_SUGGEST_ENABLED`.
+  **Only fires for members with no server role** — helpers, knowledgeable members,
+  and any other role-holder are never shown suggestions.
 - **Unformatted-code nudge** — detects code pasted as plain text and offers the
   `codeblock` tag, the single most-repeated ask. Toggle `CODE_FORMAT_SUGGEST_ENABLED`.
+  Subject to the same role exemption as keyword suggestions.
 - **"Just ask" nudge** — replies to low-effort pings ("can I ask?", "anyone
   here?") with the `ask` tag. Conservative patterns; toggle `ASK_SUGGEST_ENABLED`.
+  Subject to the same role exemption as keyword suggestions.
+- **Suggestion ignore list** — set `SUGGEST_IGNORE_CHANNEL_IDS` to suppress all
+  three suggestions in specific channels (e.g. staff channels). Listing a forum
+  channel's ID silences all its threads.
 - **"Request more info" context-menu** — right-click any message → *Request more
   info* to post the `needinfo` checklist to the asker in one click.
-- **Auto-needinfo on thin posts** — a new help thread with no code, image, or
-  detail auto-gets the `needinfo` checklist (`HELP_AUTO_NEEDINFO`).
+- **Auto-needinfo on thin posts** — when a new help thread lacks substance (no
+  code, image, URL, or inline code, and the post title + body together are under
+  `HELP_NEEDINFO_MIN_CHARS` characters), the bot sends a concise checklist and the
+  Mark Solved button in a single message. **Off by default** (`HELP_AUTO_NEEDINFO=true`
+  to enable). The full `/tag needinfo` checklist used by helpers is unaffected.
 - **Solve workflow** — a **Mark Solved** button on new help threads (set
   `HELP_CHANNEL_IDS`) plus `/solved [helper:@user]`, which closes the post and
   credits whoever helped.
@@ -201,8 +211,9 @@ the most questions:
 > `HELP_CHANNEL_IDS` — forum posts and threads opened inside text help channels
 > get the same Mark-Solved / needinfo / stale-sweep / `/openposts` treatment.
 > The keyword/code/ask suggestions and *Request more info* work server-wide
-> regardless of channel type. (Plain, thread-less messages in a text channel
-> can't be archived, so the thread lifecycle simply doesn't apply to them.)
+> regardless of channel type (subject to role exemptions and ignore lists).
+> Plain, thread-less messages in a text channel can't be archived, so the thread
+> lifecycle simply doesn't apply to them.
 
 ## 🏗️ Project structure
 
