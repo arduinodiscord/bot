@@ -12,6 +12,7 @@ import {
   codeFormatSuggestEnabled,
   askSuggestEnabled,
   suggestIgnoreChannelIds,
+  suggestImmuneRoleIds,
 } from '../utils/config';
 import tags, { type Tag, type TagSuggestion } from '../utils/tags';
 import universalEmbed from '../utils/embed';
@@ -109,9 +110,14 @@ export class TagSuggestListener extends Listener {
     if (message.guildId !== SERVER_ID) return;
     if (message.content.length < 10) return;
 
-    // Members with any server role (Trusted and above) are recognised community
-    // members — helpers, knowledgeable members, staff — who don't need suggestions.
-    if ((message.member?.roles.cache.size ?? 1) > 1) return;
+    // Members holding a recognised role (Trusted and above) don't need suggestions.
+    // Self-assignable notification roles are intentionally excluded from
+    // SUGGEST_IMMUNE_ROLE_IDS so those members are still served suggestions.
+    if (
+      suggestImmuneRoleIds.length > 0 &&
+      suggestImmuneRoleIds.some((id) => message.member?.roles.cache.has(id))
+    )
+      return;
 
     // Respect the ignore-channel list. Check both the message's channel and,
     // for threads, the parent channel so an entire forum can be suppressed.

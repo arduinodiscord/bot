@@ -54,6 +54,14 @@ export const crosspostChannelIds = idList(process.env.CROSSPOST_CHANNEL_IDS);
 export const suggestIgnoreChannelIds = idList(process.env.SUGGEST_IGNORE_CHANNEL_IDS);
 
 /**
+ * Role IDs whose holders are never shown tag/code/ask suggestions. Set this to
+ * the IDs of Trusted, Knowledgeable, Helper, and any other recognised-member
+ * roles. Self-assignable notification roles and similar should NOT be listed
+ * here so those members still receive suggestions as normal.
+ */
+export const suggestImmuneRoleIds = idList(process.env.SUGGEST_IMMUNE_ROLE_IDS);
+
+/**
  * Channels treated as "help" channels. Entries may be **forum** channels (each
  * post is a thread) or **regular text** channels (threads opened inside them get
  * the same treatment): new help threads get a "Mark Solved" button and, when

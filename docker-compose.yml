@@ -29,6 +29,7 @@ services:
 
       # ── Helper-assist features ────────────────────────────────────────────
       SUGGEST_IGNORE_CHANNEL_IDS: ${SUGGEST_IGNORE_CHANNEL_IDS:-}
+      SUGGEST_IMMUNE_ROLE_IDS: ${SUGGEST_IMMUNE_ROLE_IDS:-}
       HELP_CHANNEL_IDS: ${HELP_CHANNEL_IDS:-}
       HELP_FORUM_CHANNEL_IDS: ${HELP_FORUM_CHANNEL_IDS:-}
       TAG_SUGGEST_ENABLED: ${TAG_SUGGEST_ENABLED:-}
