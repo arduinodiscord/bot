@@ -3,37 +3,97 @@ import type { Attachment, Message } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { isImageAttachment } from './signature';
 
-// dHash works on a (W+1) x H greyscale image, comparing each pixel to its right
-// neighbour to produce W*H = 64 bits.
-const HASH_W = 9;
-const HASH_H = 8;
+// pHash parameters: resize to DCT_INPUT_SIZE×DCT_INPUT_SIZE, then keep the
+// top-left DCT_COEFF_SIZE×DCT_COEFF_SIZE low-frequency block (64 bits).
+const DCT_INPUT_SIZE = 32;
+const DCT_COEFF_SIZE = 8;
 
 /** Max image attachments per message we will fetch + hash. */
 const MAX_ATTACHMENTS = 4;
-/** Skip attachments larger than this; the thumbnail proxy handles the rest. */
-const MAX_BYTES = 12 * 1024 * 1024;
 /** Per-fetch timeout. */
 const FETCH_TIMEOUT_MS = 4000;
 
 /**
- * Difference hash (dHash) of an image, as 16 hex chars (64 bits). Near-identical
- * images — including re-encoded, recompressed, or lightly resized copies —
- * produce hashes a small Hamming distance apart, which exact byte/metadata
- * signatures cannot detect.
+ * Pre-computed cosine table for the 1-D DCT:
+ *   cosTable[k][n] = cos(π/N * (n + 0.5) * k)  for N = DCT_INPUT_SIZE
+ * Computed once at module load so per-image cost is multiplications only.
  */
-export async function dHashFromBuffer(buffer: Buffer): Promise<string> {
+const cosTable: number[][] = Array.from({ length: DCT_INPUT_SIZE }, (_, k) =>
+  Array.from({ length: DCT_INPUT_SIZE }, (__, n) =>
+    Math.cos((Math.PI / DCT_INPUT_SIZE) * (n + 0.5) * k)
+  )
+);
+
+/** 1-D DCT-II applied to a signal of length DCT_INPUT_SIZE. */
+function dct1d(signal: number[]): number[] {
+  return Array.from({ length: DCT_INPUT_SIZE }, (_, k) => {
+    let sum = 0;
+    for (let n = 0; n < DCT_INPUT_SIZE; n++) sum += signal[n] * cosTable[k][n];
+    return sum;
+  });
+}
+
+/**
+ * 2-D DCT via two separable passes of the 1-D DCT: first across rows, then
+ * down columns. Input/output are row-major flat arrays of DCT_INPUT_SIZE².
+ */
+function dct2d(pixels: number[]): number[] {
+  const N = DCT_INPUT_SIZE;
+
+  // Pass 1: DCT each row
+  const tmp = new Array<number>(N * N);
+  for (let r = 0; r < N; r++) {
+    const row = pixels.slice(r * N, r * N + N);
+    const t = dct1d(row);
+    for (let c = 0; c < N; c++) tmp[r * N + c] = t[c];
+  }
+
+  // Pass 2: DCT each column
+  const out = new Array<number>(N * N);
+  for (let c = 0; c < N; c++) {
+    const col = Array.from({ length: N }, (_, r) => tmp[r * N + c]);
+    const t = dct1d(col);
+    for (let r = 0; r < N; r++) out[r * N + c] = t[r];
+  }
+
+  return out;
+}
+
+/**
+ * Perceptual hash (pHash) of an image, as 16 hex chars (64 bits).
+ *
+ * 1. Resize to 32×32 and greyscale.
+ * 2. Compute 2-D DCT.
+ * 3. Extract the top-left 8×8 low-frequency block (64 coefficients).
+ * 4. Compute the mean of those values.
+ * 5. Bit i = 1 if coefficient i > mean, else 0.
+ *
+ * Near-identical images — re-encoded, recompressed, watermarked, or lightly
+ * resized/cropped — produce hashes with a small Hamming distance, which exact
+ * metadata signatures cannot detect.
+ */
+export async function pHashFromBuffer(buffer: Buffer): Promise<string> {
   const image = await Jimp.read(buffer);
-  image.resize({ w: HASH_W, h: HASH_H }).greyscale();
+  image.resize({ w: DCT_INPUT_SIZE, h: DCT_INPUT_SIZE }).greyscale();
 
+  const pixels: number[] = [];
+  for (let y = 0; y < DCT_INPUT_SIZE; y++)
+    for (let x = 0; x < DCT_INPUT_SIZE; x++)
+      pixels.push(intToRGBA(image.getPixelColor(x, y)).r);
+
+  const dct = dct2d(pixels);
+
+  // Top-left 8×8 low-frequency block
+  const low: number[] = [];
+  for (let r = 0; r < DCT_COEFF_SIZE; r++)
+    for (let c = 0; c < DCT_COEFF_SIZE; c++)
+      low.push(dct[r * DCT_INPUT_SIZE + c]);
+
+  const mean = low.reduce((s, v) => s + v, 0) / low.length;
+
+  // 64 bits → 16 hex chars
   let bits = '';
-  for (let y = 0; y < HASH_H; y++)
-    for (let x = 0; x < HASH_W - 1; x++) {
-      const left = intToRGBA(image.getPixelColor(x, y)).r;
-      const right = intToRGBA(image.getPixelColor(x + 1, y)).r;
-      bits += left < right ? '1' : '0';
-    }
-
-  // 64-bit string -> 16 hex chars
+  for (const v of low) bits += v > mean ? '1' : '0';
   let hex = '';
   for (let i = 0; i < bits.length; i += 4)
     hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
@@ -55,13 +115,15 @@ export function hammingDistance(a: string, b: string): number {
 }
 
 /**
- * A small thumbnail of the attachment via Discord's media proxy, so we transfer
- * and decode a few hundred bytes instead of the full image.
+ * Discord thumbnail proxy URL for an attachment. We request 64×64 so Discord
+ * handles the expensive initial downscale and we receive a small buffer; Jimp
+ * then resizes it further to 32×32 with better antialiasing than starting from
+ * a 32×32 proxy directly.
  */
 function thumbnailUrl(attachment: Attachment): string {
   const base = attachment.proxyURL || attachment.url;
   const separator = base.includes('?') ? '&' : '?';
-  return `${base}${separator}width=32&height=32`;
+  return `${base}${separator}width=64&height=64`;
 }
 
 /**
@@ -72,7 +134,6 @@ function thumbnailUrl(attachment: Attachment): string {
 export async function perceptualHashes(message: Message): Promise<string[]> {
   const images = [...message.attachments.values()]
     .filter(isImageAttachment)
-    .filter((attachment) => attachment.size <= MAX_BYTES)
     .slice(0, MAX_ATTACHMENTS);
 
   const hashes = await Promise.all(
@@ -83,7 +144,7 @@ export async function perceptualHashes(message: Message): Promise<string[]> {
         });
         if (!response.ok) return null;
         const buffer = Buffer.from(await response.arrayBuffer());
-        return await dHashFromBuffer(buffer);
+        return await pHashFromBuffer(buffer);
       } catch (error) {
         container.logger.debug(
           `Automod: could not perceptual-hash attachment ${attachment.id}:`,
