@@ -201,4 +201,11 @@ export const automodConfig = {
    * "same" question. Higher = stricter. Default 80%.
    */
   crosspostSimilarityPct: posInt(process.env.AUTOMOD_CROSSPOST_SIMILARITY_PCT, 80),
+  /**
+   * When true, a near-identical cross-channel fan-out auto-deletes the duplicate
+   * copies (keeping the first). Off by default: like flooding, a false positive
+   * here silently removes a legit user's message, so by default we only alert
+   * moderators and let them decide from the console.
+   */
+  crosspostAutoDelete: process.env.AUTOMOD_CROSSPOST_AUTO_DELETE === 'true',
 };

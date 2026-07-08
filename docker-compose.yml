@@ -67,6 +67,7 @@ services:
       AUTOMOD_CROSSPOST_WINDOW_MS: ${AUTOMOD_CROSSPOST_WINDOW_MS:-}
       AUTOMOD_CROSSPOST_MIN_CHARS: ${AUTOMOD_CROSSPOST_MIN_CHARS:-}
       AUTOMOD_CROSSPOST_SIMILARITY_PCT: ${AUTOMOD_CROSSPOST_SIMILARITY_PCT:-}
+      AUTOMOD_CROSSPOST_AUTO_DELETE: ${AUTOMOD_CROSSPOST_AUTO_DELETE:-}
 
     # Migrate the database schema, then start the bot.
     command: sh -c "node_modules/.bin/prisma migrate deploy && npm start"

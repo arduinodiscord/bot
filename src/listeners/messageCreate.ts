@@ -222,9 +222,15 @@ export class MessageCreateListener extends Listener {
 
     // Auto-delete only genuine duplicates: for a near-identical fan-out, drop
     // every copy but the first. The content-agnostic spread signal isn't a set
-    // of duplicates, so it only alerts and waits for a human.
+    // of duplicates, so it only alerts and waits for a human. Gated behind an
+    // opt-in flag so a false positive can't silently delete a legit message
+    // until a server has watched the detector and trusts it.
     let autoActed = false;
-    if (detection.kind === 'similar' && messages.length > 1) {
+    if (
+      automodConfig.crosspostAutoDelete &&
+      detection.kind === 'similar' &&
+      messages.length > 1
+    ) {
       const deleted = await deleteIncidentMessages(container.client, {
         ...incident,
         messages: messages.slice(1),
