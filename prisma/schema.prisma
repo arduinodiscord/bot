@@ -31,13 +31,34 @@ enum MemberAnalyticsEvent {
 /// Blocklist of image fingerprints confirmed to be spam by a moderator.
 /// New uploads matching one of these are auto-actioned. `kind` is "meta" for
 /// exact metadata signatures or "phash" for perceptual hashes (matched by
-/// Hamming distance).
+/// Hamming distance). `severity` distinguishes "scam" (auto-ban on reappearance)
+/// from "spam" (timeout).
 model SpamSignature {
   signature String   @id @db.VarChar
   kind      String   @default("meta") @db.VarChar
   addedBy   String   @db.VarChar
   reason    String?  @db.VarChar
   createdAt DateTime @default(now()) @db.Timestamptz(6)
+  severity  String   @default("spam") @db.VarChar // "scam" | "spam"
+}
+
+/// Allowlist of image fingerprints that are known-good (negative-training set).
+/// Signatures here suppress spam alerts even if they match a SpamSignature cluster.
+model AllowSignature {
+  id        Int      @id @default(autoincrement())
+  signature String   @unique @db.VarChar
+  kind      String   @db.VarChar // "meta" | "phash"
+  addedBy   String   @db.VarChar
+  reason    String?  @db.VarChar
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// Keywords learned from OCR of confirmed scam images.
+model ScamKeyword {
+  keyword   String   @id @db.VarChar
+  hits      Int      @default(1)
+  addedBy   String   @db.VarChar
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
 }
 
 /// Audit trail of automod-related moderation actions.
