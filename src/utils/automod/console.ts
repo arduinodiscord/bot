@@ -15,13 +15,19 @@ import { automodConfig } from '../config';
 import { getPrisma } from '../db';
 import type { Incident, IncidentLevel } from './incidents';
 
-const LEVEL_COLOR: Record<IncidentLevel, number> = {
-  fanout: 0xe03131, // high confidence — red
-  blocklist: 0xe03131,
-  burst: 0xf08c00, // needs review — amber
-  flood: 0xf08c00, // needs review — amber
-  crosspost: 0xe03131, // cross-channel — red
-};
+/** Embed color driven by confidence tier rather than incident level. */
+function tierColor(tier: Incident['tier']): number {
+  switch (tier) {
+    case 'critical':
+    case 'high':
+      return 0xe03131; // red
+    case 'medium':
+      return 0xf08c00; // amber
+    case 'low':
+    default:
+      return 0x868e96; // grey
+  }
+}
 
 const LEVEL_LABEL: Record<IncidentLevel, string> = {
   fanout: 'Cross-channel fan-out',
@@ -43,6 +49,8 @@ const LEVEL_TITLE: Record<IncidentLevel, string> = {
 /** What an automatic action did, shown when the bot acted before a human. */
 const HIGH_CONFIDENCE_NOTE =
   'High-confidence signal: the messages were deleted and the user was timed out automatically. Review and escalate or reverse below.';
+const CRITICAL_NOTE =
+  'Known scam image: the messages were deleted and the user was banned automatically. Review and reverse below if needed.';
 const AUTO_ACTION_NOTE: Record<IncidentLevel, string> = {
   fanout: HIGH_CONFIDENCE_NOTE,
   blocklist: HIGH_CONFIDENCE_NOTE,
@@ -69,7 +77,8 @@ function actionButton(
 export function buildAlertPayload(
   incident: Incident,
   member: GuildMember | null,
-  autoActed: boolean
+  autoActed: boolean,
+  previewUrl?: string
 ): MessageCreateOptions {
   const channelMentions =
     [...new Set(incident.messages.map((m) => `<#${m.channelId}>`))].join(' ') ||
@@ -84,8 +93,9 @@ export function buildAlertPayload(
       )
       .join(' • ') || '—';
 
+  // Confidence tier drives the embed color.
   const embed = new EmbedBuilder()
-    .setColor(LEVEL_COLOR[incident.level])
+    .setColor(tierColor(incident.tier))
     .setTitle(LEVEL_TITLE[incident.level])
     .setDescription(`<@${incident.userId}> \`${incident.userId}\``)
     .addFields(
@@ -93,11 +103,64 @@ export function buildAlertPayload(
         name: 'Signal',
         value: `**${LEVEL_LABEL[incident.level]}** — ${incident.reason}`,
       },
+      {
+        name: 'Confidence',
+        value: `${incident.tier.toUpperCase()} — ${incident.score}/100`,
+        inline: true,
+      },
       { name: 'Channels', value: channelMentions, inline: true },
       { name: 'Messages', value: String(incident.messages.length), inline: true }
     );
 
-  if (member) {
+  // Signal breakdown — note: points are indicative weights, not addends.
+  const signalsValue =
+    incident.matched.length > 0
+      ? incident.matched.map((m) => `• ${m.label} (+${m.points})`).join('\n')
+      : '—';
+  embed.addFields({ name: 'Signals (indicative weights)', value: signalsValue });
+
+  // Cross-user cluster accounts (cap at 10).
+  if (incident.clusterUserIds.length > 1) {
+    const cap = 10;
+    const shown = incident.clusterUserIds.slice(0, cap);
+    const overflow = incident.clusterUserIds.length - shown.length;
+    const accountsValue =
+      shown.map((id) => `<@${id}>`).join(' ') + (overflow > 0 ? ` +${overflow} more` : '');
+    embed.addFields({ name: 'Accounts', value: accountsValue });
+  }
+
+  // OCR detected text (untrusted — hard-capped at 200 chars, newlines collapsed).
+  if (incident.ocrText.length > 0) {
+    const MAX_OCR = 180;
+    let ocrDisplay = incident.ocrText.replace(/\s*\n\s*/g, ' ').trim();
+    if (ocrDisplay.length > MAX_OCR) {
+      ocrDisplay = ocrDisplay.slice(0, MAX_OCR) + '…';
+    }
+    embed.addFields({ name: 'Detected text', value: ocrDisplay });
+  }
+
+  // Thumbnail: prefer the offending image preview; fall back to member avatar.
+  if (previewUrl) {
+    embed.setThumbnail(previewUrl);
+    if (member) {
+      embed
+        .setAuthor({ name: member.user.tag, iconURL: member.displayAvatarURL() })
+        .addFields(
+          {
+            name: 'Account created',
+            value: time(member.user.createdAt, TimestampStyles.RelativeTime),
+            inline: true,
+          },
+          {
+            name: 'Joined server',
+            value: member.joinedAt
+              ? time(member.joinedAt, TimestampStyles.RelativeTime)
+              : 'unknown',
+            inline: true,
+          }
+        );
+    }
+  } else if (member) {
     embed
       .setThumbnail(member.displayAvatarURL())
       .setFooter({ text: member.user.tag })
@@ -119,13 +182,17 @@ export function buildAlertPayload(
 
   embed.addFields({ name: 'Jump to messages', value: jumpLinks });
 
-  if (autoActed)
-    embed.addFields({
-      name: '🔒 Auto-action taken',
-      value: AUTO_ACTION_NOTE[incident.level],
-    });
+  if (autoActed) {
+    const autoNote =
+      incident.tier === 'critical' ? CRITICAL_NOTE : AUTO_ACTION_NOTE[incident.level];
+    embed.addFields({ name: '🔒 Auto-action taken', value: autoNote });
+  }
 
+  // Row 1: confirmscam, confirm, timeout, ban  (4 buttons)
+  // Row 2: delete, dismiss                     (2 buttons)
+  // Total: 6 buttons across 2 rows — no row exceeds the Discord limit of 5.
   const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    actionButton('confirmscam', '⛔ Confirm scam → ban', ButtonStyle.Danger, incident.id),
     actionButton('confirm', '✅ Confirm spam', ButtonStyle.Danger, incident.id),
     actionButton('timeout', '⏳ Timeout', ButtonStyle.Secondary, incident.id),
     actionButton('ban', '🔨 Ban', ButtonStyle.Danger, incident.id)
