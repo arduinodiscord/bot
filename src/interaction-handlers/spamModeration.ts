@@ -84,7 +84,8 @@ export class SpamModerationHandler extends InteractionHandler {
           incident.signatures,
           incident.hashes,
           moderator.id,
-          'confirmed image spam'
+          'confirmed image spam',
+          'spam'
         );
         clearUser(incident.userId);
         clearFloodUser(incident.userId);

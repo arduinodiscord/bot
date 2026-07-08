@@ -73,7 +73,7 @@ export class MessageCreateListener extends Listener {
         : {}
     );
 
-    const { blocked, matched } = isBlocklisted(signatures, hashes);
+    const { blocked, severity: _severity, matched } = isBlocklisted(signatures, hashes);
 
     let level: IncidentLevel | null = null;
     if (blocked) level = 'blocklist';
