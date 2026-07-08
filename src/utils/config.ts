@@ -133,6 +133,8 @@ export const automodConfig = {
    * same image. Higher = more lenient/near-duplicate matching. Default 6.
    */
   phashThreshold: posInt(process.env.AUTOMOD_PHASH_THRESHOLD, 6),
+  /** Max concurrent pHash fetch/decode operations, to bound raid fan-out. */
+  phashMaxConcurrency: posInt(process.env.AUTOMOD_PHASH_MAX_CONCURRENCY, 3),
   /** Sliding window (ms) for detecting cross-channel fan-out. */
   fanoutWindowMs: posInt(process.env.AUTOMOD_FANOUT_WINDOW_MS, 120_000),
   /** How long (ms) auto-applied/console timeouts last. Default 1 hour. */

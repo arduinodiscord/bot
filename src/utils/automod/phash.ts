@@ -1,6 +1,7 @@
 import { Jimp, intToRGBA } from 'jimp';
 import type { Attachment, Message } from 'discord.js';
 import { container } from '@sapphire/framework';
+import { automodConfig } from '../config';
 import { isImageAttachment } from './signature';
 
 // pHash parameters: resize to DCT_INPUT_SIZE×DCT_INPUT_SIZE, then keep the
@@ -12,6 +13,27 @@ const DCT_COEFF_SIZE = 8;
 const MAX_ATTACHMENTS = 4;
 /** Per-fetch timeout. */
 const FETCH_TIMEOUT_MS = 4000;
+/** Bound on the Jimp decode of a single image (a crafted image can hang). */
+const DECODE_TIMEOUT_MS = 4000;
+/** Cap on fetched image bytes, to bound memory / decompression-bomb risk. */
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+
+/** In-flight fetch/decode count, to cap fan-out during a raid. */
+let active = 0;
+
+/**
+ * Race a promise against a timeout, resolving to `null` if the timeout wins.
+ * Used to bound a potentially hanging Jimp decode.
+ */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  let t: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<null>((res) => {
+    t = setTimeout(() => res(null), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(t!)) as Promise<
+    T | null
+  >;
+}
 
 /**
  * Pre-computed cosine table for the 1-D DCT:
@@ -138,19 +160,29 @@ export async function perceptualHashes(message: Message): Promise<string[]> {
 
   const hashes = await Promise.all(
     images.map(async (attachment) => {
+      // Best-effort concurrency guard: under raid load we skip rather than
+      // fan out unbounded fetches/decodes. A skip just means no pHash for this
+      // attachment (the metadata signature still covers it).
+      if (active >= automodConfig.phashMaxConcurrency) return null;
+      active++;
       try {
         const response = await fetch(thumbnailUrl(attachment), {
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
         if (!response.ok) return null;
+        const len = Number(response.headers.get('content-length') ?? 0);
+        if (len > MAX_IMAGE_BYTES) return null;
         const buffer = Buffer.from(await response.arrayBuffer());
-        return await pHashFromBuffer(buffer);
+        // Bound the decode: a crafted image can hang Jimp.read with no abort.
+        return await withTimeout(pHashFromBuffer(buffer), DECODE_TIMEOUT_MS);
       } catch (error) {
         container.logger.debug(
           `Automod: could not perceptual-hash attachment ${attachment.id}:`,
           error
         );
         return null;
+      } finally {
+        active--;
       }
     })
   );

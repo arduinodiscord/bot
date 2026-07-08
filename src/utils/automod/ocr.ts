@@ -74,9 +74,14 @@ async function ocrAttachment(a: Attachment): Promise<string> {
   } finally { active--; }
 }
 
+/** Cap on fetched image bytes, to bound memory / decompression-bomb risk. */
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+
 async function runOcr(a: Attachment): Promise<string> {
   const res = await fetch(readableUrl(a), { signal: AbortSignal.timeout(automodConfig.ocrTimeoutMs) });
   if (!res.ok) throw new Error(`OCR fetch failed with status ${res.status}`);
+  const len = Number(res.headers.get('content-length') ?? 0);
+  if (len > MAX_IMAGE_BYTES) throw new Error('image too large');
   const buffer = Buffer.from(await res.arrayBuffer());
   const worker = await getWorker();
   const { data } = await worker.recognize(buffer);

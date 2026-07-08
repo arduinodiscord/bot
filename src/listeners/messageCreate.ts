@@ -184,13 +184,16 @@ export class MessageCreateListener extends Listener {
     let autoActed = false;
     if (tier === 'critical') {
       await deleteIncidentMessages(container.client, incident).catch(() => 0);
-      const targets = [
-        ...new Set([message.author.id, ...cluster.userIds]),
-      ].slice(0, 10);
-      for (const id of targets)
-        await banMember(message.guild, id, `Automod: ${reason}`).catch(
-          () => false
-        );
+      // Auto-ban ONLY the confirmed-scam author. Cluster members are joined by
+      // lenient pHash similarity and are not independently confirmed, so we do
+      // not auto-ban them here — each raider posting the blocklisted image is
+      // banned as the author of their own message. The cluster is still recorded
+      // on the incident and surfaced in the alert for one-click mod action.
+      await banMember(
+        message.guild,
+        message.author.id,
+        `Automod: ${reason}`
+      ).catch(() => false);
       autoActed = true;
     } else if (tier === 'high') {
       const deleted = await deleteIncidentMessages(

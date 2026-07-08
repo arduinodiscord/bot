@@ -3,11 +3,12 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  PermissionFlagsBits,
   TimestampStyles,
   time,
   type Client,
   type Guild,
-  type GuildMember,
+  GuildMember,
   type MessageCreateOptions,
 } from 'discord.js';
 import { container } from '@sapphire/framework';
@@ -219,12 +220,29 @@ export async function timeoutMember(
     .catch(() => false);
 }
 
-/** Ban a member and scrub their last day of messages. */
+/**
+ * Whether a member is exempt from automod enforcement: staff (Manage Messages)
+ * or any configured immune role.
+ */
+function isAutomodImmune(member: GuildMember): boolean {
+  if (member.permissions.has(PermissionFlagsBits.ManageMessages)) return true;
+  return automodConfig.immuneRoleIds.some((id) => member.roles.cache.has(id));
+}
+
+/**
+ * Ban a member and scrub their last day of messages. Guards every ban path
+ * (auto and manual): if the target is still in the guild and is either
+ * automod-immune or not bannable (hierarchy/perms), the ban is skipped and
+ * `false` is returned. A user who has already left the guild is banned by id
+ * (departed raid accounts are intended targets).
+ */
 export async function banMember(
   guild: Guild,
   userId: string,
   reason: string
 ): Promise<boolean> {
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (member && (!member.bannable || isAutomodImmune(member))) return false;
   return guild.members
     .ban(userId, { reason, deleteMessageSeconds: 24 * 60 * 60 })
     .then(() => true)

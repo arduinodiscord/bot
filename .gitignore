@@ -111,3 +111,6 @@ scratch.md
 
 # Local spam sample — never commit
 spam_example.png
+
+# Local working files — never commit
+local/
