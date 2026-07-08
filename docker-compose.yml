@@ -69,6 +69,26 @@ services:
       AUTOMOD_CROSSPOST_SIMILARITY_PCT: ${AUTOMOD_CROSSPOST_SIMILARITY_PCT:-}
       AUTOMOD_CROSSPOST_AUTO_DELETE: ${AUTOMOD_CROSSPOST_AUTO_DELETE:-}
 
+      # ── Cross-user cluster (coordinated raid detection) ───────────────────
+      AUTOMOD_CLUSTER_MIN_USERS: ${AUTOMOD_CLUSTER_MIN_USERS:-}
+      AUTOMOD_CLUSTER_WINDOW_MS: ${AUTOMOD_CLUSTER_WINDOW_MS:-}
+
+      # ── Confidence scoring (0-100) ────────────────────────────────────────
+      AUTOMOD_SCORE_HIGH: ${AUTOMOD_SCORE_HIGH:-}
+      AUTOMOD_SCORE_MEDIUM: ${AUTOMOD_SCORE_MEDIUM:-}
+      AUTOMOD_SCORE_LOW: ${AUTOMOD_SCORE_LOW:-}
+      AUTOMOD_LOG_LOW_CONFIDENCE: ${AUTOMOD_LOG_LOW_CONFIDENCE:-}
+
+      # ── OCR (scam-text reading) ───────────────────────────────────────────
+      OCR_ENABLED: ${OCR_ENABLED:-}
+      AUTOMOD_OCR_TIMEOUT_MS: ${AUTOMOD_OCR_TIMEOUT_MS:-}
+      AUTOMOD_OCR_MAX_CONCURRENCY: ${AUTOMOD_OCR_MAX_CONCURRENCY:-}
+      AUTOMOD_OCR_IMAGE_WIDTH: ${AUTOMOD_OCR_IMAGE_WIDTH:-}
+      AUTOMOD_SCAM_KEYWORDS: ${AUTOMOD_SCAM_KEYWORDS:-}
+
+      # ── Perceptual hash backpressure ──────────────────────────────────────
+      AUTOMOD_PHASH_MAX_CONCURRENCY: ${AUTOMOD_PHASH_MAX_CONCURRENCY:-}
+
     # Migrate the database schema, then start the bot.
     command: sh -c "node_modules/.bin/prisma migrate deploy && npm start"
 
