@@ -29,6 +29,18 @@ export interface Incident {
   /** Perceptual hashes to blocklist if a moderator confirms this is spam. */
   hashes: string[];
   createdAt: number;
+  /** Composite risk score produced by the scoring pipeline. */
+  score: number;
+  /** Qualitative tier bucketed from the score. */
+  tier: 'low' | 'medium' | 'high' | 'critical';
+  /** Individual signal contributions that made up the score. */
+  matched: { label: string; points: number }[];
+  /** Distinct user IDs observed in the same cross-user cluster (always includes the author). */
+  clusterUserIds: string[];
+  /** Concatenated OCR text extracted from image attachments (may be ''). */
+  ocrText: string;
+  /** Category to use when a moderator confirms and blocklists this incident. */
+  severity: 'scam' | 'spam';
 }
 
 /**
@@ -39,13 +51,29 @@ export interface Incident {
 const incidents = new Map<string, Incident>();
 const TTL_MS = 60 * 60 * 1000;
 
-export function createIncident(
-  data: Omit<Incident, 'id' | 'createdAt'>
-): Incident {
+/**
+ * Input type for `createIncident`. The six scoring/enrichment fields are
+ * optional so that the flood and crosspost call sites — which don't yet run
+ * through the scoring pipeline — compile unchanged. Defaults are filled in
+ * inside `createIncident`.
+ */
+type IncidentInput = Omit<
+  Incident,
+  'id' | 'createdAt' | 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'ocrText' | 'severity'
+> &
+  Partial<Pick<Incident, 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'ocrText' | 'severity'>>;
+
+export function createIncident(data: IncidentInput): Incident {
   const incident: Incident = {
     ...data,
     id: randomUUID().slice(0, 8),
     createdAt: Date.now(),
+    score: data.score ?? 0,
+    tier: data.tier ?? 'medium',
+    matched: data.matched ?? [],
+    clusterUserIds: data.clusterUserIds ?? [data.userId],
+    ocrText: data.ocrText ?? '',
+    severity: data.severity ?? 'spam',
   };
   incidents.set(incident.id, incident);
   return incident;
