@@ -114,3 +114,7 @@ spam_example.png
 
 # Local working files — never commit
 local/
+
+# Internal working docs — never commit/push
+HANDOFF.md
+docs/superpowers/
