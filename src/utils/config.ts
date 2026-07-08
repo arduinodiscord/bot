@@ -208,4 +208,32 @@ export const automodConfig = {
    * moderators and let them decide from the console.
    */
   crosspostAutoDelete: process.env.AUTOMOD_CROSSPOST_AUTO_DELETE === 'true',
+
+  // --- Cross-user cluster ---
+  clusterMinUsers: posInt(process.env.AUTOMOD_CLUSTER_MIN_USERS, 2),
+  clusterWindowMs: posInt(process.env.AUTOMOD_CLUSTER_WINDOW_MS, 120_000),
+
+  // --- Confidence scoring thresholds (0-100) ---
+  scoreHigh: posInt(process.env.AUTOMOD_SCORE_HIGH, 50),
+  scoreMedium: posInt(process.env.AUTOMOD_SCORE_MEDIUM, 30),
+  scoreLow: posInt(process.env.AUTOMOD_SCORE_LOW, 15),
+  logLowConfidence: process.env.AUTOMOD_LOG_LOW_CONFIDENCE === 'true',
+
+  // --- OCR ---
+  ocrEnabled: process.env.OCR_ENABLED !== 'false',
+  ocrTimeoutMs: posInt(process.env.AUTOMOD_OCR_TIMEOUT_MS, 5000),
+  ocrMaxConcurrency: posInt(process.env.AUTOMOD_OCR_MAX_CONCURRENCY, 2),
+  ocrImageWidth: posInt(process.env.AUTOMOD_OCR_IMAGE_WIDTH, 640),
 };
+
+const DEFAULT_SCAM_KEYWORDS = [
+  'crypto', 'airdrop', 'withdraw', 'withdrawal', 'giveaway', 'free', 'gift',
+  'nitro', 'elon', 'musk', 'mrbeast', 'beast games', 'claim', 'wallet',
+  'bonus', 'promo', 'reward', 'bitcoin', 'eth', 'usdt',
+];
+
+/** Seed scam keywords; AUTOMOD_SCAM_KEYWORDS (comma-separated) replaces them. */
+export const seedScamKeywords = (() => {
+  const override = idList(process.env.AUTOMOD_SCAM_KEYWORDS).map((k) => k.toLowerCase());
+  return override.length > 0 ? override : DEFAULT_SCAM_KEYWORDS;
+})();
