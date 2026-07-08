@@ -14,7 +14,8 @@ import {
   type ButtonInteraction,
 } from 'discord.js';
 import { deleteIncident, getIncident } from '../utils/automod/incidents';
-import { addToBlocklist } from '../utils/automod/blocklist';
+import { addToBlocklist, addToAllowlist } from '../utils/automod/blocklist';
+import { tokenizeOcr, learnKeywords } from '../utils/automod/keywords';
 import {
   banMember,
   deleteIncidentMessages,
@@ -132,12 +133,27 @@ export class SpamModerationHandler extends InteractionHandler {
         summary = `🗑️ Deleted ${deleted} message(s).`;
         break;
       }
+      case 'confirmscam': {
+        const deleted = await deleteIncidentMessages(container.client, incident);
+        const targets = [...new Set([incident.userId, ...incident.clusterUserIds])].slice(0, 10);
+        let banned = 0;
+        for (const id of targets)
+          if (await banMember(guild, id, `Confirmed scam by ${moderator.tag}`)) banned++;
+        await addToBlocklist(incident.signatures, incident.hashes, moderator.id, 'confirmed scam', 'scam');
+        if (incident.ocrText) await learnKeywords(tokenizeOcr(incident.ocrText), moderator.id);
+        clearUser(incident.userId);
+        clearFloodUser(incident.userId);
+        clearCrosspostUser(incident.userId);
+        summary = `⛔ Confirmed scam — banned ${banned}/${targets.length} account(s), deleted ${deleted} message(s), trained blocklist + keywords.`;
+        break;
+      }
       case 'dismiss': {
+        await addToAllowlist(incident.signatures, incident.hashes, moderator.id, 'marked not spam');
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
         clearCrosspostUser(incident.userId);
         summary =
-          '👌 Marked as not spam. Cleared tracking for this user; no action taken.';
+          '👌 Marked as not spam. Cleared tracking for this user; no action taken and allowlisted the image(s).';
         break;
       }
       default:
