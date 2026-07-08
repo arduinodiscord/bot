@@ -7,7 +7,8 @@
     "start": "node ./dist/src/index.js",
     "build": "tsc -p .",
     "dev": "tsnd --respawn --transpile-only --exit-child .",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test": "tsc -p . && BOT_TOKEN=test node --test \"dist/**/*.test.js\""
   },
   "repository": {
     "type": "git",
