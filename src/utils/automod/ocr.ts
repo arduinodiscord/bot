@@ -12,8 +12,12 @@ function getWorker(): Promise<Tesseract.Worker> {
   return workerPromise;
 }
 
-// Cache OCR text by attachment signature so a raid's repeated image is read once.
+// Cache OCR text by attachment signature so a raid's repeated image is read
+// once. Only genuine completions are cached (see ocrAttachment) — a transient
+// timeout or fetch error must never poison the cache and permanently suppress
+// OCR for that fingerprint. Bounded so it cannot grow without limit.
 const cache = new Map<string, string>();
+const MAX_CACHE = 500;
 let active = 0;
 
 function readableUrl(a: Attachment): string {
@@ -23,10 +27,15 @@ function readableUrl(a: Attachment): string {
 }
 
 async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
-  return Promise.race([
-    p,
-    new Promise<null>((res) => setTimeout(() => res(null), ms)),
-  ]);
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<null>((res) => {
+    timer = setTimeout(() => res(null), ms);
+  });
+  try {
+    return await Promise.race([p, timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
 }
 
 /** OCR all image attachments on a message; returns concatenated text (may be ''). */
@@ -41,11 +50,22 @@ async function ocrAttachment(a: Attachment): Promise<string> {
   const key = attachmentSignature(a);
   const cached = cache.get(key);
   if (cached !== undefined) return cached;
+  // Best-effort concurrency guard: under load we skip rather than queue
+  // unboundedly. A skip is deliberately NOT cached, so it can be retried later.
   if (active >= automodConfig.ocrMaxConcurrency) return '';
   active++;
   try {
+    // withTimeout yields null on timeout; runOcr throws on fetch/decode failure.
+    // Only a genuine completion (a string — possibly '' for a text-free image)
+    // is cached. Transient timeouts/errors return '' WITHOUT caching so they
+    // can't poison the cache and blind OCR for this fingerprint on later posts.
     const text = await withTimeout(runOcr(a), automodConfig.ocrTimeoutMs);
-    const result = (text ?? '').trim();
+    if (text === null) return '';
+    const result = text.trim();
+    if (cache.size >= MAX_CACHE) {
+      const oldest = cache.keys().next().value;
+      if (oldest !== undefined) cache.delete(oldest);
+    }
     cache.set(key, result);
     return result;
   } catch (e) {
@@ -56,7 +76,7 @@ async function ocrAttachment(a: Attachment): Promise<string> {
 
 async function runOcr(a: Attachment): Promise<string> {
   const res = await fetch(readableUrl(a), { signal: AbortSignal.timeout(automodConfig.ocrTimeoutMs) });
-  if (!res.ok) return '';
+  if (!res.ok) throw new Error(`OCR fetch failed with status ${res.status}`);
   const buffer = Buffer.from(await res.arrayBuffer());
   const worker = await getWorker();
   const { data } = await worker.recognize(buffer);
