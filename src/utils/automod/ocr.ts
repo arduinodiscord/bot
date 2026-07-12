@@ -8,8 +8,34 @@ import { isImageAttachment, attachmentSignature } from './signature';
 // No manual load() / loadLanguage() / initialize() calls needed.
 let workerPromise: Promise<Tesseract.Worker> | null = null;
 function getWorker(): Promise<Tesseract.Worker> {
-  if (!workerPromise) workerPromise = Tesseract.createWorker('eng');
+  if (!workerPromise) {
+    workerPromise = Tesseract.createWorker('eng');
+    // A failed init (e.g. a transient error downloading the language model)
+    // must not be cached forever, or OCR would stay dead until a restart.
+    workerPromise.catch(() => {
+      workerPromise = null;
+    });
+  }
   return workerPromise;
+}
+
+/**
+ * Pre-initialize the OCR worker at startup. The first createWorker() call
+ * spawns the worker and downloads the language model, which easily blows the
+ * per-image OCR budget — without warming, the keyword signal silently reads
+ * '' for every image until the worker finishes initializing.
+ */
+export async function warmOcr(): Promise<void> {
+  if (!automodConfig.ocrEnabled) return;
+  try {
+    await getWorker();
+    container.logger.info('Automod: OCR worker ready.');
+  } catch (error) {
+    container.logger.warn(
+      'Automod: OCR worker failed to initialize (keyword signal degraded; will retry on demand):',
+      error
+    );
+  }
 }
 
 // Cache OCR text by attachment signature so a raid's repeated image is read

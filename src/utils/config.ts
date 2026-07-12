@@ -36,6 +36,14 @@ const posInt = (value: string | undefined, fallback: number): number => {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 };
 
+/** Parse the learning-mode switch: 'on' / 'off' force it, anything else is 'auto'. */
+const parseLearningMode = (value: string | undefined): 'auto' | 'on' | 'off' => {
+  const raw = (value ?? 'auto').trim().toLowerCase();
+  if (raw === 'on' || raw === 'true') return 'on';
+  if (raw === 'off' || raw === 'false') return 'off';
+  return 'auto';
+};
+
 /** Parse a comma-separated list of ids from the environment. */
 const idList = (value: string | undefined): string[] =>
   (value ?? '')
@@ -220,6 +228,19 @@ export const automodConfig = {
   scoreMedium: posInt(process.env.AUTOMOD_SCORE_MEDIUM, 30),
   scoreLow: posInt(process.env.AUTOMOD_SCORE_LOW, 15),
   logLowConfidence: process.env.AUTOMOD_LOG_LOW_CONFIDENCE === 'true',
+
+  // --- Learning (ramp-up) mode ---
+  /**
+   * While learning mode is active, EVERY image message that produces any
+   * nonzero suspicion signal is posted to the mod log (alert-only below the
+   * auto-action thresholds) so moderators can train the blocklist and keyword
+   * corpus from a cold start. 'auto' (default) keeps it active until the
+   * blocklist holds `learningCorpusTarget` confirmed fingerprints; 'on' and
+   * 'off' force it regardless of corpus size.
+   */
+  learningMode: parseLearningMode(process.env.AUTOMOD_LEARNING_MODE),
+  /** Confirmed blocklist fingerprints at which 'auto' learning mode retires. */
+  learningCorpusTarget: posInt(process.env.AUTOMOD_LEARNING_CORPUS_TARGET, 20),
 
   // --- OCR ---
   ocrEnabled: process.env.OCR_ENABLED !== 'false',

@@ -6,7 +6,7 @@ const base: Signals = {
   scamBlocklist: false, spamBlocklist: false,
   clusterUsers: 0, fanoutChannels: 0,
   keywordMatches: 0, newAccount: false, hasLinkOrMention: false,
-  imageOnlyPair: false, burst: false,
+  ocrHasLink: false, imageOnlyPair: false, burst: false,
 };
 
 test('scam blocklist forces critical', () => {
@@ -29,4 +29,14 @@ test('corroborating signals alone never exceed medium', () => {
 
 test('no signals is none', () => {
   assert.equal(scoreSignals(base).tier, 'none');
+});
+
+test('a fired burst detection is always at least low', () => {
+  const r = scoreSignals({ ...base, burst: true });
+  assert.equal(r.tier, 'low');
+});
+
+test('a link inside the image text contributes to the score', () => {
+  const r = scoreSignals({ ...base, ocrHasLink: true });
+  assert.equal(r.score, 12);
 });

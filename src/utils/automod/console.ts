@@ -34,6 +34,7 @@ const LEVEL_LABEL: Record<IncidentLevel, string> = {
   fanout: 'Cross-channel fan-out',
   blocklist: 'Known spam image',
   burst: 'Image burst',
+  suspect: 'Suspicious image',
   flood: 'Message flooding',
   crosspost: 'Cross-channel question spam',
 };
@@ -43,6 +44,7 @@ const LEVEL_TITLE: Record<IncidentLevel, string> = {
   fanout: '🚨 Possible image spam',
   blocklist: '🚨 Possible image spam',
   burst: '🚨 Possible image spam',
+  suspect: '🚨 Possible image spam',
   flood: '🚨 Possible message flooding',
   crosspost: '🚨 Possible cross-channel question spam',
 };
@@ -56,6 +58,7 @@ const AUTO_ACTION_NOTE: Record<IncidentLevel, string> = {
   fanout: HIGH_CONFIDENCE_NOTE,
   blocklist: HIGH_CONFIDENCE_NOTE,
   burst: HIGH_CONFIDENCE_NOTE,
+  suspect: HIGH_CONFIDENCE_NOTE,
   flood: 'The user was timed out automatically. Review and escalate or reverse below.',
   crosspost:
     'The duplicate crossposts were deleted automatically (the first copy was kept). Review and escalate or reverse below.',
@@ -187,6 +190,16 @@ export function buildAlertPayload(
     const autoNote =
       incident.tier === 'critical' ? CRITICAL_NOTE : AUTO_ACTION_NOTE[incident.level];
     embed.addFields({ name: '🔒 Auto-action taken', value: autoNote });
+  }
+
+  if (incident.learning) {
+    embed.addFields({
+      name: '📚 Learning mode',
+      value:
+        'Posted because the spam corpus is still training — this may well be legit. ' +
+        'Use **Confirm spam / Confirm scam → ban / Not spam** to teach the filter; ' +
+        'learning mode retires itself once enough images are confirmed.',
+    });
   }
 
   // Row 1: confirmscam, confirm, timeout, ban  (4 buttons)

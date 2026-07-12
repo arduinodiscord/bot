@@ -18,6 +18,24 @@ const allowHashes = new Set<string>();
 
 export type FingerprintKind = 'meta' | 'phash';
 
+/** Total confirmed fingerprints (metadata + perceptual) in the blocklist. */
+export function blocklistSize(): number {
+  return exactSignatures.size + perceptualHashes.size;
+}
+
+/** Test-only reset. */
+export function __resetBlocklist(): void {
+  for (const set of [
+    exactSignatures,
+    perceptualHashes,
+    scamSignatures,
+    scamHashes,
+    allowSignatures,
+    allowHashes,
+  ])
+    set.clear();
+}
+
 export interface BlocklistMatch {
   blocked: boolean;
   severity: 'scam' | 'spam' | null;

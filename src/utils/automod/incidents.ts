@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto';
 
 /**
- * The kinds of incident the moderation console can surface. `burst`, `fanout`
- * and `blocklist` come from the image-spam detector; `flood` from the
- * text-flooding detector.
+ * The kinds of incident the moderation console can surface. `burst`, `fanout`,
+ * `blocklist` and `suspect` come from the image-spam detector (`suspect` is a
+ * scored hit with no burst/fan-out/blocklist detection behind it, e.g. OCR
+ * keywords or new-account corroboration); `flood` from the text-flooding
+ * detector.
  */
 export type IncidentLevel =
   | 'burst'
   | 'fanout'
   | 'blocklist'
+  | 'suspect'
   | 'flood'
   | 'crosspost';
 
@@ -41,6 +44,8 @@ export interface Incident {
   ocrText: string;
   /** Category to use when a moderator confirms and blocklists this incident. */
   severity: 'scam' | 'spam';
+  /** Whether this alert was posted by learning mode below the normal tier gate. */
+  learning: boolean;
 }
 
 /**
@@ -59,9 +64,9 @@ const TTL_MS = 60 * 60 * 1000;
  */
 type IncidentInput = Omit<
   Incident,
-  'id' | 'createdAt' | 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'ocrText' | 'severity'
+  'id' | 'createdAt' | 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'ocrText' | 'severity' | 'learning'
 > &
-  Partial<Pick<Incident, 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'ocrText' | 'severity'>>;
+  Partial<Pick<Incident, 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'ocrText' | 'severity' | 'learning'>>;
 
 export function createIncident(data: IncidentInput): Incident {
   const incident: Incident = {
@@ -74,6 +79,7 @@ export function createIncident(data: IncidentInput): Incident {
     clusterUserIds: data.clusterUserIds ?? [data.userId],
     ocrText: data.ocrText ?? '',
     severity: data.severity ?? 'spam',
+    learning: data.learning ?? false,
   };
   incidents.set(incident.id, incident);
   return incident;

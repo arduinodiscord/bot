@@ -21,6 +21,7 @@ import {
   tokenize,
 } from '../utils/automod/crosspost';
 import { isBlocklisted, isAllowlisted } from '../utils/automod/blocklist';
+import { learningModeActive } from '../utils/automod/learning';
 import { recordAndCluster } from '../utils/automod/globalIndex';
 import { matchKeywords } from '../utils/automod/keywords';
 import { scoreSignals } from '../utils/automod/score';
@@ -105,6 +106,9 @@ export class MessageCreateListener extends Listener {
     const imageOnlyPair = message.content.trim() === '' && imageCount === 2;
     const hasLinkOrMention =
       /https?:\/\//i.test(message.content) || message.mentions.everyone;
+    // Scam images usually carry their payload link inside the image itself,
+    // where the message-content check above cannot see it.
+    const ocrHasLink = /https?:\/\/|www\.|discord\.gg\/|t\.me\//i.test(ocrText);
 
     // Fold every signal into a single confidence score + tier.
     const signals = {
@@ -116,12 +120,34 @@ export class MessageCreateListener extends Listener {
       keywordMatches: matchKeywords(ocrText).length,
       newAccount: isNewMember,
       hasLinkOrMention: Boolean(hasLinkOrMention),
+      ocrHasLink,
       imageOnlyPair,
       burst: detection.level === 'burst',
     };
     const { score, tier, matched: matchedSignals } = scoreSignals(signals);
-    if (tier === 'none') return;
-    if (tier === 'low' && !automodConfig.logLowConfidence) return;
+    const signalSummary =
+      matchedSignals.map((m) => `${m.label} (+${m.points})`).join(', ') || 'none';
+    container.logger.debug(
+      `Automod: image from ${message.author.id} in ${message.channelId} scored ${score} (${tier}); signals: ${signalSummary}`
+    );
+
+    // While learning mode is active (empty/small corpus), ANY nonzero
+    // suspicion signal is surfaced so moderators can train the blocklist and
+    // keywords; the usual tier gate takes over once the corpus has grown.
+    const learning = learningModeActive();
+    if (learning) {
+      if (score <= 0) return;
+    } else {
+      if (tier === 'none') return;
+      if (tier === 'low' && !automodConfig.logLowConfidence) {
+        // A real detection died at the gate — say so, or "why didn't this
+        // alert?" requires a code audit.
+        container.logger.info(
+          `Automod: suppressed low-confidence image alert for ${message.author.id} (score ${score}; signals: ${signalSummary}). Set AUTOMOD_LOG_LOW_CONFIDENCE=true to post these.`
+        );
+        return;
+      }
+    }
 
     if (!shouldAlert(message.author.id, now)) return;
     markAlerted(message.author.id, now);
@@ -148,13 +174,17 @@ export class MessageCreateListener extends Listener {
 
     // Incident level drives the console title/label; the tier drives colour and
     // auto-action. A blocklist hit is always labelled as such; otherwise a
-    // cross-user cluster or channel fan-out reads as fan-out, else a burst.
+    // cross-user cluster or channel fan-out reads as fan-out, a burst as a
+    // burst, and anything scored purely from corroborating signals (keywords,
+    // tenure, links) as a plain suspect.
     const level: IncidentLevel = blocked
       ? 'blocklist'
       : signals.clusterUsers >= automodConfig.clusterMinUsers ||
           signals.fanoutChannels >= automodConfig.fanoutChannels
         ? 'fanout'
-        : 'burst';
+        : signals.burst
+          ? 'burst'
+          : 'suspect';
 
     const reason = blocked
       ? `Matched a known ${severity} image`
@@ -171,11 +201,16 @@ export class MessageCreateListener extends Listener {
       signatures,
       hashes,
       score,
-      tier,
+      // A learning-mode hit may score below every threshold ('none'); it is
+      // still shown to moderators, as the lowest-confidence bucket.
+      tier: tier === 'none' ? 'low' : tier,
       matched: matchedSignals,
       clusterUserIds: cluster.userIds,
       ocrText,
       severity: severity ?? 'spam',
+      // Flag alerts that only exist because of learning mode, so the console
+      // explains why moderators are seeing a low-confidence hit.
+      learning: learning && (tier === 'none' || (tier === 'low' && !automodConfig.logLowConfidence)),
     });
 
     // Tiered enforcement, capped at the approved ceiling: only a confirmed scam

@@ -79,6 +79,10 @@ services:
       AUTOMOD_SCORE_LOW: ${AUTOMOD_SCORE_LOW:-}
       AUTOMOD_LOG_LOW_CONFIDENCE: ${AUTOMOD_LOG_LOW_CONFIDENCE:-}
 
+      # ── Learning (ramp-up) mode ───────────────────────────────────────────
+      AUTOMOD_LEARNING_MODE: ${AUTOMOD_LEARNING_MODE:-}
+      AUTOMOD_LEARNING_CORPUS_TARGET: ${AUTOMOD_LEARNING_CORPUS_TARGET:-}
+
       # ── OCR (scam-text reading) ───────────────────────────────────────────
       OCR_ENABLED: ${OCR_ENABLED:-}
       AUTOMOD_OCR_TIMEOUT_MS: ${AUTOMOD_OCR_TIMEOUT_MS:-}

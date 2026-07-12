@@ -105,7 +105,11 @@ Automod: loaded 0 signature(s) and 0 perceptual hash(es) from the blocklist.
 Type `/` in your server — the bot's commands (`/tag`, `/solved`, `/openposts`, `/ping`, `/about`, `/say`) should appear.
 
 **Automod console active?**
-Confirm `MOD_LOG_CHANNEL_ID` is set. Post a test image in two different channels quickly — you should see an alert appear in the mod-log channel within seconds.
+Confirm `MOD_LOG_CHANNEL_ID` is set (the bot logs a startup warning if it isn't). Post a test image in two different channels quickly — you should see an alert appear in the mod-log channel within seconds.
+
+> ⚠️ Test with a **non-moderator account**: anyone with Manage Messages (or a role in `AUTOMOD_IMMUNE_ROLE_IDS`) is exempt from all automod inspection, so images posted by staff never trigger alerts.
+
+While the blocklist corpus is still small, **learning mode** is active (see below): any image with at least one suspicion signal — scam keywords read from the image, a link, a burst, a new account — is posted to the mod log so moderators can train the filter with the Confirm/Not-spam buttons.
 
 **Help-channel features active?**
 Open a new thread in a configured help channel. You should see a "Mark Solved" button appear. Post a short message with no code/image in a new thread — the needinfo checklist should appear automatically.
@@ -159,6 +163,9 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | `AUTOMOD_TIMEOUT_MS` | `3600000` | Duration of auto-applied or console timeouts (1h) |
 | `AUTOMOD_ALERT_COOLDOWN_MS` | `30000` | Minimum gap between alerts for the same user |
 | `AUTOMOD_IMMUNE_ROLE_IDS` | *(none)* | Comma-separated role IDs that are never inspected |
+| `AUTOMOD_LEARNING_MODE` | `auto` | Ramp-up mode: while active, every image with any nonzero suspicion signal is posted to the mod log (alert-only) so moderators can train the corpus. `auto` retires itself at the corpus target; `on`/`off` force it |
+| `AUTOMOD_LEARNING_CORPUS_TARGET` | `20` | Confirmed blocklist fingerprints at which `auto` learning mode switches to normal confidence gating |
+| `AUTOMOD_LOG_LOW_CONFIDENCE` | `false` | After learning mode retires, set `true` to keep posting low-confidence hits |
 
 ### Text-flooding automod
 

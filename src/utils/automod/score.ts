@@ -8,6 +8,7 @@ export interface Signals {
   keywordMatches: number; // distinct OCR scam keywords matched
   newAccount: boolean;
   hasLinkOrMention: boolean;
+  ocrHasLink: boolean;    // a URL / invite link inside the image text itself
   imageOnlyPair: boolean; // image-only message with exactly 2 images
   burst: boolean;
 }
@@ -39,6 +40,7 @@ export function scoreSignals(s: Signals): ScoreResult {
     corrob.push({ label: `OCR scam keywords x${s.keywordMatches}`, points: Math.min(s.keywordMatches * 12, 30) });
   if (s.newAccount) corrob.push({ label: 'New / low-tenure account', points: 18 });
   if (s.hasLinkOrMention) corrob.push({ label: 'Contains link or @everyone/@here', points: 18 });
+  if (s.ocrHasLink) corrob.push({ label: 'Link inside image text (OCR)', points: 12 });
   if (s.imageOnlyPair) corrob.push({ label: 'Image-only, exactly 2 images', points: 8 });
   if (s.burst) corrob.push({ label: 'Image burst', points: 12 });
 
@@ -50,6 +52,10 @@ export function scoreSignals(s: Signals): ScoreResult {
   if (score >= automodConfig.scoreHigh) tier = 'high';
   else if (score >= automodConfig.scoreMedium) tier = 'medium';
   else if (score >= automodConfig.scoreLow) tier = 'low';
+  // A fired burst detection is always worth at least a low-confidence alert:
+  // its weight alone sits below scoreLow, and without this floor a burst from
+  // an established member is computed and then silently discarded.
+  else if (s.burst) tier = 'low';
 
   return { score, tier, matched: [...strong, ...corrob] };
 }

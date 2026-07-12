@@ -1,11 +1,18 @@
 import { Events, Listener } from '@sapphire/framework';
 import type { Client } from 'discord.js';
 import { initDatabase } from '../utils/db';
-import { loadBlocklist } from '../utils/automod/blocklist';
+import { blocklistSize, loadBlocklist } from '../utils/automod/blocklist';
 import { loadKeywords } from '../utils/automod/keywords';
+import { learningModeActive } from '../utils/automod/learning';
+import { warmOcr } from '../utils/automod/ocr';
 import { seedInviteCache } from '../utils/inviteCache';
 import { startStaleHelpSweep } from '../utils/staleHelpSweep';
-import { JOIN_LEAVE_LOG_CHANNEL_ID, SERVER_ID } from '../utils/config';
+import {
+  JOIN_LEAVE_LOG_CHANNEL_ID,
+  MOD_LOG_CHANNEL_ID,
+  SERVER_ID,
+  automodConfig,
+} from '../utils/config';
 
 export class ReadyListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
@@ -24,10 +31,32 @@ export class ReadyListener extends Listener {
     await loadBlocklist();
     // Load learned scam keywords from the database (no-op without one).
     await loadKeywords();
+    this.logAutomodStatus();
+    // Pre-initialize the OCR worker (model download) off the message path.
+    void warmOcr();
     // Seed the invite-use cache so join logging can attribute the source.
     await this.fillInviteCache(client);
     // Begin nudging/auto-archiving stale help posts (no-op unless configured).
     startStaleHelpSweep(client);
+  }
+
+  /** Surface automod state at startup so a silent misconfiguration is visible. */
+  private logAutomodStatus(): void {
+    if (!MOD_LOG_CHANNEL_ID) {
+      this.container.logger.warn(
+        'Automod: MOD_LOG_CHANNEL_ID is not set — ALL spam detection is disabled and no alerts will be posted.'
+      );
+      return;
+    }
+    if (learningModeActive()) {
+      this.container.logger.info(
+        `Automod: learning mode ACTIVE (blocklist ${blocklistSize()}/${automodConfig.learningCorpusTarget} confirmed fingerprints, mode=${automodConfig.learningMode}) — every image with any suspicion signal is posted to the mod log for training.`
+      );
+    } else {
+      this.container.logger.info(
+        `Automod: learning mode inactive (blocklist ${blocklistSize()} fingerprint(s), mode=${automodConfig.learningMode}) — normal confidence gating applies.`
+      );
+    }
   }
 
   private async fillInviteCache(client: Client<true>): Promise<void> {
