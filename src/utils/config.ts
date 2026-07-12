@@ -241,6 +241,13 @@ export const automodConfig = {
   learningMode: parseLearningMode(process.env.AUTOMOD_LEARNING_MODE),
   /** Confirmed blocklist fingerprints at which 'auto' learning mode retires. */
   learningCorpusTarget: posInt(process.env.AUTOMOD_LEARNING_CORPUS_TARGET, 20),
+  /**
+   * When true, learning mode posts EVERY image message — even ones with zero
+   * suspicion signals — to the mod log. Off by default: in a busy server this
+   * is a firehose, but it guarantees nothing slips past while the corpus
+   * trains. Only applies while learning mode is active.
+   */
+  learningCatchAll: process.env.AUTOMOD_LEARNING_CATCH_ALL === 'true',
 
   // --- OCR ---
   ocrEnabled: process.env.OCR_ENABLED !== 'false',

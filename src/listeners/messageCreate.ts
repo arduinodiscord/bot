@@ -133,10 +133,11 @@ export class MessageCreateListener extends Listener {
 
     // While learning mode is active (empty/small corpus), ANY nonzero
     // suspicion signal is surfaced so moderators can train the blocklist and
-    // keywords; the usual tier gate takes over once the corpus has grown.
+    // keywords — or, with the catch-all opted in, every image message. The
+    // usual tier gate takes over once the corpus has grown.
     const learning = learningModeActive();
     if (learning) {
-      if (score <= 0) return;
+      if (score <= 0 && !automodConfig.learningCatchAll) return;
     } else {
       if (tier === 'none') return;
       if (tier === 'low' && !automodConfig.logLowConfidence) {
@@ -190,7 +191,10 @@ export class MessageCreateListener extends Listener {
       ? `Matched a known ${severity} image`
       : signals.clusterUsers >= automodConfig.clusterMinUsers
         ? `Same image from ${signals.clusterUsers} accounts across ${new Set(cluster.events.map((e) => e.channelId)).size} channel(s)`
-        : detection.reason || 'Image flagged by confidence scoring';
+        : detection.reason ||
+          (score > 0
+            ? 'Image flagged by confidence scoring'
+            : 'No suspicion signals — posted by the learning catch-all');
 
     const incident = createIncident({
       userId: message.author.id,

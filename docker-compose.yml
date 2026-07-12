@@ -82,6 +82,7 @@ services:
       # ── Learning (ramp-up) mode ───────────────────────────────────────────
       AUTOMOD_LEARNING_MODE: ${AUTOMOD_LEARNING_MODE:-}
       AUTOMOD_LEARNING_CORPUS_TARGET: ${AUTOMOD_LEARNING_CORPUS_TARGET:-}
+      AUTOMOD_LEARNING_CATCH_ALL: ${AUTOMOD_LEARNING_CATCH_ALL:-}
 
       # ── OCR (scam-text reading) ───────────────────────────────────────────
       OCR_ENABLED: ${OCR_ENABLED:-}

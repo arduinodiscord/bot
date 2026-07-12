@@ -49,8 +49,11 @@ export class ReadyListener extends Listener {
       return;
     }
     if (learningModeActive()) {
+      const coverage = automodConfig.learningCatchAll
+        ? 'EVERY image message is posted to the mod log (catch-all enabled)'
+        : 'every image with any suspicion signal is posted to the mod log';
       this.container.logger.info(
-        `Automod: learning mode ACTIVE (blocklist ${blocklistSize()}/${automodConfig.learningCorpusTarget} confirmed fingerprints, mode=${automodConfig.learningMode}) — every image with any suspicion signal is posted to the mod log for training.`
+        `Automod: learning mode ACTIVE (blocklist ${blocklistSize()}/${automodConfig.learningCorpusTarget} confirmed fingerprints, mode=${automodConfig.learningMode}) — ${coverage} for training.`
       );
     } else {
       this.container.logger.info(

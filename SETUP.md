@@ -165,6 +165,7 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | `AUTOMOD_IMMUNE_ROLE_IDS` | *(none)* | Comma-separated role IDs that are never inspected |
 | `AUTOMOD_LEARNING_MODE` | `auto` | Ramp-up mode: while active, every image with any nonzero suspicion signal is posted to the mod log (alert-only) so moderators can train the corpus. `auto` retires itself at the corpus target; `on`/`off` force it |
 | `AUTOMOD_LEARNING_CORPUS_TARGET` | `20` | Confirmed blocklist fingerprints at which `auto` learning mode switches to normal confidence gating |
+| `AUTOMOD_LEARNING_CATCH_ALL` | `false` | Set `true` to post **every** image message (even zero-signal ones) while learning mode is active. Guarantees nothing slips past during training, but is a firehose in a busy server |
 | `AUTOMOD_LOG_LOW_CONFIDENCE` | `false` | After learning mode retires, set `true` to keep posting low-confidence hits |
 
 ### Text-flooding automod
