@@ -1,7 +1,7 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
 import { EmbedBuilder } from 'discord.js';
 import { version } from './../../package.json';
-import universalEmbed from '../index'
+import universalEmbed from '../utils/embed';
 
 export class AboutCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {

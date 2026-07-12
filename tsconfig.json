@@ -3,7 +3,6 @@
     // --- Module Configuration ---
     "module": "Node16",
     "moduleResolution": "Node16",
-    "baseUrl": "./", // Allows for absolute paths from the root
     "target": "ES2022", // Updated to a more modern target
     "lib": ["ESNext"],
 

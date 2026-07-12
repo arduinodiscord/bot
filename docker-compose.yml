@@ -1,0 +1,116 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # ── Required ──────────────────────────────────────────────────────────
+      BOT_TOKEN: ${BOT_TOKEN}
+
+      # ── Core IDs (defaults target the official Arduino server) ────────────
+      SERVER_ID: ${SERVER_ID:-}
+      BOT_COMMANDS_CHANNEL_ID: ${BOT_COMMANDS_CHANNEL_ID:-}
+
+      # ── Database (wired to the bundled Postgres service) ──────────────────
+      DATABASE_URL: postgresql://${POSTGRES_USER:-arduino}:${POSTGRES_PASSWORD:-arduino}@db:5432/${POSTGRES_DB:-arduino}
+
+      # ── Automod console ───────────────────────────────────────────────────
+      MOD_LOG_CHANNEL_ID: ${MOD_LOG_CHANNEL_ID:-}
+
+      # ── Server-management features ────────────────────────────────────────
+      JOIN_LEAVE_LOG_CHANNEL_ID: ${JOIN_LEAVE_LOG_CHANNEL_ID:-}
+      CROSSPOST_CHANNEL_IDS: ${CROSSPOST_CHANNEL_IDS:-}
+      CROSSPOST_LOG_CHANNEL_ID: ${CROSSPOST_LOG_CHANNEL_ID:-}
+      ROLE_SELECT_MESSAGE_ID: ${ROLE_SELECT_MESSAGE_ID:-}
+      EVENT_NOTIFS_ROLE_ID: ${EVENT_NOTIFS_ROLE_ID:-}
+      SERVER_UPDATE_NOTIFS_ROLE_ID: ${SERVER_UPDATE_NOTIFS_ROLE_ID:-}
+
+      # ── Helper-assist features ────────────────────────────────────────────
+      SUGGEST_IGNORE_CHANNEL_IDS: ${SUGGEST_IGNORE_CHANNEL_IDS:-}
+      SUGGEST_IMMUNE_ROLE_IDS: ${SUGGEST_IMMUNE_ROLE_IDS:-}
+      HELP_CHANNEL_IDS: ${HELP_CHANNEL_IDS:-}
+      HELP_FORUM_CHANNEL_IDS: ${HELP_FORUM_CHANNEL_IDS:-}
+      TAG_SUGGEST_ENABLED: ${TAG_SUGGEST_ENABLED:-}
+      CODE_FORMAT_SUGGEST_ENABLED: ${CODE_FORMAT_SUGGEST_ENABLED:-}
+      ASK_SUGGEST_ENABLED: ${ASK_SUGGEST_ENABLED:-}
+      HELP_AUTO_NEEDINFO: ${HELP_AUTO_NEEDINFO:-}
+      HELP_NEEDINFO_MIN_CHARS: ${HELP_NEEDINFO_MIN_CHARS:-}
+      HELP_STALE_SWEEP_ENABLED: ${HELP_STALE_SWEEP_ENABLED:-}
+      HELP_STALE_NUDGE_HOURS: ${HELP_STALE_NUDGE_HOURS:-}
+      HELP_STALE_ARCHIVE_HOURS: ${HELP_STALE_ARCHIVE_HOURS:-}
+
+      # ── Image-spam automod tunables ───────────────────────────────────────
+      AUTOMOD_BURST_THRESHOLD: ${AUTOMOD_BURST_THRESHOLD:-}
+      AUTOMOD_BURST_WINDOW_MS: ${AUTOMOD_BURST_WINDOW_MS:-}
+      AUTOMOD_FANOUT_CHANNELS: ${AUTOMOD_FANOUT_CHANNELS:-}
+      AUTOMOD_FANOUT_WINDOW_MS: ${AUTOMOD_FANOUT_WINDOW_MS:-}
+      AUTOMOD_PHASH_THRESHOLD: ${AUTOMOD_PHASH_THRESHOLD:-}
+      AUTOMOD_TIMEOUT_MS: ${AUTOMOD_TIMEOUT_MS:-}
+      AUTOMOD_ALERT_COOLDOWN_MS: ${AUTOMOD_ALERT_COOLDOWN_MS:-}
+      AUTOMOD_IMMUNE_ROLE_IDS: ${AUTOMOD_IMMUNE_ROLE_IDS:-}
+      AUTOMOD_NEW_MEMBER_WINDOW_MS: ${AUTOMOD_NEW_MEMBER_WINDOW_MS:-}
+      AUTOMOD_NEW_MEMBER_BURST_THRESHOLD: ${AUTOMOD_NEW_MEMBER_BURST_THRESHOLD:-}
+
+      # ── Text-flooding automod tunables ────────────────────────────────────
+      AUTOMOD_FLOOD_ENABLED: ${AUTOMOD_FLOOD_ENABLED:-}
+      AUTOMOD_FLOOD_THRESHOLD: ${AUTOMOD_FLOOD_THRESHOLD:-}
+      AUTOMOD_FLOOD_WINDOW_MS: ${AUTOMOD_FLOOD_WINDOW_MS:-}
+      AUTOMOD_FLOOD_MAX_CHARS: ${AUTOMOD_FLOOD_MAX_CHARS:-}
+      AUTOMOD_FLOOD_AUTO_TIMEOUT: ${AUTOMOD_FLOOD_AUTO_TIMEOUT:-}
+
+      # ── Cross-channel question-spam automod tunables ──────────────────────
+      AUTOMOD_CROSSPOST_ENABLED: ${AUTOMOD_CROSSPOST_ENABLED:-}
+      AUTOMOD_CROSSPOST_CHANNELS: ${AUTOMOD_CROSSPOST_CHANNELS:-}
+      AUTOMOD_CROSSPOST_SPREAD_CHANNELS: ${AUTOMOD_CROSSPOST_SPREAD_CHANNELS:-}
+      AUTOMOD_CROSSPOST_WINDOW_MS: ${AUTOMOD_CROSSPOST_WINDOW_MS:-}
+      AUTOMOD_CROSSPOST_MIN_CHARS: ${AUTOMOD_CROSSPOST_MIN_CHARS:-}
+      AUTOMOD_CROSSPOST_SIMILARITY_PCT: ${AUTOMOD_CROSSPOST_SIMILARITY_PCT:-}
+      AUTOMOD_CROSSPOST_AUTO_DELETE: ${AUTOMOD_CROSSPOST_AUTO_DELETE:-}
+
+      # ── Cross-user cluster (coordinated raid detection) ───────────────────
+      AUTOMOD_CLUSTER_MIN_USERS: ${AUTOMOD_CLUSTER_MIN_USERS:-}
+      AUTOMOD_CLUSTER_WINDOW_MS: ${AUTOMOD_CLUSTER_WINDOW_MS:-}
+
+      # ── Confidence scoring (0-100) ────────────────────────────────────────
+      AUTOMOD_SCORE_HIGH: ${AUTOMOD_SCORE_HIGH:-}
+      AUTOMOD_SCORE_MEDIUM: ${AUTOMOD_SCORE_MEDIUM:-}
+      AUTOMOD_SCORE_LOW: ${AUTOMOD_SCORE_LOW:-}
+      AUTOMOD_LOG_LOW_CONFIDENCE: ${AUTOMOD_LOG_LOW_CONFIDENCE:-}
+
+      # ── Learning (ramp-up) mode ───────────────────────────────────────────
+      AUTOMOD_LEARNING_MODE: ${AUTOMOD_LEARNING_MODE:-}
+      AUTOMOD_LEARNING_CORPUS_TARGET: ${AUTOMOD_LEARNING_CORPUS_TARGET:-}
+      AUTOMOD_LEARNING_CATCH_ALL: ${AUTOMOD_LEARNING_CATCH_ALL:-}
+
+      # ── OCR (scam-text reading) ───────────────────────────────────────────
+      OCR_ENABLED: ${OCR_ENABLED:-}
+      AUTOMOD_OCR_TIMEOUT_MS: ${AUTOMOD_OCR_TIMEOUT_MS:-}
+      AUTOMOD_OCR_MAX_CONCURRENCY: ${AUTOMOD_OCR_MAX_CONCURRENCY:-}
+      AUTOMOD_OCR_IMAGE_WIDTH: ${AUTOMOD_OCR_IMAGE_WIDTH:-}
+      AUTOMOD_SCAM_KEYWORDS: ${AUTOMOD_SCAM_KEYWORDS:-}
+
+      # ── Perceptual hash backpressure ──────────────────────────────────────
+      AUTOMOD_PHASH_MAX_CONCURRENCY: ${AUTOMOD_PHASH_MAX_CONCURRENCY:-}
+
+    # Migrate the database schema, then start the bot.
+    command: sh -c "node_modules/.bin/prisma migrate deploy && npm start"
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-arduino}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arduino}
+      POSTGRES_DB: ${POSTGRES_DB:-arduino}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-arduino}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
