@@ -76,7 +76,7 @@ All active development is on `revamp`. The branch adds substantial new features 
 *Phase 2* — broader coverage and close-the-loop on help posts:
 - Tag `suggest` triggers co-located in `tags.ts` (moved out of `tagSuggest.ts`) — adding a suggestible tag is now a one-place change.
 - Unformatted-code nudge: detects plain-text code pastes and offers the `codeblock` tag. Toggle: `CODE_FORMAT_SUGGEST_ENABLED`.
-- "Just ask" nudge: conservative patterns catch "can I ask?" / "anyone here?" and reply with the `ask` tag. Toggle: `ASK_SUGGEST_ENABLED`.
+- "Just ask" nudge: conservative patterns catch "can I ask?" / "anyone here?" and reply with the `ask` tag. Off by default; enable with `ASK_SUGGEST_ENABLED=true`.
 - Auto-needinfo on thin posts: new help thread with short content and no code/image gets the `needinfo` checklist automatically. Toggle: `HELP_AUTO_NEEDINFO`, threshold: `HELP_NEEDINFO_MIN_CHARS`.
 - Stale-post sweep (`src/utils/staleHelpSweep.ts`): nudges open posts idle past `HELP_STALE_NUDGE_HOURS` (default 72h), then auto-archives if no human replies within a further `HELP_STALE_ARCHIVE_HOURS` (default 168h). Runs on an unref'd interval started in the `ready` listener.
 - `/openposts` command (`src/commands/openPosts.ts`): ephemeral digest of open help posts, oldest-waiting first. Backed by `src/utils/helpPosts.ts` (shared with the sweep).

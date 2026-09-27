@@ -247,7 +247,7 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | `HELP_FORUM_CHANNEL_IDS` | *(none)* | Legacy alias for `HELP_CHANNEL_IDS`; still honoured and merged in |
 | `TAG_SUGGEST_ENABLED` | `true` | Keyword → tag auto-suggestion |
 | `CODE_FORMAT_SUGGEST_ENABLED` | `true` | Nudge for unformatted code pastes |
-| `ASK_SUGGEST_ENABLED` | `true` | Nudge for "can I ask?" / "anyone here?" messages |
+| `ASK_SUGGEST_ENABLED` | `false` | Nudge for "can I ask?" / "anyone here?" messages |
 | `SUGGEST_IMMUNE_ROLE_IDS` | *(none)* | Comma-separated role IDs whose holders never receive suggestions (Trusted, Knowledgeable, Helper, Moderator, etc.). Self-assignable notification roles should **not** be listed. |
 | `SUGGEST_IGNORE_CHANNEL_IDS` | *(none)* | Comma-separated channel IDs where suggestions are suppressed entirely (e.g. staff channels). Listing a forum channel's ID silences all its threads. |
 | `HELP_AUTO_NEEDINFO` | `false` | Set `true` to auto-post a concise checklist when a new help post is thin. Off by default — enable after observing the Mark Solved rollout. |

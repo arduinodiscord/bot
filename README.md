@@ -185,7 +185,7 @@ the most questions:
   `codeblock` tag, the single most-repeated ask. Toggle `CODE_FORMAT_SUGGEST_ENABLED`.
   Subject to the same role exemption as keyword suggestions.
 - **"Just ask" nudge** — replies to low-effort pings ("can I ask?", "anyone
-  here?") with the `ask` tag. Conservative patterns; toggle `ASK_SUGGEST_ENABLED`.
+  here?") with the `ask` tag. Conservative patterns; off by default, enable with `ASK_SUGGEST_ENABLED=true`.
   Subject to the same role exemption as keyword suggestions.
 - **Suggestion ignore list** — set `SUGGEST_IGNORE_CHANNEL_IDS` to suppress all
   three suggestions in specific channels (e.g. staff channels). Listing a forum

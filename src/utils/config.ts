@@ -106,8 +106,12 @@ export const tagSuggestEnabled = process.env.TAG_SUGGEST_ENABLED !== 'false';
 export const codeFormatSuggestEnabled =
   process.env.CODE_FORMAT_SUGGEST_ENABLED !== 'false';
 
-/** Whether to nudge "can I ask?" / "anyone here?" non-questions toward the ask tag. */
-export const askSuggestEnabled = process.env.ASK_SUGGEST_ENABLED !== 'false';
+/**
+ * Whether to nudge "can I ask?" / "anyone here?" non-questions toward the ask
+ * tag. Off unless "true": a public bot reply to a greeting is the kind of
+ * intervention most likely to read as condescending.
+ */
+export const askSuggestEnabled = process.env.ASK_SUGGEST_ENABLED === 'true';
 
 /**
  * Help-channel quality-of-life knobs. The auto-needinfo and stale-post sweep
