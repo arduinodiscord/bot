@@ -118,3 +118,4 @@ local/
 # Internal working docs — never commit/push
 HANDOFF.md
 docs/superpowers/
+.claude/
