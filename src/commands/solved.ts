@@ -10,6 +10,8 @@ import {
   applySolved,
   canMarkSolved,
   describeSolveFailure,
+  fetchAskerIds,
+  needsStarterLookup,
 } from '../utils/solveThread';
 
 export class SolvedCommand extends Command {
@@ -50,12 +52,6 @@ export class SolvedCommand extends Command {
     const isStaff =
       interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages) ??
       false;
-    const check = canMarkSolved(channel, interaction.user.id, isStaff);
-    if (!check.ok)
-      return interaction.reply({
-        content: check.reason,
-        flags: MessageFlags.Ephemeral,
-      });
 
     const helper = interaction.options.getUser('helper');
     const embed = new EmbedBuilder(universalEmbed)
@@ -66,7 +62,38 @@ export class SolvedCommand extends Command {
           : 'Closing this post.'
       );
 
-    await interaction.reply({ embeds: [embed] });
+    if (needsStarterLookup(channel, interaction.user.id, isStaff)) {
+      // Text-channel thread opened by someone else: the asker may be the
+      // author of the starter message. Fetching it can be slow, so defer
+      // (privately, in case the answer is no) before looking.
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const check = canMarkSolved(
+        channel,
+        interaction.user.id,
+        isStaff,
+        await fetchAskerIds(channel)
+      );
+      if (!check.ok) return interaction.editReply({ content: check.reason });
+
+      embed.setDescription(
+        helper
+          ? `Marked solved by <@${interaction.user.id}>. Thanks to <@${helper.id}> for helping. Closing this post.`
+          : `Marked solved by <@${interaction.user.id}>. Closing this post.`
+      );
+      await channel
+        .send({ embeds: [embed], allowedMentions: { parse: [] } })
+        .catch(() => null);
+      await interaction.editReply({ content: 'Marked solved.' });
+    } else {
+      const check = canMarkSolved(channel, interaction.user.id, isStaff);
+      if (!check.ok)
+        return interaction.reply({
+          content: check.reason,
+          flags: MessageFlags.Ephemeral,
+        });
+      await interaction.reply({ embeds: [embed] });
+    }
+
     const result = await applySolved(channel);
     const failure = describeSolveFailure(result);
     if (failure) {

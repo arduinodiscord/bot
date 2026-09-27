@@ -1,4 +1,4 @@
-import type { ThreadChannel } from 'discord.js';
+import { ChannelType, type ThreadChannel } from 'discord.js';
 
 export const SOLVED_PREFIX = '✅ ';
 
@@ -7,23 +7,61 @@ export interface SolveCheck {
   reason?: string;
 }
 
+type SolvableThread = Pick<ThreadChannel, 'name' | 'ownerId'>;
+
 /**
- * Whether `userId` may mark `thread` solved: the original poster always can,
- * and so can staff (Manage Messages). Already-solved threads are rejected.
+ * Whether `userId` may mark `thread` solved: the asker always can, and so can
+ * staff (Manage Messages). Already-solved threads are rejected. `askerIds`
+ * defaults to the thread owner; pass the starter message author too for
+ * text-channel threads (see {@link needsStarterLookup}).
  */
 export function canMarkSolved(
-  thread: ThreadChannel,
+  thread: SolvableThread,
   userId: string,
-  isStaff: boolean
+  isStaff: boolean,
+  askerIds: ReadonlyArray<string | null> = [thread.ownerId]
 ): SolveCheck {
   if (thread.name.startsWith(SOLVED_PREFIX))
     return { ok: false, reason: 'This post is already marked solved.' };
-  if (thread.ownerId !== userId && !isStaff)
+  if (!isStaff && !askerIds.includes(userId))
     return {
       ok: false,
       reason: 'Only the person who opened this post (or a moderator) can mark it solved.',
     };
   return { ok: true };
+}
+
+/**
+ * In a text channel, a helper can open a thread from someone else's message,
+ * so the asker is the starter message's author rather than the thread owner.
+ * True when that (slow) lookup could change the answer for `userId`.
+ */
+export function needsStarterLookup(
+  thread: SolvableThread & { parent: { type: ChannelType } | null },
+  userId: string,
+  isStaff: boolean
+): boolean {
+  return (
+    !isStaff &&
+    !thread.name.startsWith(SOLVED_PREFIX) &&
+    thread.ownerId !== userId &&
+    thread.parent?.type === ChannelType.GuildText
+  );
+}
+
+/**
+ * Everyone who counts as the asker: the thread owner plus, for text-channel
+ * threads, the author of the message the thread was started from. The starter
+ * fetch can be slow; callers must defer the interaction first.
+ */
+export async function fetchAskerIds(
+  thread: ThreadChannel
+): Promise<Array<string | null>> {
+  const ids: Array<string | null> = [thread.ownerId];
+  if (thread.parent?.type !== ChannelType.GuildText) return ids;
+  const starter = await thread.fetchStarterMessage().catch(() => null);
+  if (starter && !starter.author.bot) ids.push(starter.author.id);
+  return ids;
 }
 
 export interface SolveResult {
