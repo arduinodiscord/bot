@@ -149,7 +149,7 @@ cd /opt/stacks/arduino-bot
 git pull
 ```
 
-Then in Dockge, click **Rebuild** on the stack. The `prisma migrate deploy` step in the startup command applies any new migrations automatically.
+Then in Dockge, click **Rebuild** on the stack. The `prisma migrate deploy` step in the startup command applies any new migrations automatically. For tagged releases, backups and rollback, follow [RELEASING.md](RELEASING.md).
 
 ---
 
@@ -173,6 +173,8 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | `SERVER_ID` | `420594746990526466` | Your server's ID — set explicitly (see section 2) |
 | `BOT_COMMANDS_CHANNEL_ID` | `451158319361556491` | Channel where bot-command-only tags are allowed |
 | `DATABASE_URL` | auto-set by compose | Set automatically by docker-compose; do not override |
+| `GIT_SHA` | `unknown` | Build-time only (compose build arg): commit baked into the image and logged at startup. See [RELEASING.md](RELEASING.md) |
+| `BUILD_DATE` | `unknown` | Build-time only: build timestamp, logged at startup |
 
 ### Automod console
 
