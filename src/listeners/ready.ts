@@ -8,6 +8,7 @@ import { warmOcr } from '../utils/automod/ocr';
 import { seedInviteCache } from '../utils/inviteCache';
 import { startStaleHelpSweep } from '../utils/staleHelpSweep';
 import { runStartupCheck } from '../utils/startupCheck';
+import { startRetentionSweep } from '../utils/retention';
 import {
   JOIN_LEAVE_LOG_CHANNEL_ID,
   MOD_LOG_CHANNEL_ID,
@@ -32,6 +33,8 @@ export class ReadyListener extends Listener {
     );
     // Connect persistence if configured; the bot runs in-memory otherwise.
     await initDatabase();
+    // Enforce the retention periods promised in PRIVACY.md.
+    startRetentionSweep();
     // Warm the automod blocklist from the database (no-op without one).
     await loadBlocklist();
     // Load learned scam keywords from the database (no-op without one).

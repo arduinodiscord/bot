@@ -2,6 +2,13 @@ services:
   bot:
     build: .
     restart: unless-stopped
+    # Logs contain user/channel IDs; PRIVACY.md promises they are rotated and
+    # overwritten, never archived. Caps the bot's logs at ~50 MB total.
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
     depends_on:
       db:
         condition: service_healthy
