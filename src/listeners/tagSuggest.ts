@@ -75,7 +75,7 @@ function detect(content: string): Suggestion | null {
   if (tagSuggestEnabled) {
     const match = keywordSuggestions.find((s) => s.pattern.test(content));
     if (match)
-      return { tag: match.tag, prompt: match.prompt, label: 'Show steps' };
+      return { tag: match.tag, prompt: match.prompt, label: 'Show the guide' };
   }
   if (codeFormatSuggestEnabled && looksLikeUnformattedCode(content))
     return {
