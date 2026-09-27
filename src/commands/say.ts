@@ -1,14 +1,13 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
 import {
   ChannelType,
-  EmbedBuilder,
   InteractionContextType,
   MessageFlags,
   PermissionFlagsBits,
+  type APIEmbed,
 } from 'discord.js';
 import universalEmbed from '../utils/embed';
-
-const MAX_FIELDS = 25;
+import { embedLimitProblems } from '../utils/embedLimits';
 
 export class SayCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
@@ -47,13 +46,13 @@ export class SayCommand extends Command {
         .addStringOption((option) =>
           option
             .setName('description')
-            .setDescription('Embed description')
+            .setDescription('Embed description (type \\n for a line break)')
             .setRequired(true)
         )
         .addStringOption((option) =>
           option
             .setName('fields')
-            .setDescription('Optional fields, one per line as: name | value')
+            .setDescription('Optional fields: Name::Value | Name::Value (\\n = line break)')
         )
         .addStringOption((option) =>
           option
@@ -83,51 +82,82 @@ export class SayCommand extends Command {
         flags: MessageFlags.Ephemeral,
       });
 
-    const embed = new EmbedBuilder(universalEmbed)
-      .setTitle(interaction.options.getString('title', true))
-      .setDescription(interaction.options.getString('description', true))
-      .setTimestamp();
-
     const thumbnail = interaction.options.getString('thumbnail');
-    if (thumbnail) {
-      if (!URL.canParse(thumbnail))
-        return interaction.reply({
-          content: 'The thumbnail must be a valid URL.',
-          flags: MessageFlags.Ephemeral,
-        });
-      embed.setThumbnail(thumbnail);
-    }
+    if (thumbnail && !/^https?:\/\//i.test(thumbnail))
+      return interaction.reply({
+        content: 'The thumbnail must be an http(s) URL.',
+        flags: MessageFlags.Ephemeral,
+      });
 
-    const fields = this.parseFields(interaction.options.getString('fields'));
-    if (fields.length > 0) embed.addFields(fields);
+    const parsed = parseFields(interaction.options.getString('fields'));
+    if ('error' in parsed)
+      return interaction.reply({
+        content: parsed.error,
+        flags: MessageFlags.Ephemeral,
+      });
 
+    // Build plain data and validate it ourselves: the EmbedBuilder setters
+    // throw on over-long input, which would leave the interaction unanswered.
+    const embed: APIEmbed = {
+      ...universalEmbed,
+      title: interaction.options.getString('title', true),
+      description: withLineBreaks(
+        interaction.options.getString('description', true)
+      ),
+      timestamp: new Date().toISOString(),
+    };
+    if (thumbnail) embed.thumbnail = { url: thumbnail };
+    if (parsed.fields.length > 0) embed.fields = parsed.fields;
+
+    const problems = embedLimitProblems(embed);
+    if (problems.length > 0)
+      return interaction.reply({
+        content: `That embed cannot be sent:\n- ${problems.join('\n- ')}`,
+        flags: MessageFlags.Ephemeral,
+      });
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
-      await channel.send({ embeds: [embed] });
+      await channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
     } catch (error) {
       this.container.logger.error('/say failed to send:', error);
-      return interaction.reply({
-        content: 'Something went wrong sending the embed.',
-        flags: MessageFlags.Ephemeral,
+      return interaction.editReply({
+        content: 'Something went wrong sending the embed (check my permissions in that channel and the thumbnail URL).',
       });
     }
 
-    return interaction.reply({
-      content: `✅ Sent to <#${picked.id}>.`,
-      flags: MessageFlags.Ephemeral,
+    return interaction.editReply({ content: `✅ Sent to <#${picked.id}>.` });
+  }
+}
+
+/** Slash-command strings can't contain newlines; let staff type a literal \\n instead. */
+function withLineBreaks(text: string): string {
+  return text.replace(/\\n/g, '\n');
+}
+
+type ParsedFields =
+  | { fields: { name: string; value: string }[] }
+  | { error: string };
+
+/**
+ * Parse `Name::Value | Name::Value` into embed fields. `|` separates fields
+ * and the first `::` in each separates its name from its value. Malformed
+ * input is reported rather than silently dropped.
+ */
+function parseFields(raw: string | null): ParsedFields {
+  if (!raw?.trim()) return { fields: [] };
+  const fields: { name: string; value: string }[] = [];
+  const segments = raw.split('|').map((s) => s.trim()).filter(Boolean);
+  for (const [i, segment] of segments.entries()) {
+    const sep = segment.indexOf('::');
+    if (sep === -1)
+      return {
+        error: `Field ${i + 1} ("${segment.slice(0, 50)}") is missing \`::\` between its name and value. Format: \`Name::Value | Name::Value\``,
+      };
+    fields.push({
+      name: segment.slice(0, sep).trim(),
+      value: withLineBreaks(segment.slice(sep + 2).trim()),
     });
   }
-
-  /** Parse newline-separated `name | value` pairs into embed fields. */
-  private parseFields(raw: string | null): { name: string; value: string }[] {
-    if (!raw) return [];
-    return raw
-      .split('\n')
-      .map((line) => line.split('|'))
-      .filter((parts) => parts.length >= 2 && parts[0].trim() && parts[1].trim())
-      .slice(0, MAX_FIELDS)
-      .map((parts) => ({
-        name: parts[0].trim(),
-        value: parts.slice(1).join('|').trim(),
-      }));
-  }
+  return { fields };
 }
