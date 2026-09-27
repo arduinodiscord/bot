@@ -2,6 +2,9 @@ services:
   bot:
     build: .
     restart: unless-stopped
+    # Run under tini: node as PID 1 ignores SIGTERM (no default handler), so
+    # without an init `docker stop` waits 10s and then SIGKILLs the bot.
+    init: true
     # Logs contain user/channel IDs; PRIVACY.md promises they are rotated and
     # overwritten, never archived. Caps the bot's logs at ~50 MB total.
     logging:
@@ -101,8 +104,11 @@ services:
       # ── Perceptual hash backpressure ──────────────────────────────────────
       AUTOMOD_PHASH_MAX_CONCURRENCY: ${AUTOMOD_PHASH_MAX_CONCURRENCY:-}
 
-    # Migrate the database schema, then start the bot.
-    command: sh -c "node_modules/.bin/prisma migrate deploy && npm start"
+    # Migrate the database schema, then start the bot. `exec` replaces the
+    # shell with node so stop signals are delivered to the bot, not to sh.
+    # No healthcheck: the bot exposes no port, and "process is running" is
+    # already what `restart: unless-stopped` acts on.
+    command: sh -c "node_modules/.bin/prisma migrate deploy && exec node dist/src/index.js"
 
   db:
     image: postgres:16-alpine
