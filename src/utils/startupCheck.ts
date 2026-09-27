@@ -111,7 +111,11 @@ export async function runStartupCheck(client: Client<true>): Promise<number> {
   await checkChannel('BOT_COMMANDS_CHANNEL_ID', BOT_COMMANDS_CHANNEL_ID, SEND_PERMISSIONS);
 
   if (MOD_LOG_CHANNEL_ID) {
-    await checkChannel('MOD_LOG_CHANNEL_ID', MOD_LOG_CHANNEL_ID, SEND_PERMISSIONS);
+    // Alerts attach a copy of the offending image (the original gets deleted).
+    await checkChannel('MOD_LOG_CHANNEL_ID', MOD_LOG_CHANNEL_ID, [
+      ...SEND_PERMISSIONS,
+      ['AttachFiles (alert evidence image)', P.AttachFiles],
+    ]);
     const me = guild.members.me;
     const gaps = GUILD_PERMISSIONS.filter(([, flag]) => !me?.permissions.has(flag)).map(
       ([name]) => name
