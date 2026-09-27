@@ -10,6 +10,7 @@ import {
   BOT_COMMANDS_CHANNEL_ID,
   MOD_LOG_CHANNEL_ID,
   SERVER_ID,
+  helpAssistConfig,
   helpChannelIds,
 } from './config';
 
@@ -30,9 +31,33 @@ const SEND_PERMISSIONS: Array<[string, bigint]> = [
 
 const HELP_PERMISSIONS: Array<[string, bigint]> = [
   ['ViewChannel', P.ViewChannel],
+  ['ReadMessageHistory (stale-post sweep)', P.ReadMessageHistory],
   ['SendMessagesInThreads', P.SendMessagesInThreads],
   ['ManageThreads (solve/archive)', P.ManageThreads],
 ];
+
+/** Discord's longest auto-archive duration: idle threads close after 7 days. */
+const MAX_THREAD_IDLE_HOURS = 168;
+
+/**
+ * Stale-sweep timings that can never fire. Discord archives an idle thread
+ * after at most 7 days, and archived threads drop out of the sweep, so a nudge
+ * at 168h or later (or an archive wait over 168h after the nudge) never happens.
+ */
+export function staleTimingProblems(nudgeMs: number, archiveMs: number): string[] {
+  const nudgeHours = nudgeMs / 3_600_000;
+  const archiveHours = archiveMs / 3_600_000;
+  const problems: string[] = [];
+  if (nudgeHours >= MAX_THREAD_IDLE_HOURS)
+    problems.push(
+      `HELP_STALE_NUDGE_HOURS=${nudgeHours} is not below ${MAX_THREAD_IDLE_HOURS}: Discord archives idle threads after 7 days, so posts will never be nudged`
+    );
+  if (archiveHours > MAX_THREAD_IDLE_HOURS)
+    problems.push(
+      `HELP_STALE_ARCHIVE_HOURS=${archiveHours} is over ${MAX_THREAD_IDLE_HOURS}: Discord archives idle threads after 7 days, so this wait never finishes`
+    );
+  return problems;
+}
 
 function missing(
   channel: GuildBasedChannel,
@@ -109,6 +134,11 @@ export async function runStartupCheck(client: Client<true>): Promise<number> {
     const gaps = missing(channel, guild, HELP_PERMISSIONS);
     if (gaps.length > 0) problems.push(`help channel #${channel.name}: missing ${gaps.join(', ')}`);
   }
+
+  if (helpChannelIds.length > 0 && helpAssistConfig.staleSweepEnabled)
+    problems.push(
+      ...staleTimingProblems(helpAssistConfig.staleNudgeMs, helpAssistConfig.staleArchiveMs)
+    );
 
   if (problems.length === 0) {
     logger.info(`Startup check: OK (guild ${guild.name}, all configured channels and permissions present).`);
