@@ -14,6 +14,7 @@ import {
   SERVER_UPDATE_NOTIFS_ROLE_ID,
 } from '../utils/config';
 import universalEmbed from '../utils/embed';
+import { isHomeGuild } from '../utils/homeGuild';
 
 interface RoleToggle {
   roleId: string;
@@ -50,6 +51,7 @@ export class RoleSelectHandler extends InteractionHandler {
 
   public override parse(interaction: ButtonInteraction) {
     if (!ROLE_SELECT_MESSAGE_ID) return this.none();
+    if (!isHomeGuild(interaction.guildId)) return this.none();
     if (interaction.message.id !== ROLE_SELECT_MESSAGE_ID) return this.none();
     const toggle = roleForButton(interaction.customId);
     return toggle ? this.some(toggle) : this.none();

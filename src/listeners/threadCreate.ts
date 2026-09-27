@@ -9,6 +9,7 @@ import {
 } from 'discord.js';
 import { helpChannelIds, helpAssistConfig } from '../utils/config';
 import universalEmbed from '../utils/embed';
+import { isHomeGuild } from '../utils/homeGuild';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -47,6 +48,7 @@ export class ThreadCreateListener extends Listener {
 
   public async run(thread: AnyThreadChannel, newlyCreated: boolean) {
     if (!newlyCreated) return;
+    if (!isHomeGuild(thread.guildId)) return;
     if (helpChannelIds.length === 0) return;
     if (!thread.parentId || !helpChannelIds.includes(thread.parentId)) return;
 

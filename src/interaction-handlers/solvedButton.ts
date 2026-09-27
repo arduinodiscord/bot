@@ -19,6 +19,7 @@ import {
   fetchAskerIds,
   needsStarterLookup,
 } from '../utils/solveThread';
+import { isHomeGuild } from '../utils/homeGuild';
 
 /** Handles the "Mark Solved" button posted in help threads (forum or text). */
 export class SolvedButtonHandler extends InteractionHandler {
@@ -33,7 +34,8 @@ export class SolvedButtonHandler extends InteractionHandler {
   }
 
   public override parse(interaction: ButtonInteraction) {
-    return interaction.customId === 'solved' ? this.some() : this.none();
+    if (interaction.customId !== 'solved') return this.none();
+    return isHomeGuild(interaction.guildId) ? this.some() : this.none();
   }
 
   public async run(interaction: ButtonInteraction) {

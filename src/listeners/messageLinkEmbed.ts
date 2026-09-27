@@ -9,6 +9,7 @@ import {
   type Role,
 } from 'discord.js';
 import universalEmbed from '../utils/embed';
+import { isHomeGuild } from '../utils/homeGuild';
 
 // Matches https://discord.com/channels/<guild>/<channel>/<message> (and the
 // canary/ptb subdomains). IDs are 17-20 digits to be future-proof.
@@ -41,6 +42,7 @@ export class MessageLinkEmbedListener extends Listener {
 
   public async run(message: Message) {
     if (!message.inGuild() || message.author.bot) return;
+    if (!isHomeGuild(message.guildId)) return;
 
     const matches = [...message.content.matchAll(MESSAGE_LINK)];
     if (matches.length === 0) return;

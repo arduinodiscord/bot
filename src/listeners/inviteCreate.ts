@@ -1,6 +1,7 @@
 import { Events, Listener } from '@sapphire/framework';
 import type { Invite } from 'discord.js';
 import { setInviteUses } from '../utils/inviteCache';
+import { isHomeGuild } from '../utils/homeGuild';
 
 /** Seed newly-created invites into the cache so join attribution stays accurate. */
 export class InviteCreateListener extends Listener {
@@ -9,6 +10,7 @@ export class InviteCreateListener extends Listener {
   }
 
   public run(invite: Invite) {
+    if (!isHomeGuild(invite.guild?.id)) return;
     setInviteUses(invite.code, invite.uses ?? 0);
   }
 }
