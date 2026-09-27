@@ -9,6 +9,31 @@ import tags from '../utils/tags';
 import { resolveTag } from '../utils/resolveTag';
 import universalEmbed from '../utils/embed';
 
+/**
+ * `/tag name` choices. Must list every key in the tags map (checked by
+ * tags.test.ts); Discord allows at most 25.
+ */
+export const TAG_CHOICES = [
+  { name: 'AI', value: 'ai' },
+  { name: 'ask', value: 'ask' },
+  { name: 'avrdude', value: 'avrdude' },
+  { name: 'codeblock', value: 'codeblock' },
+  { name: 'debounce', value: 'debounce' },
+  { name: 'espcomm', value: 'espcomm' },
+  { name: 'help', value: 'help' },
+  { name: 'hid', value: 'hid' },
+  { name: 'lab', value: 'lab' },
+  { name: 'language', value: 'language' },
+  { name: 'levelShifter', value: 'levelShifter' },
+  { name: 'libmissing', value: 'libmissing' },
+  { name: 'needinfo', value: 'needinfo' },
+  { name: 'ninevolt', value: 'ninevolt' },
+  { name: 'power', value: 'power' },
+  { name: 'pullup', value: 'pullup' },
+  { name: 'reinstall', value: 'reinstall' },
+  { name: 'wiki', value: 'wiki' },
+];
+
 export class TagCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
     super(context, {
@@ -32,26 +57,7 @@ export class TagCommand extends Command {
             .setName('name')
             .setDescription('Tag to see')
             .setRequired(true)
-            .addChoices(
-              { name: 'AI', value: 'ai' },
-              { name: 'ask', value: 'ask' },
-              { name: 'avrdude', value: 'avrdude' },
-              { name: 'codeblock', value: 'codeblock' },
-              { name: 'debounce', value: 'debounce' },
-              { name: 'espcomm', value: 'espcomm' },
-              { name: 'help', value: 'help' },
-              { name: 'hid', value: 'hid' },
-              { name: 'lab', value: 'lab' },
-              { name: 'language', value: 'language' },
-              { name: 'levelShifter', value: 'levelShifter' },
-              { name: 'libmissing', value: 'libmissing' },
-              { name: 'needinfo', value: 'needinfo' },
-              { name: 'ninevolt', value: 'ninevolt' },
-              { name: 'power', value: 'power' },
-              { name: 'pullup', value: 'pullup' },
-              { name: 'reinstall', value: 'reinstall' },
-              { name: 'wiki', value: 'wiki' },
-            ),
+            .addChoices(...TAG_CHOICES),
         )
         .addUserOption((option) =>
           option
