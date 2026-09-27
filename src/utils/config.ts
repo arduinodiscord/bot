@@ -36,6 +36,13 @@ export const {
   SERVER_UPDATE_NOTIFS_ROLE_ID = '', // role toggled by the "server_updates" button
 } = process.env;
 
+/**
+ * Build identity baked into the Docker image (Dockerfile ARG -> ENV). Set by
+ * the deploy step via compose build args; 'unknown' for local/dev runs.
+ */
+export const BUILD_SHA = process.env.GIT_SHA ?? 'unknown';
+export const BUILD_DATE = process.env.BUILD_DATE ?? 'unknown';
+
 /** Parse a positive integer from the environment, falling back to a default. */
 const posInt = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value);

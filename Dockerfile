@@ -25,5 +25,13 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
+# Build identity, logged at startup. Declared after the build so a new SHA
+# doesn't invalidate the cached install/build layers. Compose passes these
+# from the host environment (see RELEASING.md); they default to 'unknown'.
+ARG GIT_SHA=unknown
+ARG BUILD_DATE=unknown
+ENV GIT_SHA=$GIT_SHA BUILD_DATE=$BUILD_DATE
+LABEL org.opencontainers.image.revision=$GIT_SHA org.opencontainers.image.created=$BUILD_DATE
+
 # Run node directly (not via npm) so SIGTERM from `docker stop` reaches it.
 CMD ["node", "dist/src/index.js"]

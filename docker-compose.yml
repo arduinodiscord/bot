@@ -1,6 +1,14 @@
 services:
   bot:
-    build: .
+    build:
+      context: .
+      # Build identity baked into the image (compose can't run git itself).
+      # The deploy step exports these or puts them in .env; see RELEASING.md.
+      # Deliberately NOT in `environment:` below — an empty runtime value
+      # would override the baked-in one.
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
     restart: unless-stopped
     # Run under tini: node as PID 1 ignores SIGTERM (no default handler), so
     # without an init `docker stop` waits 10s and then SIGKILLs the bot.
