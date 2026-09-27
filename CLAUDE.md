@@ -14,7 +14,7 @@ docker compose up -d
 docker compose down
 ```
 
-There is no test suite. Type-check via `npm run build`.
+Type-check via `npm run build`; unit tests (`src/**/*.test.ts`, node:test) run via `npm test`.
 
 To add a new slash command, register it in `src/commands/` following the Sapphire `Command` pattern.
 
@@ -56,7 +56,7 @@ The whole pipeline is triggered in `src/listeners/messageCreate.ts`. The three d
 
 **Tags** (`src/utils/tags.ts`): A `Record<string, Tag>` map. Each entry has optional `embeds`, `components`, `content` (string or `(user?) => string`), `botCommandsOnly`, and `suggest` (a `{ pattern: RegExp, prompt: string }` for keyword auto-suggestion). To add a tag: add it to `tags.ts` and add a choice in `src/commands/tag.ts`.
 
-**Help-channel workflow:** Configured via `HELP_CHANNEL_IDS` (forum or text channels). New help threads get a "Mark Solved" button (`src/listeners/threadCreate.ts`), auto-needinfo if thin (`src/utils/helpPosts.ts`), and are tracked by the stale-post sweep (`src/utils/staleHelpSweep.ts`). The `/solved` command and `solvedButton` interaction handler close threads and update tags.
+**Help-channel workflow:** Configured via `HELP_CHANNEL_IDS` (forum or text channels). New help threads get a "Mark Solved" button (`src/listeners/threadCreate.ts`), auto-needinfo if thin (`src/utils/helpPosts.ts`), and are tracked by the stale-post sweep (`src/utils/staleHelpSweep.ts`). The `/solved` command and `solvedButton` interaction handler prefix the thread title with a checkmark and archive it (no forum tags are applied).
 
 ## `revamp` branch — work in progress
 
@@ -64,7 +64,7 @@ All active development is on `revamp`. The branch adds substantial new features 
 
 **Automod additions (revamp):**
 - Text-flooding detector (`automod/flood.ts`) — flags N short messages from one user in a sliding window; alerts only by default, `AUTOMOD_FLOOD_AUTO_TIMEOUT=true` to also time out.
-- Cross-channel question-spam detector (`automod/crosspost.ts`) — two signals: near-identical fan-out (Jaccard similarity ≥ threshold, any tenure) auto-deletes duplicates and alerts; new-member spread (posting substantively in many channels even when reworded) alerts only.
+- Cross-channel question-spam detector (`automod/crosspost.ts`) — two signals: near-identical fan-out (Jaccard similarity ≥ threshold, any tenure) alerts, and auto-deletes duplicates only with `AUTOMOD_CROSSPOST_AUTO_DELETE=true` (default off); new-member spread (posting substantively in many channels even when reworded) alerts only.
 
 **Helper-assist suite (revamp, built in three phases):**
 

@@ -10,15 +10,21 @@ Step-by-step deployment on a Dockge server.
 2. Name it (e.g. *Arduino Bot*) → **Create**.
 3. In the left sidebar → **Bot**:
    - Click **Reset Token** → copy it. This is your `BOT_TOKEN`. Keep it secret.
-   - Under **Privileged Gateway Intents**, enable:
+   - Under **Privileged Gateway Intents**, enable **only** these two:
      - **Server Members Intent** (required for join/leave logging and new-member detection)
      - **Message Content Intent** (required for tag suggestions, automod, and help-post detection)
+   - Leave **Presence Intent** off — the bot does not use it.
 4. In the left sidebar → **OAuth2 → URL Generator**:
    - Scopes: `bot`, `applications.commands`
-   - Bot permissions: `Manage Messages`, `Moderate Members`, `Ban Members`, `Send Messages`, `Embed Links`, `Read Message History`, `View Channels`
+   - Bot permissions:
+     - `View Channels`, `Read Message History`
+     - `Send Messages`, `Send Messages in Threads`, `Embed Links`
+     - `Manage Messages` (automod deletes, crosspost publishing)
+     - `Manage Threads` (solve / stale-post archiving)
+     - `Moderate Members` (automod timeouts), `Ban Members` (console ban button)
+     - `Manage Server` (reading invites for join-source tracking with `JOIN_LEAVE_LOG_CHANNEL_ID`)
    - Copy the generated URL, paste it in a browser, and invite the bot to your server.
-
-> **Manage Server permission** is also needed if you want invite-source logging (`JOIN_LEAVE_LOG_CHANNEL_ID`). Add it to the bot permissions above if you plan to use that feature.
+   - Drag the bot's role **above** the member roles it must be able to time out or ban.
 
 ---
 
@@ -43,6 +49,8 @@ Gather the IDs you need for the features you want to use:
 | Mod / immune roles | `AUTOMOD_IMMUNE_ROLE_IDS` (comma-separated) |
 
 You only need the IDs for features you intend to use. Features self-disable when their ID is left blank.
+
+> **Arduino deployment:** set `SERVER_ID`, `BOT_COMMANDS_CHANNEL_ID` and `MOD_LOG_CHANNEL_ID` explicitly in `.env`. `SERVER_ID` and `BOT_COMMANDS_CHANNEL_ID` default to the official Arduino server, but if `SERVER_ID` doesn't match the guild the bot is in, automod, tags, suggestions and help features silently do nothing. Without `MOD_LOG_CHANNEL_ID`, all spam detection is off.
 
 ---
 
@@ -72,6 +80,9 @@ Fill in at minimum:
 
 ```dotenv
 BOT_TOKEN=your_token_here
+SERVER_ID=...
+BOT_COMMANDS_CHANNEL_ID=...
+MOD_LOG_CHANNEL_ID=...
 ```
 
 Then add the IDs and enable the features you want (see section 2 and the full reference below).
@@ -93,9 +104,21 @@ Then add the IDs and enable the features you want (see section 2 and the full re
 Watch the log output. You should see:
 ```
 Logged in as Arduino Bot#0000 (...)
+Startup check: OK (guild Arduino, all configured channels and permissions present).
 Database connection success
-Automod: loaded 0 signature(s) and 0 perceptual hash(es) from the blocklist.
+Automod: loaded 0 signature(s) and 0 perceptual hash(es) from the blocklist (...)
+Automod: learning mode ACTIVE (...)
 ```
+
+The **startup check** verifies the configuration against the live server and logs every problem it finds. The bot keeps running either way, so read it:
+
+- `Startup check: OK (...)` — the guild, configured channels and permissions all line up.
+- `Startup check: bot is not in SERVER_ID=...` (error) — wrong `SERVER_ID`; the log lists the guilds the bot *is* in. Nearly every feature is inert until fixed.
+- `Startup check: <VAR> <id> not found in <guild>` — a configured channel ID is wrong or the bot can't see it.
+- `Startup check: <VAR> #channel: missing ...` / `help channel #...: missing ...` — the bot lacks a channel permission there.
+- `Startup check: automod guild permissions missing: ...` — Manage Messages / Moderate Members / Ban Members not granted.
+- `Startup check: bot's highest role (...) is at the bottom of the role list` — move the bot's role up so it can time out/ban.
+- `Automod: MOD_LOG_CHANNEL_ID is not set — ALL spam detection is disabled` — set it.
 
 ---
 
@@ -112,7 +135,7 @@ Confirm `MOD_LOG_CHANNEL_ID` is set (the bot logs a startup warning if it isn't)
 While the blocklist corpus is still small, **learning mode** is active (see below): any image with at least one suspicion signal — scam keywords read from the image, a link, a burst, a new account — is posted to the mod log so moderators can train the filter with the Confirm/Not-spam buttons.
 
 **Help-channel features active?**
-Open a new thread in a configured help channel. You should see a "Mark Solved" button appear. Post a short message with no code/image in a new thread — the needinfo checklist should appear automatically.
+Open a new thread in a configured help channel. You should see a "Mark Solved" button appear. If you set `HELP_AUTO_NEEDINFO=true` (off by default), a short post with no code/image also gets the needinfo checklist automatically.
 
 **Tag suggestions active?**
 Post a message containing `avrdude` or `stk500` in any channel — the bot should reply with a suggestion button.
@@ -130,6 +153,14 @@ Then in Dockge, click **Rebuild** on the stack. The `prisma migrate deploy` step
 
 ---
 
+## 8. Data retention and logs
+
+The bot enforces the retention periods in [PRIVACY.md](PRIVACY.md) itself: a daily sweep (started at login, `src/utils/retention.ts`) deletes join/leave analytics older than 90 days and moderation-action records older than 365 days. It needs no configuration, but only runs while the bot does.
+
+Container logs contain user and channel IDs, so `docker-compose.yml` rotates the bot's logs with the `json-file` driver (5 files × 10 MB, oldest overwritten). Don't move the bot service to a log driver that archives indefinitely without updating PRIVACY.md.
+
+---
+
 ## Environment variable reference
 
 All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the default shown.
@@ -139,7 +170,7 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | Variable | Default | Description |
 |---|---|---|
 | `BOT_TOKEN` | — | **Required.** Your bot token |
-| `SERVER_ID` | `420594746990526466` | Your server's ID |
+| `SERVER_ID` | `420594746990526466` | Your server's ID — set explicitly (see section 2) |
 | `BOT_COMMANDS_CHANNEL_ID` | `451158319361556491` | Channel where bot-command-only tags are allowed |
 | `DATABASE_URL` | auto-set by compose | Set automatically by docker-compose; do not override |
 
@@ -160,6 +191,12 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | `AUTOMOD_FANOUT_CHANNELS` | `2` | Distinct channels the same image must appear in to flag fan-out |
 | `AUTOMOD_FANOUT_WINDOW_MS` | `120000` | Window for fan-out detection (ms) |
 | `AUTOMOD_PHASH_THRESHOLD` | `6` | Max Hamming distance (of 64) for two images to count as the same |
+| `AUTOMOD_PHASH_MAX_CONCURRENCY` | `3` | Max simultaneous pHash fetch/decode jobs (raid backpressure) |
+| `AUTOMOD_CLUSTER_MIN_USERS` | `2` | Distinct accounts posting the same/near-identical image to flag a coordinated raid |
+| `AUTOMOD_CLUSTER_WINDOW_MS` | `120000` | Window for cross-user image clustering (ms) |
+| `AUTOMOD_SCORE_HIGH` | `50` | Confidence (0-100) at or above which the bot auto-deletes and times out |
+| `AUTOMOD_SCORE_MEDIUM` | `30` | Confidence at or above which an alert is posted (no auto-action) |
+| `AUTOMOD_SCORE_LOW` | `15` | Confidence at or above which a hit counts as low-confidence (posted only with `AUTOMOD_LOG_LOW_CONFIDENCE`) |
 | `AUTOMOD_TIMEOUT_MS` | `3600000` | Duration of auto-applied or console timeouts (1h) |
 | `AUTOMOD_ALERT_COOLDOWN_MS` | `30000` | Minimum gap between alerts for the same user |
 | `AUTOMOD_IMMUNE_ROLE_IDS` | *(none)* | Comma-separated role IDs that are never inspected |
@@ -167,6 +204,16 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | `AUTOMOD_LEARNING_CORPUS_TARGET` | `20` | Confirmed blocklist fingerprints at which `auto` learning mode switches to normal confidence gating |
 | `AUTOMOD_LEARNING_CATCH_ALL` | `false` | Set `true` to post **every** image message (even zero-signal ones) while learning mode is active. Guarantees nothing slips past during training, but is a firehose in a busy server |
 | `AUTOMOD_LOG_LOW_CONFIDENCE` | `false` | After learning mode retires, set `true` to keep posting low-confidence hits |
+
+### OCR (scam text in images)
+
+| Variable | Default | Description |
+|---|---|---|
+| `OCR_ENABLED` | `true` | Set `false` to disable reading text from images |
+| `AUTOMOD_OCR_TIMEOUT_MS` | `5000` | Per-image OCR timeout (ms); on timeout the image is skipped |
+| `AUTOMOD_OCR_MAX_CONCURRENCY` | `2` | Max simultaneous OCR jobs |
+| `AUTOMOD_OCR_IMAGE_WIDTH` | `640` | Width (px) images are fetched at for OCR — larger reads better but is slower |
+| `AUTOMOD_SCAM_KEYWORDS` | *(built-in list)* | Comma-separated keywords that **replace** the built-in seed list |
 
 ### Text-flooding automod
 
@@ -188,12 +235,14 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | `AUTOMOD_CROSSPOST_WINDOW_MS` | `120000` | Detection window (ms) |
 | `AUTOMOD_CROSSPOST_MIN_CHARS` | `12` | Messages shorter than this are ignored (greetings, reactions) |
 | `AUTOMOD_CROSSPOST_SIMILARITY_PCT` | `80` | Token-overlap % at which two messages count as the same question |
+| `AUTOMOD_CROSSPOST_AUTO_DELETE` | `false` | Set `true` to auto-delete duplicate copies (keeping the first); default alert-only |
 
 ### Helper-assist
 
 | Variable | Default | Description |
 |---|---|---|
 | `HELP_CHANNEL_IDS` | *(disabled)* | Comma-separated forum or text channel IDs — enables solve button, auto-needinfo, stale sweep, and `/openposts` |
+| `HELP_FORUM_CHANNEL_IDS` | *(none)* | Legacy alias for `HELP_CHANNEL_IDS`; still honoured and merged in |
 | `TAG_SUGGEST_ENABLED` | `true` | Keyword → tag auto-suggestion |
 | `CODE_FORMAT_SUGGEST_ENABLED` | `true` | Nudge for unformatted code pastes |
 | `ASK_SUGGEST_ENABLED` | `true` | Nudge for "can I ask?" / "anyone here?" messages |
