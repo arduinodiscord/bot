@@ -14,8 +14,41 @@ test('scam blocklist forces critical', () => {
   assert.equal(r.tier, 'critical');
 });
 
-test('two-user cluster reaches high (auto-action) alone', () => {
+test('two users sharing an image with no scam content is only medium', () => {
+  // e.g. two members posting the same popular pinout diagram with a question.
   const r = scoreSignals({ ...base, clusterUsers: 2 });
+  assert.equal(r.tier, 'medium');
+});
+
+test('two-user cluster of an image-only pair reaches high', () => {
+  // The raid shape: same two images, no text, from two accounts.
+  const r = scoreSignals({ ...base, clusterUsers: 2, imageOnlyPair: true });
+  assert.equal(r.tier, 'high');
+});
+
+test('two-user cluster with scam words in the image reaches high', () => {
+  const r = scoreSignals({ ...base, clusterUsers: 2, keywordMatches: 2 });
+  assert.equal(r.tier, 'high');
+});
+
+test('three or more accounts sharing an image reaches high on its own', () => {
+  const r = scoreSignals({ ...base, clusterUsers: 3 });
+  assert.equal(r.tier, 'high');
+});
+
+test('a new member posting the same image in two channels is only medium', () => {
+  // The common newcomer "ask everywhere" pattern: tenure is not scam content.
+  const r = scoreSignals({ ...base, fanoutChannels: 2, newAccount: true });
+  assert.equal(r.tier, 'medium');
+});
+
+test('fan-out across three channels reaches high on its own', () => {
+  const r = scoreSignals({ ...base, fanoutChannels: 3 });
+  assert.equal(r.tier, 'high');
+});
+
+test('a mod-confirmed spam image stays high without corroboration', () => {
+  const r = scoreSignals({ ...base, spamBlocklist: true });
   assert.equal(r.tier, 'high');
 });
 
