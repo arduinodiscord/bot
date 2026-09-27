@@ -28,6 +28,10 @@ const lastAlertAt = new Map<string, number>();
 
 const unique = <T>(values: T[]): T[] => [...new Set(values)];
 
+/** Per-user buffer and per-message token caps, bounding CPU per message. */
+const MAX_BUFFER = 20;
+const MAX_TOKENS = 100;
+
 /** Lowercase, strip punctuation, collapse whitespace — then split into words. */
 export function tokenize(text: string): Set<string> {
   const normalized = text
@@ -35,7 +39,9 @@ export function tokenize(text: string): Set<string> {
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  return new Set(normalized.split(' ').filter(Boolean));
+  // Capped: comparison cost scales with token count, and a few accounts
+  // posting walls of text must not be able to stall the event loop.
+  return new Set(normalized.split(' ').filter(Boolean).slice(0, MAX_TOKENS));
 }
 
 /** Jaccard overlap of two token sets, in [0, 1]. */
@@ -68,9 +74,9 @@ export function recordTextMessage(
   options: CrosspostOptions = {}
 ): CrosspostDetection | null {
   const horizon = message.at - automodConfig.crosspostWindowMs;
-  const messages = (userMessages.get(userId) ?? []).filter(
-    (m) => m.at >= horizon
-  );
+  const messages = (userMessages.get(userId) ?? [])
+    .filter((m) => m.at >= horizon)
+    .slice(-(MAX_BUFFER - 1));
   messages.push(message);
 
   const similar = detectSimilarFanout(messages);
@@ -85,22 +91,25 @@ export function recordTextMessage(
   return null;
 }
 
-/** Near-identical text across `crosspostChannels`+ distinct channels. */
+/**
+ * Near-identical text across `crosspostChannels`+ distinct channels. Only the
+ * newest message is compared against the buffer (linear, not quadratic):
+ * detection runs on every insert and the buffer is cleared on a hit, so a
+ * cluster can only newly reach the threshold through the message just added.
+ */
 function detectSimilarFanout(messages: TextMessage[]): CrosspostDetection | null {
-  for (const anchor of messages) {
-    const cluster = messages.filter((m) => isSimilar(m, anchor));
-    const channels = unique(cluster.map((m) => m.channelId));
-    if (channels.length >= automodConfig.crosspostChannels) {
-      const ordered = [...cluster].sort((a, b) => a.at - b.at);
-      return {
-        kind: 'similar',
-        reason: `Same question posted across ${channels.length} channels`,
-        messages: ordered,
-        channels,
-      };
-    }
-  }
-  return null;
+  const anchor = messages[messages.length - 1];
+  if (!anchor) return null;
+  const cluster = messages.filter((m) => m === anchor || isSimilar(m, anchor));
+  const channels = unique(cluster.map((m) => m.channelId));
+  if (channels.length < automodConfig.crosspostChannels) return null;
+  const ordered = [...cluster].sort((a, b) => a.at - b.at);
+  return {
+    kind: 'similar',
+    reason: `Same question posted in ${channels.length} channels`,
+    messages: ordered,
+    channels,
+  };
 }
 
 /**
