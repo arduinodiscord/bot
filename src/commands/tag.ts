@@ -3,11 +3,16 @@ import {
   EmbedBuilder,
   InteractionContextType,
   MessageFlags,
+  PermissionFlagsBits,
 } from 'discord.js';
 import { BOT_COMMANDS_CHANNEL_ID } from '../utils/config';
 import tags from '../utils/tags';
 import { resolveTag } from '../utils/resolveTag';
 import universalEmbed from '../utils/embed';
+import { Cooldown } from '../utils/cooldown';
+
+/** Per-invoker cooldown so /tag can't be used to spam pings (staff exempt). */
+const cooldown = new Cooldown(10_000);
 
 /**
  * `/tag name` choices. Must list every key in the tags map (checked by
@@ -82,6 +87,17 @@ export class TagCommand extends Command {
         flags: MessageFlags.Ephemeral,
       });
 
+    const isStaff =
+      interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages) ??
+      false;
+    const wait = isStaff ? 0 : cooldown.remaining(interaction.user.id);
+    if (wait > 0)
+      return interaction.reply({
+        content: `Please wait ${Math.ceil(wait / 1000)}s before posting another tag.`,
+        flags: MessageFlags.Ephemeral,
+      });
+    if (!isStaff) cooldown.record(interaction.user.id);
+
     // Always ping a requested user. Templated tags (e.g. needinfo) already
     // include the mention; everything else gets it prepended.
     if (user) {
@@ -134,8 +150,9 @@ export class TagCommand extends Command {
       ],
     });
 
-    // Point the tagged user at the info from the channel they're in.
-    if (user)
+    // Point the tagged user at the info from the channel they're in (not
+    // needed when they're already looking at bot-commands).
+    if (user && interaction.channelId !== BOT_COMMANDS_CHANNEL_ID)
       await interaction
         .followUp({
           content: `<@${user.id}>`,
