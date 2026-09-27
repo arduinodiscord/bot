@@ -1,5 +1,5 @@
 import { SapphireClient, Logger, LogLevel } from '@sapphire/framework';
-import { ActivityType, GatewayIntentBits } from 'discord.js';
+import { ActivityType, GatewayIntentBits, Partials } from 'discord.js';
 import { BOT_TOKEN } from './utils/config';
 import { version } from '../package.json';
 
@@ -14,6 +14,9 @@ const client = new SapphireClient({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
   ],
+  // Leave events for members not in the cache (most of a 41k-member server)
+  // are only emitted as partials; without these they are silently dropped.
+  partials: [Partials.GuildMember, Partials.User],
   presence: {
     activities: [{ name: `/tag • v${version}`, type: ActivityType.Watching }],
   },
