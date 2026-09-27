@@ -10,6 +10,8 @@ import { startStaleHelpSweep } from '../utils/staleHelpSweep';
 import { runStartupCheck } from '../utils/startupCheck';
 import { startRetentionSweep } from '../utils/retention';
 import {
+  BUILD_DATE,
+  BUILD_SHA,
   JOIN_LEAVE_LOG_CHANNEL_ID,
   MOD_LOG_CHANNEL_ID,
   SERVER_ID,
@@ -26,6 +28,7 @@ export class ReadyListener extends Listener {
     this.container.logger.info(
       `Logged in as ${username}#${discriminator} (${id})`
     );
+    this.container.logger.info(`Build: ${BUILD_SHA} (built ${BUILD_DATE})`);
 
     // Log misconfiguration (wrong guild, missing channels/permissions) loudly.
     await runStartupCheck(client).catch((error) =>
