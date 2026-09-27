@@ -18,7 +18,7 @@ import { __resetBlocklist, addToBlocklist } from '../utils/automod/blocklist';
 import { __resetIncidents } from '../utils/automod/incidents';
 import { __resetKeywords } from '../utils/automod/keywords';
 import { automodConfig } from '../utils/config';
-import { perceptualHashes } from '../utils/automod/phash';
+import { perceptualHashes, __resetPhash } from '../utils/automod/phash';
 import { AUTO_ACTION_FIELD } from '../utils/automod/console';
 import {
   resetWorld,
@@ -62,6 +62,7 @@ let diagram: SimImage;
 let screenshot: SimImage;
 
 beforeEach(async () => {
+  __resetPhash();
   __resetTracker();
   __resetFlood();
   __resetCrosspost();
@@ -127,10 +128,6 @@ test('1c: re-encoded copies (different metadata, same pixels) still cluster via 
 
 test(
   '1d: concurrent raid of re-encoded copies -> every later raider is still caught',
-  {
-    todo:
-      'BUG: perceptualHashes skips (not queues) attachments once AUTOMOD_PHASH_MAX_CONCURRENCY (3) fetches are in flight, so the 3rd raider of a concurrent 2-image raid gets no hashes and scores LOW',
-  },
   async () => {
     const raiders = ['q1', 'q2', 'q3'].map((id) => addNewMember(id));
     // Each copy re-encoded: distinct metadata signature, same pixels.

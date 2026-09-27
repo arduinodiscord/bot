@@ -2,7 +2,7 @@ import { Jimp, intToRGBA } from 'jimp';
 import type { Attachment, Message } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { automodConfig } from '../config';
-import { isImageAttachment } from './signature';
+import { attachmentSignature, isRasterImage } from './signature';
 
 // pHash parameters: resize to DCT_INPUT_SIZE×DCT_INPUT_SIZE, then keep the
 // top-left DCT_COEFF_SIZE×DCT_COEFF_SIZE low-frequency block (64 bits).
@@ -18,8 +18,51 @@ const DECODE_TIMEOUT_MS = 4000;
 /** Cap on fetched image bytes, to bound memory / decompression-bomb risk. */
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
 
+/** How long an attachment may wait for a free hashing slot before it is skipped. */
+const SLOT_WAIT_MS = 8000;
+
 /** In-flight fetch/decode count, to cap fan-out during a raid. */
 let active = 0;
+/** Callers waiting for a slot, released in FIFO order. */
+const waiting: Array<() => void> = [];
+
+/**
+ * Wait (bounded) for a hashing slot. During a raid several messages arrive at
+ * once; skipping outright used to drop most of their hashes, which blinded
+ * cross-account matching of re-encoded copies. Resolves false on timeout.
+ */
+function acquireSlot(): Promise<boolean> {
+  if (active < automodConfig.phashMaxConcurrency) {
+    active++;
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const grant = () => {
+      clearTimeout(timer);
+      active++;
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      const i = waiting.indexOf(grant);
+      if (i >= 0) waiting.splice(i, 1);
+      resolve(false);
+    }, SLOT_WAIT_MS);
+    waiting.push(grant);
+  });
+}
+
+function releaseSlot(): void {
+  active--;
+  const next = waiting.shift();
+  if (next) next();
+}
+
+/**
+ * Hashes of recently seen files, keyed by metadata signature: every identical
+ * copy in a raid after the first costs nothing. Only successes are cached.
+ */
+const hashCache = new Map<string, string>();
+const MAX_HASH_CACHE = 1000;
 
 /**
  * Race a promise against a timeout, resolving to `null` if the timeout wins.
@@ -167,7 +210,8 @@ export function hammingDistance(a: string, b: string): number {
 function thumbnailUrl(attachment: Attachment): string {
   const base = attachment.proxyURL || attachment.url;
   const separator = base.includes('?') ? '&' : '?';
-  return `${base}${separator}width=64&height=64`;
+  // format=png: Jimp cannot decode WebP, so ask the proxy for PNG.
+  return `${base}${separator}width=64&height=64&format=png`;
 }
 
 /**
@@ -177,16 +221,20 @@ function thumbnailUrl(attachment: Attachment): string {
  */
 export async function perceptualHashes(message: Message): Promise<string[]> {
   const images = [...message.attachments.values()]
-    .filter(isImageAttachment)
+    .filter(isRasterImage)
     .slice(0, MAX_ATTACHMENTS);
 
   const hashes = await Promise.all(
     images.map(async (attachment) => {
-      // Best-effort concurrency guard: under raid load we skip rather than
-      // fan out unbounded fetches/decodes. A skip just means no pHash for this
-      // attachment (the metadata signature still covers it).
-      if (active >= automodConfig.phashMaxConcurrency) return null;
-      active++;
+      const key = attachmentSignature(attachment);
+      const cached = hashCache.get(key);
+      if (cached) return cached;
+      if (!(await acquireSlot())) {
+        container.logger.info(
+          `Automod: skipped perceptual hash for attachment ${attachment.id} (hashing queue full).`
+        );
+        return null;
+      }
       try {
         const response = await fetch(thumbnailUrl(attachment), {
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
@@ -194,9 +242,19 @@ export async function perceptualHashes(message: Message): Promise<string[]> {
         if (!response.ok) return null;
         const len = Number(response.headers.get('content-length') ?? 0);
         if (len > MAX_IMAGE_BYTES) return null;
-        const buffer = Buffer.from(await response.arrayBuffer());
+        const bytes = await response.arrayBuffer();
+        // content-length can be absent; enforce the cap on what we received.
+        if (bytes.byteLength > MAX_IMAGE_BYTES) return null;
         // Bound the decode: a crafted image can hang Jimp.read with no abort.
-        return await withTimeout(pHashFromBuffer(buffer), DECODE_TIMEOUT_MS);
+        const hash = await withTimeout(pHashFromBuffer(Buffer.from(bytes)), DECODE_TIMEOUT_MS);
+        if (hash) {
+          if (hashCache.size >= MAX_HASH_CACHE) {
+            const oldest = hashCache.keys().next().value;
+            if (oldest !== undefined) hashCache.delete(oldest);
+          }
+          hashCache.set(key, hash);
+        }
+        return hash;
       } catch (error) {
         container.logger.debug(
           `Automod: could not perceptual-hash attachment ${attachment.id}:`,
@@ -204,10 +262,15 @@ export async function perceptualHashes(message: Message): Promise<string[]> {
         );
         return null;
       } finally {
-        active--;
+        releaseSlot();
       }
     })
   );
 
   return hashes.filter((hash): hash is string => hash !== null);
+}
+
+/** Test-only reset. */
+export function __resetPhash(): void {
+  hashCache.clear();
 }
