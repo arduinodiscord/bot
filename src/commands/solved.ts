@@ -17,7 +17,7 @@ export class SolvedCommand extends Command {
     super(context, {
       ...options,
       name: 'solved',
-      description: 'Mark the current help post/thread as solved.',
+      description: 'Mark this help post as solved and close it.',
     });
   }
 
@@ -62,8 +62,8 @@ export class SolvedCommand extends Command {
       .setTitle('✅ Marked solved')
       .setDescription(
         helper
-          ? `Thanks for the help, <@${helper.id}>! 🎉`
-          : 'Glad it’s sorted! Closing this post.'
+          ? `Thanks to <@${helper.id}> for helping. Closing this post.`
+          : 'Closing this post.'
       );
 
     await interaction.reply({ embeds: [embed] });

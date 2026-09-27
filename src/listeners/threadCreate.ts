@@ -15,22 +15,22 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // Concise auto-needinfo text. Kept inline (not in tags.ts) so the full
 // /tag needinfo content — used by helpers explicitly — stays unchanged.
 const AUTO_NEEDINFO_TEXT = [
-  '**To help us help you, please share:**',
-  '• What you want it to do vs. what\'s actually happening',
+  '**To get an answer sooner, please add:**',
+  '• What you expect to happen, and what actually happens',
   '• A photo of your project and a wiring diagram',
   '• Your code in a **code block** (\\`\\`\\`)',
-  '• Any error messages',
+  '• The full text of any error messages',
   '',
-  'Once your question is answered, click **Mark Solved** below. 🛠️',
+  'When your question is answered, click **Mark Solved** below.',
 ].join('\n');
 
 const SOLVED_ONLY_TEXT =
-  'When your question is answered, the original poster or a moderator can click **Mark Solved** to close this post. Use `/solved helper:@user` to also thank whoever helped. 🛠️';
+  'When your question is answered, the person who opened this post (or a moderator) can click **Mark Solved** to close it. To credit whoever helped, use `/solved helper:@user` instead.';
 
 const solvedRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
   new ButtonBuilder()
     .setCustomId('solved')
-    .setLabel('✅ Mark Solved')
+    .setLabel('Mark Solved')
     .setStyle(ButtonStyle.Success)
 );
 

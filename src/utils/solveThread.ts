@@ -63,5 +63,5 @@ export function describeSolveFailure(result: SolveResult): string | null {
       : !result.renamed
         ? 'rename'
         : 'close';
-  return `⚠️ I couldn't ${failed} this post — I may be missing the **Manage Threads** permission here. Please ask a moderator to close it.`;
+  return `I couldn't ${failed} this post. I may be missing the **Manage Threads** permission here. Please ask a moderator to close it.`;
 }

@@ -122,11 +122,11 @@ export class SayCommand extends Command {
     } catch (error) {
       this.container.logger.error('/say failed to send:', error);
       return interaction.editReply({
-        content: 'Something went wrong sending the embed (check my permissions in that channel and the thumbnail URL).',
+        content: 'Could not send the embed. Check my permissions in that channel and the thumbnail URL.',
       });
     }
 
-    return interaction.editReply({ content: `✅ Sent to <#${picked.id}>.` });
+    return interaction.editReply({ content: `Sent to <#${picked.id}>.` });
   }
 }
 

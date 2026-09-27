@@ -41,12 +41,12 @@ const LEVEL_LABEL: Record<IncidentLevel, string> = {
 
 /** Headline shown at the top of an alert, by incident kind. */
 const LEVEL_TITLE: Record<IncidentLevel, string> = {
-  fanout: '🚨 Possible image spam',
-  blocklist: '🚨 Possible image spam',
-  burst: '🚨 Possible image spam',
-  suspect: '🚨 Possible image spam',
-  flood: '🚨 Possible message flooding',
-  crosspost: '🚨 Possible cross-channel question spam',
+  fanout: 'Possible image spam',
+  blocklist: 'Possible image spam',
+  burst: 'Possible image spam',
+  suspect: 'Possible image spam',
+  flood: 'Possible message flooding',
+  crosspost: 'Possible cross-channel question spam',
 };
 
 /**
@@ -82,8 +82,8 @@ function describeAutoAction(result: AutoActionResult): string {
   return (
     parts.join('\n') +
     (failed
-      ? '\n**Some actions failed** — check the bot has Manage Messages / Moderate Members / Ban Members and that its role sits above the user\'s. Act manually below.'
-      : '\nReview and escalate or reverse below.')
+      ? '\n**Some actions failed.** Check that the bot has Manage Messages, Moderate Members and Ban Members, and that its role is above the user\'s. Use the buttons below or act manually.'
+      : '\nUse the buttons below to go further or undo.')
   );
 }
 
@@ -104,6 +104,14 @@ function actionButton(
     .setLabel(label)
     .setStyle(style);
 }
+
+/** Plain explanation of every alert button, shown on each alert. */
+const BUTTON_GUIDE = [
+  '**Confirm scam**: only for real scam graphics. Deletes the messages and bans the poster plus other accounts that posted the same image (up to 10 accounts). Blocklists the image, so anyone who posts it again is banned automatically. Also adds words from the image text to the scam filter.',
+  '**Confirm spam**: deletes the messages, times out the user and blocklists the image as spam. Future posts of it are deleted and the poster is timed out automatically.',
+  '**Time out only** / **Ban this user only** / **Delete messages only**: act on this user or these messages. Nothing is blocklisted. Ban also deletes their last 24 hours of messages.',
+  '**Not spam**: permanently allowlists the image so it is never flagged again, and lifts the timeout the bot applied. Deleted messages cannot be restored.',
+].join('\n');
 
 /** Build the alert message moderators see in the console channel. */
 export function buildAlertPayload(
@@ -133,11 +141,11 @@ export function buildAlertPayload(
     .addFields(
       {
         name: 'Signal',
-        value: `**${LEVEL_LABEL[incident.level]}** — ${incident.reason}`,
+        value: `**${LEVEL_LABEL[incident.level]}**: ${incident.reason}`,
       },
       {
         name: 'Confidence',
-        value: `${incident.tier.toUpperCase()} — ${incident.score}/100`,
+        value: `${incident.tier.toUpperCase()} (${incident.score}/100)`,
         inline: true,
       },
       { name: 'Channels', value: channelMentions, inline: true },
@@ -215,31 +223,36 @@ export function buildAlertPayload(
   embed.addFields({ name: 'Jump to messages', value: jumpLinks });
 
   if (attemptedAutoAction(autoAction)) {
-    embed.addFields({ name: '🔒 Auto-action', value: describeAutoAction(autoAction) });
+    embed.addFields({ name: 'Already done automatically', value: describeAutoAction(autoAction) });
   }
 
   if (incident.learning) {
     embed.addFields({
-      name: '📚 Learning mode',
+      name: 'Learning mode',
       value:
-        'Posted because the spam corpus is still training — this may well be legit. ' +
-        'Use **Confirm spam / Confirm scam → ban / Not spam** to teach the filter; ' +
-        'learning mode retires itself once enough images are confirmed.',
+        'The filter is still collecting examples, so it posts images it is unsure about. ' +
+        'This one may be fine. Your choice of Confirm scam, Confirm spam or Not spam trains it. ' +
+        'Learning mode turns itself off once enough images have been confirmed.',
     });
   }
+
+  embed.addFields({
+    name: 'What the buttons do',
+    value: BUTTON_GUIDE,
+  });
 
   // Row 1: confirmscam, confirm, timeout, ban  (4 buttons)
   // Row 2: delete, dismiss                     (2 buttons)
   // Total: 6 buttons across 2 rows — no row exceeds the Discord limit of 5.
   const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    actionButton('confirmscam', '⛔ Confirm scam → ban', ButtonStyle.Danger, incident.id),
-    actionButton('confirm', '✅ Confirm spam', ButtonStyle.Danger, incident.id),
-    actionButton('timeout', '⏳ Timeout', ButtonStyle.Secondary, incident.id),
-    actionButton('ban', '🔨 Ban', ButtonStyle.Danger, incident.id)
+    actionButton('confirmscam', 'Confirm scam: ban all posters, auto-ban image', ButtonStyle.Danger, incident.id),
+    actionButton('confirm', 'Confirm spam: delete, time out, auto-delete image', ButtonStyle.Danger, incident.id),
+    actionButton('timeout', 'Time out only', ButtonStyle.Secondary, incident.id),
+    actionButton('ban', 'Ban this user only', ButtonStyle.Danger, incident.id)
   );
   const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    actionButton('delete', '🗑️ Delete msgs', ButtonStyle.Secondary, incident.id),
-    actionButton('dismiss', '👌 Not spam', ButtonStyle.Success, incident.id)
+    actionButton('delete', 'Delete messages only', ButtonStyle.Secondary, incident.id),
+    actionButton('dismiss', 'Not spam: allowlist image, lift timeout', ButtonStyle.Success, incident.id)
   );
 
   return { embeds: [embed], components: [row1, row2] };

@@ -54,20 +54,20 @@ export class OpenPostsCommand extends Command {
 
     if (posts.length === 0)
       return interaction.editReply({
-        content: '🎉 No open help posts right now — all caught up!',
+        content: 'There are no open help posts right now.',
       });
 
     const lines = posts.slice(0, MAX_LISTED).map(({ thread, lastActivityAt }) => {
       const url = `https://discord.com/channels/${thread.guildId}/${thread.id}`;
       const when = time(Math.floor(lastActivityAt / 1000), TimestampStyles.RelativeTime);
-      return `• [${thread.name}](${url}) — last activity ${when}`;
+      return `• [${thread.name}](${url}) · last activity ${when}`;
     });
 
     if (posts.length > MAX_LISTED)
       lines.push(`…and ${posts.length - MAX_LISTED} more.`);
 
     const embed = new EmbedBuilder(universalEmbed)
-      .setTitle(`🗂️ Open help posts (${posts.length})`)
+      .setTitle(`Open help posts (${posts.length})`)
       .setDescription(lines.join('\n'));
 
     return interaction.editReply({ embeds: [embed] });

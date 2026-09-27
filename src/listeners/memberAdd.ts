@@ -41,13 +41,13 @@ export class MemberAddListener extends Listener {
 
     const source = await this.resolveInviteSource(member);
     const embed = new EmbedBuilder(universalEmbed)
-      .setTitle('📥 Member joined')
+      .setTitle('Member joined')
       .setAuthor({
         name: member.user.tag,
         iconURL: member.displayAvatarURL(),
       })
       .setThumbnail(member.displayAvatarURL())
-      .setDescription(`<@${member.id}> — member #${member.guild.memberCount}`)
+      .setDescription(`<@${member.id}>, member #${member.guild.memberCount}`)
       .addFields(
         {
           name: 'Account created',

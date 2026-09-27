@@ -55,14 +55,14 @@ export class TagCommand extends Command {
         .addStringOption((option) =>
           option
             .setName('name')
-            .setDescription('Tag to see')
+            .setDescription('Tag to post')
             .setRequired(true)
             .addChoices(...TAG_CHOICES),
         )
         .addUserOption((option) =>
           option
             .setName('user')
-            .setDescription('User to ping with the tag.')
+            .setDescription('User to ping with the tag')
             .setRequired(false),
         );
     });
@@ -129,8 +129,8 @@ export class TagCommand extends Command {
     await interaction.editReply({
       embeds: [
         new EmbedBuilder(universalEmbed)
-          .setTitle('Requested info was sent in the Bot-Commands Channel')
-          .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`),
+          .setTitle('Tag posted')
+          .setDescription(`Posted in <#${BOT_COMMANDS_CHANNEL_ID}>.`),
       ],
     });
 
@@ -138,11 +138,11 @@ export class TagCommand extends Command {
     if (user)
       await interaction
         .followUp({
-          content: `<@${user.id}> you've been tagged with standard helpful info.`,
+          content: `<@${user.id}>`,
           embeds: [
             new EmbedBuilder(universalEmbed)
-              .setTitle('Your answer is in the Bot-Commands Channel...')
-              .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`),
+              .setTitle('Information for you')
+              .setDescription(`A helper posted information for you in <#${BOT_COMMANDS_CHANNEL_ID}>.`),
           ],
           allowedMentions: { users: [user.id] },
         })

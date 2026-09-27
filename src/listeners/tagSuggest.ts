@@ -75,19 +75,19 @@ function detect(content: string): Suggestion | null {
   if (tagSuggestEnabled) {
     const match = keywordSuggestions.find((s) => s.pattern.test(content));
     if (match)
-      return { tag: match.tag, prompt: match.prompt, label: 'Show steps' };
+      return { tag: match.tag, prompt: match.prompt, label: 'Show the guide' };
   }
   if (codeFormatSuggestEnabled && looksLikeUnformattedCode(content))
     return {
       tag: 'codeblock',
-      prompt: 'That looks like **unformatted code**.',
+      prompt: 'Code is much easier to read in a code block.',
       label: 'How to format code',
     };
   if (askSuggestEnabled && looksLikeLowEffortAsk(content))
     return {
       tag: 'ask',
       prompt:
-        'No need to ask to ask — just **post your question with details** and someone will help.',
+        "You don't need to ask first. Post your question with details and someone will answer when they can.",
       label: 'How to ask',
     };
   return null;
@@ -143,7 +143,7 @@ export class TagSuggestListener extends Listener {
     lastSuggested.set(message.author.id, now);
 
     const embed = new EmbedBuilder(universalEmbed).setDescription(
-      `💡 ${suggestion.prompt} Tap below for the details.`
+      suggestion.prompt
     );
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
