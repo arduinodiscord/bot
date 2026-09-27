@@ -17,8 +17,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -31,8 +31,41 @@ jobs:
         env:
           BOT_TOKEN: test
 
+  # Apply every migration to a real Postgres (same major as docker-compose),
+  # then fail if the migrated database doesn't match schema.prisma, i.e. a
+  # schema change was committed without a matching migration or vice versa.
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arduino
+          POSTGRES_PASSWORD: arduino
+          POSTGRES_DB: arduino
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arduino"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # prisma.config.ts only defines a datasource when this is set.
+      DATABASE_URL: postgresql://arduino:arduino@localhost:5432/arduino
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      # --exit-code: 0 = no drift, 2 = drift, 1 = error.
+      - run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: docker build --build-arg GIT_SHA=${{ github.sha }} -t arduino-bot:ci .

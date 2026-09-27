@@ -3,12 +3,15 @@
   "description": "The new and improved custom discord bot to power the official Arduino discord server @ https://arduino.cc/discord",
   "version": "1.0.0",
   "main": "./dist/src/index.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node ./dist/src/index.js",
-    "build": "tsc -p .",
-    "dev": "tsnd --respawn --transpile-only --exit-child .",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p .",
+    "dev": "npm run build && (tsc -p . -w --preserveWatchOutput & node --watch-path=./dist ./dist/src/index.js)",
     "postinstall": "prisma generate",
-    "test": "tsc -p . && BOT_TOKEN=test node --test \"dist/**/*.test.js\""
+    "test": "node -e \"require('fs').rmSync('dist-test',{recursive:true,force:true})\" && tsc -p tsconfig.test.json && BOT_TOKEN=test node --test \"dist-test/**/*.test.js\""
   },
   "repository": {
     "type": "git",
@@ -21,17 +24,11 @@
   "author": "Max Bromberg and Contributors",
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
-    "@sapphire/discord.js-utilities": "^7.3.3",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "@sapphire/framework": "^5.5.0",
-    "@sapphire/plugin-hmr": "^3.0.2",
-    "@sapphire/plugin-logger": "^4.1.0",
-    "@sapphire/plugin-subcommands": "^7.0.1",
-    "@sapphire/type": "^2.6.0",
-    "@sapphire/utilities": "^3.18.2",
     "@tesseract.js-data/eng": "^1.0.0",
-    "discord.js": "^14.26.4",
+    "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
     "jimp": "^1.6.1",
     "pg": "^8.21.0",
@@ -41,8 +38,7 @@
     "@sapphire/ts-config": "^5.0.3",
     "@types/node": "^25.9.3",
     "@types/pg": "^8.20.0",
-    "prisma": "^7.8.0",
-    "ts-node-dev": "^2.0.0",
+    "prisma": "^7.10.0",
     "typescript": "^6.0.3"
   }
 }

@@ -5,9 +5,10 @@ LABEL org.opencontainers.image.source https://github.com/arduinodiscord/bot
 
 WORKDIR /srv
 
-# @sapphire/type publishes no Linux prebuilt binary, so node-gyp compiles it
-# from source on install — that needs Python and a C/C++ toolchain.
-RUN apk add --no-cache python3 make g++
+# No native addons remain in the dependency tree, so no build toolchain.
+# OpenSSL is what Prisma's schema engine (used by `prisma migrate deploy`)
+# links against; Prisma's docs list it as required on Alpine.
+RUN apk add --no-cache openssl
 
 # Install dependencies first for better layer caching. The postinstall hook runs
 # `prisma generate`, which needs the schema, so copy prisma/ before installing.
@@ -32,6 +33,12 @@ ARG GIT_SHA=unknown
 ARG BUILD_DATE=unknown
 ENV GIT_SHA=$GIT_SHA BUILD_DATE=$BUILD_DATE
 LABEL org.opencontainers.image.revision=$GIT_SHA org.opencontainers.image.created=$BUILD_DATE
+
+# Drop root for runtime. Everything under /srv stays root-owned and is only
+# world-readable: nothing writes there at runtime (`prisma migrate deploy`
+# only reads node_modules, prisma/ and prisma.config.ts; OCR loads its bundled
+# model with cacheMethod 'none'), so the bot can't modify its own code.
+USER node
 
 # Run node directly (not via npm) so SIGTERM from `docker stop` reaches it.
 CMD ["node", "dist/src/index.js"]

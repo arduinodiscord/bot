@@ -35,5 +35,8 @@
     "noUnusedParameters": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  // Tests compile separately (tsconfig.test.json -> dist-test/). If they landed
+  // in dist/, Sapphire would load dist/src/listeners/*.test.js as pieces and
+  // run the test suite inside the live bot.
+  "exclude": ["node_modules", "src/**/*.test.ts"]
 }
