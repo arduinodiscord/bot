@@ -30,6 +30,19 @@ export function isImageAttachment(attachment: Attachment): boolean {
   return IMAGE_EXTENSION.test(attachment.name ?? '');
 }
 
+const RASTER_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+const RASTER_EXTENSION = /\.(png|jpe?g|gif|webp)$/i;
+
+/**
+ * Whether an image is a common raster format we can safely download and
+ * decode for pHash/OCR. SVG, HEIC, AVIF, TIFF and odd types are still
+ * fingerprinted by metadata signature, but never fed to a decoder.
+ */
+export function isRasterImage(attachment: Attachment): boolean {
+  if (attachment.contentType) return RASTER_TYPES.has(attachment.contentType.split(';')[0].trim());
+  return RASTER_EXTENSION.test(attachment.name ?? '');
+}
+
 /** Signatures for every image attachment on a message (empty if none). */
 export function imageSignatures(message: Message): string[] {
   return [...message.attachments.values()]

@@ -1,17 +1,41 @@
+import path from 'node:path';
 import Tesseract from 'tesseract.js';
 import type { Attachment, Message } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { automodConfig } from '../config';
-import { isImageAttachment, attachmentSignature } from './signature';
+import { isRasterImage, attachmentSignature } from './signature';
+
+// The English model ships inside the image (@tesseract.js-data/eng), so OCR
+// never downloads from a CDN at runtime: a blocked or flaky CDN used to leave
+// OCR dead, and without the errorHandler below it crashed the whole process.
+const LANG_PATH = path.join(
+  path.dirname(require.resolve('@tesseract.js-data/eng/package.json')),
+  '4.0.0_best_int'
+);
 
 // tesseract.js v7: createWorker(langs) auto-loads and initializes the language model.
 // No manual load() / loadLanguage() / initialize() calls needed.
 let workerPromise: Promise<Tesseract.Worker> | null = null;
 function getWorker(): Promise<Tesseract.Worker> {
   if (!workerPromise) {
-    workerPromise = Tesseract.createWorker('eng');
-    // A failed init (e.g. a transient error downloading the language model)
-    // must not be cached forever, or OCR would stay dead until a restart.
+    workerPromise = Tesseract.createWorker('eng', Tesseract.OEM.LSTM_ONLY, {
+      langPath: LANG_PATH,
+      cacheMethod: 'none',
+      // REQUIRED: without an errorHandler, tesseract.js rethrows every failed
+      // job (e.g. an image it cannot decode) from inside an event listener,
+      // which is an uncaught exception that kills the bot. The failed job's
+      // promise still rejects, so callers see the error normally.
+      // It must never throw itself, or it reintroduces the crash.
+      errorHandler: (error: unknown) => {
+        try {
+          container.logger?.debug('Automod: OCR job failed:', error);
+        } catch {
+          /* ignore */
+        }
+      },
+    });
+    // A failed init (e.g. a transient error) must not be cached forever, or
+    // OCR would stay dead until a restart.
     workerPromise.catch(() => {
       workerPromise = null;
     });
@@ -67,7 +91,7 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
 /** OCR all image attachments on a message; returns concatenated text (may be ''). */
 export async function ocrMessage(message: Message): Promise<string> {
   if (!automodConfig.ocrEnabled) return '';
-  const images = [...message.attachments.values()].filter(isImageAttachment).slice(0, 4);
+  const images = [...message.attachments.values()].filter(isRasterImage).slice(0, 4);
   const texts = await Promise.all(images.map((a) => ocrAttachment(a)));
   return texts.filter(Boolean).join('\n');
 }
@@ -119,8 +143,22 @@ async function runOcr(a: Attachment): Promise<string> {
   if (!res.ok) throw new Error(`OCR fetch failed with status ${res.status}`);
   const len = Number(res.headers.get('content-length') ?? 0);
   if (len > MAX_IMAGE_BYTES) throw new Error('image too large');
-  const buffer = Buffer.from(await res.arrayBuffer());
+  const bytes = await res.arrayBuffer();
+  // content-length can be absent; enforce the cap on what we received.
+  if (bytes.byteLength > MAX_IMAGE_BYTES) throw new Error('image too large');
+  return recognizeImage(Buffer.from(bytes));
+}
+
+/** Run OCR on raw image bytes. Rejects (never crashes) on undecodable input. */
+export async function recognizeImage(buffer: Buffer): Promise<string> {
   const worker = await getWorker();
   const { data } = await worker.recognize(buffer);
   return data.text ?? '';
+}
+
+/** Shut the OCR worker down (tests, graceful shutdown). */
+export async function stopOcr(): Promise<void> {
+  const pending = workerPromise;
+  workerPromise = null;
+  if (pending) await (await pending.catch(() => null))?.terminate();
 }
