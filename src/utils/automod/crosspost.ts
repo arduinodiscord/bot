@@ -139,6 +139,12 @@ export function clearCrosspostUser(userId: string): void {
   lastAlertAt.delete(userId);
 }
 
+/** Test-only reset of all crosspost state. */
+export function __resetCrosspost(): void {
+  userMessages.clear();
+  lastAlertAt.clear();
+}
+
 // Periodically drop stale state so the maps don't grow unbounded. unref()
 // keeps this timer from holding the process open.
 const sweep = setInterval(() => {

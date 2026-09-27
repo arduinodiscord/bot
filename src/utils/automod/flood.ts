@@ -81,6 +81,12 @@ export function clearFloodUser(userId: string): void {
   lastAlertAt.delete(userId);
 }
 
+/** Test-only reset of all flood state. */
+export function __resetFlood(): void {
+  userMessages.clear();
+  lastAlertAt.clear();
+}
+
 // Periodically drop stale state so the maps don't grow unbounded. unref()
 // keeps this timer from holding the process open.
 const sweep = setInterval(() => {

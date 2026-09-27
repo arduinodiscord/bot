@@ -180,6 +180,12 @@ export function clearUser(userId: string): void {
   lastAlertAt.delete(userId);
 }
 
+/** Test-only reset of all tracked image events and alert cooldowns. */
+export function __resetTracker(): void {
+  userEvents.clear();
+  lastAlertAt.clear();
+}
+
 // Periodically drop stale state so the maps don't grow unbounded for users
 // who post one image and never return. unref() keeps this from holding the
 // process open.

@@ -110,6 +110,11 @@ export function restoreIncident(incident: Incident): void {
   incidents.set(incident.id, incident);
 }
 
+/** Test-only reset of the open-incident store. */
+export function __resetIncidents(): void {
+  incidents.clear();
+}
+
 const sweep = setInterval(() => {
   const horizon = Date.now() - TTL_MS;
   for (const [id, incident] of incidents)
