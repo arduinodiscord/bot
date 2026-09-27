@@ -26,6 +26,11 @@ test('two-user cluster of an image-only pair reaches high', () => {
   assert.equal(r.tier, 'high');
 });
 
+test('one generic keyword (e.g. "free") is not scam content on its own', () => {
+  const r = scoreSignals({ ...base, clusterUsers: 2, keywordMatches: 1 });
+  assert.equal(r.tier, 'medium');
+});
+
 test('two-user cluster with scam words in the image reaches high', () => {
   const r = scoreSignals({ ...base, clusterUsers: 2, keywordMatches: 2 });
   assert.equal(r.tier, 'high');

@@ -12,9 +12,22 @@ test('matches distinct seed keywords', () => {
   assert.ok(m.length >= 4); // free, crypto, wallet, airdrop
 });
 
-test('learned keywords are matched after learning', () => {
+test('a learned keyword activates only after a second confirmed scam', () => {
   __resetKeywords();
+  learnKeywords(['totallyuniquescamword'], 'modid');
   assert.equal(matchKeywords('totallyuniquescamword here').length, 0);
   learnKeywords(['totallyuniquescamword'], 'modid');
   assert.deepEqual(matchKeywords('totallyuniquescamword here'), ['totallyuniquescamword']);
+});
+
+test('one scam image counts once even if a word repeats in it', () => {
+  __resetKeywords();
+  learnKeywords(['zzscamword', 'zzscamword', 'zzscamword'], 'modid');
+  assert.equal(matchKeywords('zzscamword').length, 0);
+});
+
+test('common words and Arduino help vocabulary are never learned', () => {
+  __resetKeywords();
+  for (let i = 0; i < 3; i++) learnKeywords(['arduino', 'upload', 'click', 'balance', 'today'], 'modid');
+  assert.deepEqual(matchKeywords('arduino upload click balance today'), []);
 });

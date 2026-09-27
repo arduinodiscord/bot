@@ -61,13 +61,13 @@ export function scoreSignals(s: Signals): ScoreResult {
   // help server: two members can share the same popular diagram, and a
   // newcomer often posts the same screenshot in two channels. Unless a
   // moderator already confirmed the image, auto-action also needs either
-  // scam-shaped content (scam words or a link in the image, a link or
+  // scam-shaped content (2+ scam words or a link in the image, a link or
   // @everyone in the message, or the image-only pair the raids use) or a
   // spread no ordinary member produces (3+ accounts or 3+ channels). Account
   // tenure alone does not count. Otherwise the detection is capped at medium:
   // an alert, and a human decides.
   const scamContent =
-    s.keywordMatches > 0 || s.ocrHasLink || s.hasLinkOrMention || s.imageOnlyPair;
+    s.keywordMatches >= 2 || s.ocrHasLink || s.hasLinkOrMention || s.imageOnlyPair;
   const wideSpread = s.clusterUsers >= 3 || s.fanoutChannels >= 3;
   if (tier === 'high' && !s.spamBlocklist && !scamContent && !wideSpread)
     tier = 'medium';
