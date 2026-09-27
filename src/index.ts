@@ -12,7 +12,6 @@ const client = new SapphireClient({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildInvites,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages,
   ],
   // Leave events for members not in the cache (most of a 41k-member server)
   // are only emitted as partials; without these they are silently dropped.
