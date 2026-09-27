@@ -46,7 +46,7 @@ That's it — the bot connects, registers its slash commands, and is ready.
 ```bash
 npm install
 cp .env.example .env          # set BOT_TOKEN
-npm run dev                   # hot-reloading dev server (ts-node-dev)
+npm run dev                   # rebuilds on change (tsc -w) and restarts the bot (node --watch)
 ```
 
 > **Privileged intents:** enable **Message Content** and **Server Members** for

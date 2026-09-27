@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev        # hot-reloading dev server (ts-node-dev, transpile-only)
+npm run dev        # tsc --watch + node --watch on dist/ (Sapphire loads pieces from package.json "main", so it runs compiled output)
 npm run build      # TypeScript compile to dist/
 npm start          # run compiled output
 
