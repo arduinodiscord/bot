@@ -1,0 +1,10 @@
+{
+  // Test build: everything under src/ including *.test.ts, emitted to
+  // dist-test/ so compiled tests never end up in the bot's dist/ tree.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-test"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

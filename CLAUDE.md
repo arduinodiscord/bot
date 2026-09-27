@@ -14,7 +14,7 @@ docker compose up -d
 docker compose down
 ```
 
-Type-check via `npm run build`; unit tests (`src/**/*.test.ts`, node:test) run via `npm test`.
+Type-check via `npm run build`; unit tests (`src/**/*.test.ts`, node:test) run via `npm test`, which compiles with `tsconfig.test.json` into `dist-test/`. Tests are excluded from `dist/` on purpose: Sapphire would load `dist/src/listeners/*.test.js` as a listener piece and run the suite inside the live bot.
 
 To add a new slash command, register it in `src/commands/` following the Sapphire `Command` pattern.
 

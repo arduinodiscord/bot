@@ -8,10 +8,10 @@
   },
   "scripts": {
     "start": "node ./dist/src/index.js",
-    "build": "tsc -p .",
-    "dev": "tsc -p . && (tsc -p . -w --preserveWatchOutput & node --watch-path=./dist ./dist/src/index.js)",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p .",
+    "dev": "npm run build && (tsc -p . -w --preserveWatchOutput & node --watch-path=./dist ./dist/src/index.js)",
     "postinstall": "prisma generate",
-    "test": "tsc -p . && BOT_TOKEN=test node --test \"dist/**/*.test.js\""
+    "test": "tsc -p tsconfig.test.json && BOT_TOKEN=test node --test \"dist-test/**/*.test.js\""
   },
   "repository": {
     "type": "git",
