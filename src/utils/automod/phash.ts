@@ -82,19 +82,34 @@ function dct2d(pixels: number[]): number[] {
 }
 
 /**
- * Perceptual hash (pHash) of an image, as 16 hex chars (64 bits).
+ * Minimum mean |AC coefficient| for an image to carry a usable fingerprint.
+ * A flat or near-flat image (blank, solid colour, empty screenshot) has almost
+ * no low-frequency structure, so its bits would be decided by noise and it
+ * would "match" every other flat image. Such images get no pHash (a blank
+ * canvas with one small 10px mark scores ~18; a real screenshot is in the
+ * hundreds or thousands). Exact duplicates are still caught by signature.
+ */
+const MIN_AC_ENERGY = 50;
+
+/**
+ * Perceptual hash (pHash) of an image, as 16 hex chars (64 bits), or `null`
+ * when the image is too flat to fingerprint meaningfully.
  *
  * 1. Resize to 32×32 and greyscale.
  * 2. Compute 2-D DCT.
  * 3. Extract the top-left 8×8 low-frequency block (64 coefficients).
- * 4. Compute the mean of those values.
- * 5. Bit i = 1 if coefficient i > mean, else 0.
+ * 4. Take the median of the 63 AC coefficients. The DC term (index 0) is the
+ *    overall brightness and is orders of magnitude larger than the rest; letting
+ *    it into the threshold drove almost every bit to 0, so unrelated
+ *    screenshots collided. It is excluded, and its bit is fixed at 0.
+ * 5. Bit i = 1 if AC coefficient i > median, else 0.
  *
  * Near-identical images — re-encoded, recompressed, watermarked, or lightly
- * resized/cropped — produce hashes with a small Hamming distance, which exact
- * metadata signatures cannot detect.
+ * resized/brightened — produce hashes with a small Hamming distance, which
+ * exact metadata signatures cannot detect. Rotation, perspective warps, and
+ * crops of more than a few percent do NOT survive; other signals cover those.
  */
-export async function pHashFromBuffer(buffer: Buffer): Promise<string> {
+export async function pHashFromBuffer(buffer: Buffer): Promise<string | null> {
   const image = await Jimp.read(buffer);
   image.resize({ w: DCT_INPUT_SIZE, h: DCT_INPUT_SIZE }).greyscale();
 
@@ -111,11 +126,18 @@ export async function pHashFromBuffer(buffer: Buffer): Promise<string> {
     for (let c = 0; c < DCT_COEFF_SIZE; c++)
       low.push(dct[r * DCT_INPUT_SIZE + c]);
 
-  const mean = low.reduce((s, v) => s + v, 0) / low.length;
+  const ac = low.slice(1);
+  const energy = ac.reduce((s, v) => s + Math.abs(v), 0) / ac.length;
+  if (energy < MIN_AC_ENERGY) return null;
 
-  // 64 bits → 16 hex chars
-  let bits = '';
-  for (const v of low) bits += v > mean ? '1' : '0';
+  const sorted = [...ac].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  const median =
+    sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+  // 64 bits → 16 hex chars (bit 0 = DC, always 0)
+  let bits = '0';
+  for (const v of ac) bits += v > median ? '1' : '0';
   let hex = '';
   for (let i = 0; i < bits.length; i += 4)
     hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
