@@ -13,7 +13,7 @@ import {
   type ButtonComponent,
   type ButtonInteraction,
 } from 'discord.js';
-import { deleteIncident, getIncident } from '../utils/automod/incidents';
+import { claimIncident, restoreIncident, type Incident } from '../utils/automod/incidents';
 import { addToBlocklist, addToAllowlist } from '../utils/automod/blocklist';
 import { tokenizeOcr, learnKeywords } from '../utils/automod/keywords';
 import {
@@ -56,21 +56,54 @@ export class SpamModerationHandler extends InteractionHandler {
         flags: MessageFlags.Ephemeral,
       });
 
-    const incident = getIncident(parsed.incidentId);
-    if (!incident || !interaction.guild)
+    if (!interaction.guild)
+      return interaction.reply({ content: 'Not in a server.', flags: MessageFlags.Ephemeral });
+    // Claim before any await so two moderators can't both run the action.
+    const incident = claimIncident(parsed.incidentId);
+    if (!incident)
       return interaction.reply({
         content:
-          'This alert has expired (the incident is no longer tracked, likely due to a bot restart). Please action the user manually.',
+          'This alert was already actioned by another moderator, or has expired (older than 24h or the bot restarted). Please action the user manually if needed.',
         flags: MessageFlags.Ephemeral,
       });
 
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    try {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const summary = await this.apply(interaction, parsed.action, incident);
+      await logModerationAction(
+        interaction.user.id,
+        incident.userId,
+        parsed.action,
+        incident.reason
+      );
+      await this.resolveAlert(interaction, summary);
+      return interaction.editReply({ content: summary });
+    } catch (error) {
+      container.logger.error(
+        `Automod: moderation action "${parsed.action}" on incident ${incident.id} failed:`,
+        error
+      );
+      // Let another click retry; actions are safe to repeat.
+      restoreIncident(incident);
+      const content =
+        '⚠️ Something went wrong while applying that action. Nothing further was changed; you can retry, or action the user manually.';
+      return interaction.deferred || interaction.replied
+        ? interaction.editReply({ content }).catch(() => null)
+        : interaction.reply({ content, flags: MessageFlags.Ephemeral }).catch(() => null);
+    }
+  }
 
-    const { guild } = interaction;
+  /** Perform a moderation action and return a summary for the moderator. */
+  private async apply(
+    interaction: ButtonInteraction,
+    action: string,
+    incident: Incident
+  ): Promise<string> {
+    const guild = interaction.guild!;
     const moderator = interaction.user;
     let summary: string;
 
-    switch (parsed.action) {
+    switch (action) {
       case 'confirm': {
         const deleted = await deleteIncidentMessages(
           container.client,
@@ -152,23 +185,28 @@ export class SpamModerationHandler extends InteractionHandler {
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
         clearCrosspostUser(incident.userId);
-        summary =
-          '👌 Marked as not spam. Cleared tracking for this user; no action taken and allowlisted the image(s).';
+        // Undo the bot's own automatic timeout. Deleted messages cannot be
+        // restored, so say so.
+        let undo = '';
+        if (incident.autoTimedOut) {
+          const member = await guild.members.fetch(incident.userId).catch(() => null);
+          const lifted = await member
+            ?.timeout(null, `Automod false positive — marked not spam by ${moderator.tag}`)
+            .then(() => true)
+            .catch(() => false);
+          undo = lifted
+            ? ' Lifted the automatic timeout.'
+            : ' **Could not** lift the automatic timeout — remove it manually.';
+        }
+        if (incident.messages.length > 0 && incident.autoTimedOut)
+          undo += ' Auto-deleted messages cannot be restored; consider letting the user know.';
+        summary = `👌 Marked as not spam and allowlisted the image(s).${undo}`;
         break;
       }
       default:
         summary = 'Unknown action.';
     }
-
-    await logModerationAction(
-      moderator.id,
-      incident.userId,
-      parsed.action,
-      incident.reason
-    );
-    deleteIncident(parsed.incidentId);
-    await this.resolveAlert(interaction, summary);
-    return interaction.editReply({ content: summary });
+    return summary;
   }
 
   /** Disable the alert's buttons and stamp it with the resolution. */
