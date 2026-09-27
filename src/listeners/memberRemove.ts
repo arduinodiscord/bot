@@ -46,7 +46,7 @@ export class MemberRemoveListener extends Listener {
     // anything that needs member data and guard the user just in case.
     const user = member.user as typeof member.user | null | undefined;
     const embed = new EmbedBuilder(universalEmbed)
-      .setTitle('📤 Member left')
+      .setTitle('Member left')
       .setAuthor({
         name: user?.tag ?? `Unknown user (${member.id})`,
         iconURL: user?.displayAvatarURL(),

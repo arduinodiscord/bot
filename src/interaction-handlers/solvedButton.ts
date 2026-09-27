@@ -62,7 +62,7 @@ export class SolvedButtonHandler extends InteractionHandler {
     const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('solved')
-        .setLabel('✅ Solved')
+        .setLabel('Solved')
         .setStyle(ButtonStyle.Success)
         .setDisabled(true)
     );

@@ -14,14 +14,14 @@ import universalEmbed from './embed';
 const SWEEP_INTERVAL_MS = 30 * 60_000;
 
 const NUDGE_TEXT =
-  "👋 This post has been quiet for a while. If you're sorted, tap **Mark Solved** to close it — otherwise reply with an update (what you've tried, your wiring/code) so a helper can jump back in.";
+  "This post has had no activity for a while. If your problem is solved, click **Mark Solved** to close it. If not, reply with an update (what you've tried, your current code and wiring) so helpers can pick it up again. If nobody replies, the post will be closed automatically.";
 
 function nudgePayload() {
   const embed = new EmbedBuilder(universalEmbed).setDescription(NUDGE_TEXT);
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('solved')
-      .setLabel('✅ Mark Solved')
+      .setLabel('Mark Solved')
       .setStyle(ButtonStyle.Success)
   );
   return { embeds: [embed], components: [row] };

@@ -95,12 +95,12 @@ export class RequestInfoCommand extends Command {
 
     if (!sent)
       return interaction.editReply({
-        content: "I couldn't post the checklist here (I may be missing permissions).",
+        content: "I couldn't post the checklist here. I may be missing permissions in this channel.",
       });
 
     lastUsed.set(interaction.user.id, now);
     return interaction.editReply({
-      content: '✅ Requested more info from the user.',
+      content: 'Posted the checklist asking for more info.',
     });
   }
 }

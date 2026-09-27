@@ -8,7 +8,7 @@ export class AboutCommand extends Command {
     super(context, {
       ...options,
       name: 'about',
-      description: 'Retrieve information about this bot.',
+      description: 'Show information about this bot.',
     });
   }
   public override registerApplicationCommands(

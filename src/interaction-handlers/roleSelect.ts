@@ -69,13 +69,13 @@ export class RoleSelectHandler extends InteractionHandler {
       else await member.roles.add(toggle.roleId);
     } catch {
       return interaction.reply({
-        content: `I couldn't update your roles — please check my permissions or ask a moderator.`,
+        content: `I couldn't update your roles. Please ask a moderator.`,
         flags: MessageFlags.Ephemeral,
       });
     }
 
     const embed = new EmbedBuilder(universalEmbed).setTitle(
-      `✅ The ${toggle.label} role was ${had ? 'removed' : 'added'}.`
+      `${had ? 'Removed' : 'Added'} the ${toggle.label} role.`
     );
     return interaction.reply({
       embeds: [embed],

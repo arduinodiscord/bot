@@ -29,7 +29,7 @@ export class CrosspostListener extends Listener {
       container.logger.error(`Auto-crosspost failed in #${channelName}:`, error);
       await this.log(
         `Failed to auto-crosspost in #${channelName}`,
-        'Likely rate-limiting — check the logs for details.'
+        'Probably rate limited. Check the logs for details.'
       );
     }
   }

@@ -76,7 +76,7 @@ export class MessageLinkEmbedListener extends Listener {
         })
         .setDescription(linked.content || '*[no text content]*')
         .setFooter({
-          text: `Quoted by ${message.author.tag} • click the link for full context`,
+          text: `Quoted by ${message.author.tag}. Open the link for full context.`,
         })
         .setTimestamp(linked.createdAt);
 
