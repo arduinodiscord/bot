@@ -66,6 +66,35 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arduino
+          POSTGRES_PASSWORD: arduino
+          POSTGRES_DB: arduino
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U arduino" --health-interval 5s
+          --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v5
       - run: docker build --build-arg GIT_SHA=${{ github.sha }} -t arduino-bot:ci .
+      # Run the image exactly as docker-compose does (same command, same
+      # non-root user), against a real Postgres: migrations must apply, and
+      # the bot must load every piece, the OCR model and the DB, and get as
+      # far as logging in. A dummy token makes login fail, which is expected.
+      - name: Smoke-test the container
+        run: |
+          set -o pipefail
+          timeout 90 docker run --rm --network host \
+            -e BOT_TOKEN=ci-dummy-token \
+            -e DATABASE_URL=postgresql://arduino:arduino@localhost:5432/arduino \
+            arduino-bot:ci \
+            sh -c "node_modules/.bin/prisma migrate deploy && exec node dist/src/index.js" \
+            2>&1 | tee smoke.log || true
+          grep -q "migrations have been successfully applied\|No pending migrations" smoke.log
+          grep -q "Attempting to connect to discord client" smoke.log
+          # Login with a dummy token must be the only failure.
+          grep -qi "TokenInvalid\|invalid token\|An invalid token was provided" smoke.log
+          ! grep -qiE "Cannot find module|EACCES|permission denied|SyntaxError|failed to load" smoke.log
