@@ -316,7 +316,7 @@ export const field = (payload: MessageCreateOptions, name: string): string | und
 
 /** Image-automod alerts only (flood/crosspost alerts have other titles). */
 export const imageAlerts = () =>
-  world.alerts.filter((a) => embedOf(a).title === '🚨 Possible image spam');
+  world.alerts.filter((a) => embedOf(a).title === 'Possible image spam');
 
 /** "HIGH", "MEDIUM", ... from the Confidence field. */
 export const tierOf = (payload: MessageCreateOptions) =>

@@ -19,6 +19,7 @@ import { __resetIncidents } from '../utils/automod/incidents';
 import { __resetKeywords } from '../utils/automod/keywords';
 import { automodConfig } from '../utils/config';
 import { perceptualHashes } from '../utils/automod/phash';
+import { AUTO_ACTION_FIELD } from '../utils/automod/console';
 import {
   resetWorld,
   world,
@@ -98,7 +99,7 @@ test('1: two established accounts post the identical 2-image message -> high: de
   const last = imageAlerts().at(-1)!;
   assert.equal(tierOf(last), 'HIGH');
   assert.match(field(last, 'Signal')!, /Same image from 2 accounts/);
-  const action = field(last, 'Auto-action')!;
+  const action = field(last, AUTO_ACTION_FIELD)!;
   assert.match(action, /✅ Deleted 2\/2 message\(s\)/);
   assert.match(action, /✅ Timed out/);
   assert.doesNotMatch(action, /FAILED/);
@@ -160,7 +161,7 @@ test('2: three accounts post an identical single image with text -> high on the 
   assert.match(field(last, 'Signal')!, /Same image from 3 accounts/);
   assert.equal(timedOut('u3').length, 1);
   assert.equal(world.deletes.length, 3);
-  assert.match(field(last, 'Auto-action')!, /✅ Timed out/);
+  assert.match(field(last, AUTO_ACTION_FIELD)!, /✅ Timed out/);
 });
 
 test('3: two regular members share an image with a text question -> medium, alert only', async () => {
@@ -173,7 +174,7 @@ test('3: two regular members share an image with a text question -> medium, aler
   const alerts = imageAlerts();
   assert.equal(alerts.length, 1);
   assert.equal(tierOf(alerts[0]), 'MEDIUM');
-  assert.equal(field(alerts[0], 'Auto-action'), undefined, 'no auto-action on medium');
+  assert.equal(field(alerts[0], AUTO_ACTION_FIELD), undefined, 'no auto-action on medium');
   assert.equal(world.deletes.length, 0);
   assert.equal(world.timeouts.length, 0);
   assert.equal(world.bans.length, 0);
@@ -195,7 +196,7 @@ test('4: new member cross-posts screenshot + text: 2 channels -> medium alert on
   assert.equal(tierOf(last), 'HIGH');
   assert.equal(world.deletes.length, 3);
   assert.equal(timedOut('newbie').length, 1);
-  assert.match(field(last, 'Auto-action')!, /✅ Deleted 3\/3/);
+  assert.match(field(last, AUTO_ACTION_FIELD)!, /✅ Deleted 3\/3/);
 });
 
 test('5: repeat spam inside the cooldown is still enforced; mod-log throttled except on escalation', async () => {
@@ -232,7 +233,7 @@ test('6: after "Confirm scam", a new account posting the same image is auto-bann
   const incidentId = incidentIdOf(imageAlerts().at(-1)!);
 
   const i = await click('confirmscam', incidentId);
-  assert.match(i.edits.at(-1)!, /Confirmed scam — banned 2\/2/);
+  assert.match(i.edits.at(-1)!, /Confirmed scam\. Banned 2\/2/);
   const bansBefore = world.bans.length;
 
   const raider = addNewMember('raider');
@@ -243,7 +244,7 @@ test('6: after "Confirm scam", a new account posting the same image is auto-bann
   const last = imageAlerts().at(-1)!;
   assert.equal(tierOf(last), 'CRITICAL');
   assert.match(alertText(last), /Known spam image/);
-  assert.match(field(last, 'Auto-action')!, /✅ Banned/);
+  assert.match(field(last, AUTO_ACTION_FIELD)!, /✅ Banned/);
 });
 
 test('7: staff posting the raid images -> nothing happens', async () => {
@@ -268,7 +269,7 @@ test('8: timeout fails (member not moderatable) -> alert reports "Timeout FAILED
   await post(a, { images: [raidA, raidB] });
   await post(b, { images: [raidA, raidB] });
   assert.equal(world.timeouts.length, 0);
-  const action = field(imageAlerts().at(-1)!, 'Auto-action')!;
+  const action = field(imageAlerts().at(-1)!, AUTO_ACTION_FIELD)!;
   assert.match(action, /❌ Timeout FAILED/);
   assert.match(action, /Some actions failed/);
 });
@@ -322,7 +323,7 @@ test('11: two moderators click the same button concurrently -> the action runs o
   assert.equal(world.bans.filter((x) => x.userId === 'b11').length, 1);
   assert.equal(i1.edits.length + i2.edits.length, 1, 'one moderator gets the result');
   assert.equal(i1.replies.length + i2.replies.length, 1, 'the other is told it was already actioned');
-  assert.match([...i1.replies, ...i2.replies][0], /already actioned/);
+  assert.match([...i1.replies, ...i2.replies][0], /already been handled/);
 });
 
 test('12: learning mode: a single image-only 2-image post from an established account -> low learning alert, no action', async () => {
@@ -331,7 +332,7 @@ test('12: learning mode: a single image-only 2-image post from an established ac
   assert.equal(alerts.length, 1);
   assert.equal(tierOf(alerts[0]), 'LOW');
   assert.ok(field(alerts[0], 'Learning mode'), 'alert explains it is a learning-mode hit');
-  assert.equal(field(alerts[0], 'Auto-action'), undefined);
+  assert.equal(field(alerts[0], AUTO_ACTION_FIELD), undefined);
   assert.equal(world.deletes.length, 0);
   assert.equal(world.timeouts.length, 0);
   assert.equal(world.bans.length, 0);

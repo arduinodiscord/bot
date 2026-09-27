@@ -62,6 +62,9 @@ export interface AutoActionResult {
   banned?: boolean;
 }
 
+/** Alert field that reports what the bot already did (tests key off this). */
+export const AUTO_ACTION_FIELD = 'Already done automatically';
+
 const tick = (ok: boolean) => (ok ? '✅' : '❌');
 
 /** Human-readable summary of an auto-action, flagging anything that failed. */
@@ -223,7 +226,7 @@ export function buildAlertPayload(
   embed.addFields({ name: 'Jump to messages', value: jumpLinks });
 
   if (attemptedAutoAction(autoAction)) {
-    embed.addFields({ name: 'Already done automatically', value: describeAutoAction(autoAction) });
+    embed.addFields({ name: AUTO_ACTION_FIELD, value: describeAutoAction(autoAction) });
   }
 
   if (incident.learning) {
