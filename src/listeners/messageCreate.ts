@@ -206,7 +206,7 @@ export class MessageCreateListener extends Listener {
         : detection.reason ||
           (score > 0
             ? 'Image flagged by confidence scoring'
-            : 'No suspicion signals — posted by the learning catch-all');
+            : 'No suspicious signals. Posted because learning mode is on');
 
     const incident = createIncident({
       userId: message.author.id,

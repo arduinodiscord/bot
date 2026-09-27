@@ -52,18 +52,18 @@ export class SpamModerationHandler extends InteractionHandler {
     // Only staff (anyone who can delete messages) may action alerts.
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages))
       return interaction.reply({
-        content: 'You need the Manage Messages permission to action spam alerts.',
+        content: 'You need the Manage Messages permission to use these buttons.',
         flags: MessageFlags.Ephemeral,
       });
 
     if (!interaction.guild)
-      return interaction.reply({ content: 'Not in a server.', flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: 'This only works in a server.', flags: MessageFlags.Ephemeral });
     // Claim before any await so two moderators can't both run the action.
     const incident = claimIncident(parsed.incidentId);
     if (!incident)
       return interaction.reply({
         content:
-          'This alert was already actioned by another moderator, or has expired (older than 24h or the bot restarted). Please action the user manually if needed.',
+          'This alert has already been handled by another moderator, or it has expired (older than 24 hours, or the bot restarted). Act on the user manually if needed.',
         flags: MessageFlags.Ephemeral,
       });
 
@@ -86,7 +86,7 @@ export class SpamModerationHandler extends InteractionHandler {
       // Let another click retry; actions are safe to repeat.
       restoreIncident(incident);
       const content =
-        '⚠️ Something went wrong while applying that action. Nothing further was changed; you can retry, or action the user manually.';
+        'Something went wrong while applying that action, and it stopped partway. Try the button again or act on the user manually.';
       return interaction.deferred || interaction.replied
         ? interaction.editReply({ content }).catch(() => null)
         : interaction.reply({ content, flags: MessageFlags.Ephemeral }).catch(() => null);
@@ -126,11 +126,11 @@ export class SpamModerationHandler extends InteractionHandler {
         clearCrosspostUser(incident.userId);
         const fingerprints = incident.signatures.length + incident.hashes.length;
         const blocklisted = fingerprints
-          ? `, and blocklisted ${fingerprints} image fingerprint(s)`
+          ? ` Blocklisted ${fingerprints} image fingerprint(s) as spam.`
           : '';
-        summary = `✅ Confirmed spam — deleted ${deleted} message(s), ${
-          timedOut ? 'timed out the user' : '**could not** time out the user'
-        }${blocklisted}.`;
+        summary = `Confirmed spam. Deleted ${deleted} message(s). ${
+          timedOut ? 'Timed out the user.' : '**Could not** time out the user.'
+        }${blocklisted}`;
         break;
       }
       case 'timeout': {
@@ -140,8 +140,8 @@ export class SpamModerationHandler extends InteractionHandler {
           `Automod review by ${moderator.tag}`
         );
         summary = ok
-          ? '⏳ User timed out.'
-          : '⚠️ Could not time out the user (check role hierarchy and permissions).';
+          ? 'Timed out the user.'
+          : 'Could not time out the user. Check the bot\'s role position and permissions.';
         break;
       }
       case 'ban': {
@@ -154,8 +154,8 @@ export class SpamModerationHandler extends InteractionHandler {
         clearFloodUser(incident.userId);
         clearCrosspostUser(incident.userId);
         summary = ok
-          ? '🔨 User banned and recent messages purged.'
-          : '⚠️ Could not ban the user (check role hierarchy and permissions).';
+          ? 'Banned the user and deleted their messages from the last 24 hours.'
+          : 'Could not ban the user. Check the bot\'s role position and permissions.';
         break;
       }
       case 'delete': {
@@ -163,7 +163,7 @@ export class SpamModerationHandler extends InteractionHandler {
           container.client,
           incident
         );
-        summary = `🗑️ Deleted ${deleted} message(s).`;
+        summary = `Deleted ${deleted} message(s).`;
         break;
       }
       case 'confirmscam': {
@@ -177,7 +177,9 @@ export class SpamModerationHandler extends InteractionHandler {
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
         clearCrosspostUser(incident.userId);
-        summary = `⛔ Confirmed scam — banned ${banned}/${targets.length} account(s), deleted ${deleted} message(s), trained blocklist + keywords.`;
+        summary = `Confirmed scam. Banned ${banned}/${targets.length} account(s) and deleted ${deleted} message(s). The image is blocklisted as a scam${
+          incident.ocrText ? ' and its text was added to the scam filter' : ''
+        }.`;
         break;
       }
       case 'dismiss': {
@@ -196,11 +198,11 @@ export class SpamModerationHandler extends InteractionHandler {
             .catch(() => false);
           undo = lifted
             ? ' Lifted the automatic timeout.'
-            : ' **Could not** lift the automatic timeout — remove it manually.';
+            : ' **Could not** lift the automatic timeout. Remove it manually.';
         }
         if (incident.messages.length > 0 && incident.autoTimedOut)
-          undo += ' Auto-deleted messages cannot be restored; consider letting the user know.';
-        summary = `👌 Marked as not spam and allowlisted the image(s).${undo}`;
+          undo += ' The deleted messages cannot be restored, so you may want to let the user know.';
+        summary = `Marked as not spam. The image(s) are allowlisted.${undo}`;
         break;
       }
       default:
