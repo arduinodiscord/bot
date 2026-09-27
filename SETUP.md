@@ -19,12 +19,22 @@ Step-by-step deployment on a Dockge server.
    - Bot permissions:
      - `View Channels`, `Read Message History`
      - `Send Messages`, `Send Messages in Threads`, `Embed Links`
+     - `Attach Files` (mod-log alerts attach an evidence image)
      - `Manage Messages` (automod deletes, crosspost publishing)
      - `Manage Threads` (solve / stale-post archiving)
      - `Moderate Members` (automod timeouts), `Ban Members` (console ban button)
      - `Manage Server` (reading invites for join-source tracking with `JOIN_LEAVE_LOG_CHANNEL_ID`)
+     - `Manage Roles` (the role-select buttons add/remove opt-in roles)
    - Copy the generated URL, paste it in a browser, and invite the bot to your server.
-   - Drag the bot's role **above** the member roles it must be able to time out or ban.
+   - Drag the bot's role **above** the member roles it must be able to time out or ban, and above the opt-in roles it toggles.
+
+   Instead of the URL generator you can fill in this template (Application ID is on the app's **General Information** page). `1391837965348` is exactly the permission list above:
+
+   ```
+   https://discord.com/oauth2/authorize?client_id=<APPLICATION_ID>&scope=bot+applications.commands&permissions=1391837965348
+   ```
+
+   Re-inviting an already-present bot with this URL updates its managed role's permissions without kicking it.
 
 ---
 
@@ -62,10 +72,14 @@ SSH into your Dockge host and clone the repo into Dockge's stacks directory:
 cd /opt/stacks
 git clone https://github.com/arduinodiscord/bot.git arduino-bot
 cd arduino-bot
-git checkout revamp          # active development branch
+git checkout v1.2.3          # production: a release tag (see RELEASING.md)
 ```
 
+Production runs a **release tag** (`vX.Y.Z`, tagged on `main`). A staging/test deploy may check out a branch or a specific commit SHA instead; either way, the `Build: <sha>` line in the startup log tells you exactly which commit is running.
+
 > Dockge looks for compose files inside `/opt/stacks/<stack-name>/`. Cloning there means Dockge can pick up the stack automatically.
+
+> ⚠️ **This directory is the stack.** Compose names the project after the directory, and the database lives in the volume `<directory>_pgdata` (here `arduino-bot_pgdata`). Always deploy and update from this same directory. Moving/renaming it, or creating a new stack by pasting `docker-compose.yml` into Dockge's **+ Compose** editor, gives you a stack with **no build context** (no Dockerfile or source, so the build fails) and a **new, empty database** (the blocklist and moderation history appear to vanish).
 
 ---
 
@@ -89,21 +103,33 @@ Then add the IDs and enable the features you want (see section 2 and the full re
 
 ---
 
-## 5. Deploy in Dockge
+## 5. Deploy
 
-1. Open Dockge in your browser (typically `http://<server-ip>:5001`).
-2. Click **+ Compose** (or **Scan** if Dockge has already picked up the stack).
-3. If creating manually, paste the contents of `docker-compose.yml` into the editor.
-4. Dockge will find the `.env` file in the same directory and use it automatically.
-5. Click **Deploy**. Dockge will:
-   - Build the bot image (takes a minute on first run)
-   - Start Postgres
-   - Run `prisma migrate deploy` to create the database schema
-   - Start the bot
+Build and start from a shell in the stack directory. Dockge's **Deploy**/**Update** buttons are not a reliable way to rebuild: they reuse an existing `arduino-bot-bot` image, so after a `git checkout` the old code keeps running.
 
-Watch the log output. You should see:
+```bash
+cd /opt/stacks/arduino-bot
+
+# Build identity, baked into the image and logged at startup (else "Build: unknown").
+export GIT_SHA=$(git rev-parse --short HEAD)
+export BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+docker compose up -d --build
+docker compose logs -f --tail=100 bot
+```
+
+`docker compose` reads `.env` from the same directory. On startup it:
+- builds the bot image (a minute or two the first time),
+- starts Postgres,
+- runs `prisma migrate deploy` to create/upgrade the database schema,
+- starts the bot.
+
+The stack then shows up in Dockge (use **Scan** if it doesn't), which is fine for viewing logs and stopping/starting. For deploying new code, repeat the commands above (full procedure with backups: [RELEASING.md](RELEASING.md)).
+
+You should see:
 ```
 Logged in as Arduino Bot#0000 (...)
+Build: <sha> (built <date>)
 Startup check: OK (guild Arduino, all configured channels and permissions present).
 Database connection success
 Automod: loaded 0 signature(s) and 0 perceptual hash(es) from the blocklist (...)
@@ -125,7 +151,16 @@ The **startup check** verifies the configuration against the live server and log
 ## 6. Verify it's working
 
 **Slash commands registered?**
-Type `/` in your server — the bot's commands (`/tag`, `/solved`, `/openposts`, `/ping`, `/about`, `/say`) should appear.
+Type `/` in your server — the bot's commands should appear:
+
+| Command | Who | What it does |
+|---|---|---|
+| `/tag` | everyone | Post a canned help answer |
+| `/solved [helper]` | thread owner, staff | Mark a help thread solved, credit the helper, archive it |
+| `/openposts` | everyone (ephemeral) | Digest of open help posts, oldest-waiting first |
+| `/ping`, `/about` | everyone | Health check / bot info |
+| `/say` | Manage Server | Send a custom embed as the bot. `description` and field values take a literal `\n` for a line break. `fields` format: `Name::Value \| Name::Value` (e.g. `Rules::Be nice \| Help::Ask in #help`) |
+| **Request more info** (message context menu: right-click a message → **Apps**) | everyone (cooldown; none for Manage Messages) | Replies to that message with the `needinfo` checklist for its author |
 
 **Automod console active?**
 Confirm `MOD_LOG_CHANNEL_ID` is set (the bot logs a startup warning if it isn't). Post a test image in two different channels quickly — you should see an alert appear in the mod-log channel within seconds.
@@ -144,12 +179,22 @@ Post a message containing `avrdude` or `stk500` in any channel — the bot shoul
 
 ## 7. Updating
 
-```bash
-cd /opt/stacks/arduino-bot
-git pull
-```
+Follow [RELEASING.md](RELEASING.md): back up the database, `git checkout` the new release tag **in the same stack directory**, export `GIT_SHA`/`BUILD_DATE`, and run `docker compose up -d --build`. The `prisma migrate deploy` step in the startup command applies any new migrations automatically. Don't rely on Dockge's buttons to pick up new code (see section 5).
 
-Then in Dockge, click **Rebuild** on the stack. The `prisma migrate deploy` step in the startup command applies any new migrations automatically. For tagged releases, backups and rollback, follow [RELEASING.md](RELEASING.md).
+---
+
+## 7a. Switching the bot to a different Discord application
+
+For example, promoting from a beta/test application to the production one, or vice versa. The token, the bot user and its managed role all change, so:
+
+1. **Stop the old instance** (`docker compose stop bot` in its stack directory) so two bots never act on the same messages.
+2. On the **new** application's **Bot** page, enable the **Server Members** and **Message Content** privileged intents (section 1). Without them the bot logs in but automod, tags and join logging silently see nothing.
+3. **Invite** the new bot with the permissions URL from section 1 (`permissions=1391837965348`, `client_id` = the new Application ID).
+4. **Recreate channel permission overwrites** for the new bot's role wherever the old bot had them: the mod-log channel (View, Send, Embed Links, Attach Files), help channels (View, Send Messages in Threads, Manage Threads), the bot-commands channel, and any private/staff channels it must read. Overwrites are per role, so none carry over.
+5. In **Server Settings → Roles**, drag the new bot's role **above** the member roles it must time out/ban and the opt-in roles it toggles.
+6. **Kick the old (beta) bot** from the server. Otherwise both sets of slash commands show up in `/` and members pick the wrong one.
+7. Put the new `BOT_TOKEN` in `.env` and redeploy (section 5). Messages the old bot posted keep their buttons (role-select message, Mark Solved, mod-log alerts), but those buttons belong to the old application and **stop working**: repost the role-select message (and update `ROLE_SELECT_MESSAGE_ID`), and handle old mod-log alerts manually.
+8. **Read the `Startup check:` log line.** `OK` means guild, channels and permissions line up; any warning names the missing channel or permission.
 
 ---
 
@@ -208,6 +253,8 @@ All variables are optional except `BOT_TOKEN`. Leaving a variable blank uses the
 | `AUTOMOD_LOG_LOW_CONFIDENCE` | `false` | After learning mode retires, set `true` to keep posting low-confidence hits |
 
 ### OCR (scam text in images)
+
+The English Tesseract model ships with the image (`@tesseract.js-data/eng`) and is loaded from disk with no cache; nothing is downloaded at runtime, so OCR works on hosts without outbound access to a CDN.
 
 | Variable | Default | Description |
 |---|---|---|

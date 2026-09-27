@@ -36,7 +36,7 @@ Helpful tags, image-spam moderation, and server automation — built for the peo
 git clone https://github.com/arduinodiscord/bot.git
 cd bot
 cp .env.example .env          # add your BOT_TOKEN (+ any feature channel IDs)
-docker compose up -d          # builds the bot, starts Postgres, applies migrations
+docker compose up -d --build  # builds the bot, starts Postgres, applies migrations
 ```
 
 That's it — the bot connects, registers its slash commands, and is ready.
@@ -51,7 +51,7 @@ npm run dev                   # rebuilds on change (tsc -w) and restarts the bot
 
 > **Privileged intents:** enable **Message Content** and **Server Members** for
 > your application in the [Discord Developer Portal](https://discord.com/developers/applications).
-> For invite-source logging the bot also needs the **Manage Server** permission.
+> Invite it with the permission set in [SETUP.md](SETUP.md) (section 1), which includes a ready-made invite URL.
 
 ---
 
