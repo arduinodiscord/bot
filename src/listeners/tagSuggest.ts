@@ -4,6 +4,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  PermissionFlagsBits,
   type Message,
 } from 'discord.js';
 import {
@@ -109,6 +110,10 @@ export class TagSuggestListener extends Listener {
     if (!message.inGuild() || message.author.bot) return;
     if (message.guildId !== SERVER_ID) return;
     if (message.content.length < 10) return;
+
+    // Staff (Manage Messages) are exempt, matching automod's immunity.
+    if (message.member?.permissions.has(PermissionFlagsBits.ManageMessages))
+      return;
 
     // Members holding a recognised role (Trusted and above) don't need suggestions.
     // Self-assignable notification roles are intentionally excluded from
