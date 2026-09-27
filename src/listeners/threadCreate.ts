@@ -74,7 +74,16 @@ export class ThreadCreateListener extends Listener {
     if (!helpAssistConfig.staleSweepEnabled) return;
     if ((thread.autoArchiveDuration ?? 0) >= ThreadAutoArchiveDuration.OneWeek)
       return;
-    if (!thread.manageable) return;
+    // `manageable` throws when the bot's own member isn't cached.
+    if (!thread.guild.members.me)
+      await thread.guild.members.fetchMe().catch(() => null);
+    let manageable = false;
+    try {
+      manageable = thread.manageable;
+    } catch {
+      manageable = false;
+    }
+    if (!manageable) return;
     await thread
       .setAutoArchiveDuration(
         ThreadAutoArchiveDuration.OneWeek,
