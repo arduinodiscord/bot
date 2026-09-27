@@ -16,7 +16,10 @@ import {
   applySolved,
   canMarkSolved,
   describeSolveFailure,
+  fetchAskerIds,
+  needsStarterLookup,
 } from '../utils/solveThread';
+import { isHomeGuild } from '../utils/homeGuild';
 
 /** Handles the "Mark Solved" button posted in help threads (forum or text). */
 export class SolvedButtonHandler extends InteractionHandler {
@@ -31,7 +34,8 @@ export class SolvedButtonHandler extends InteractionHandler {
   }
 
   public override parse(interaction: ButtonInteraction) {
-    return interaction.customId === 'solved' ? this.some() : this.none();
+    if (interaction.customId !== 'solved') return this.none();
+    return isHomeGuild(interaction.guildId) ? this.some() : this.none();
   }
 
   public async run(interaction: ButtonInteraction) {
@@ -45,17 +49,27 @@ export class SolvedButtonHandler extends InteractionHandler {
     const isStaff =
       interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages) ??
       false;
-    const check = canMarkSolved(channel, interaction.user.id, isStaff);
-    if (!check.ok)
-      return interaction.reply({
-        content: check.reason,
-        flags: MessageFlags.Ephemeral,
-      });
+
+    // Checking a text-channel thread's starter message can be slow; acknowledge
+    // the click first so Discord's 3s window is never missed.
+    const slow = needsStarterLookup(channel, interaction.user.id, isStaff);
+    if (slow) await interaction.deferUpdate();
+    const check = canMarkSolved(
+      channel,
+      interaction.user.id,
+      isStaff,
+      slow ? await fetchAskerIds(channel) : undefined
+    );
+    if (!check.ok) {
+      const refusal = { content: check.reason, flags: MessageFlags.Ephemeral } as const;
+      return slow ? interaction.followUp(refusal) : interaction.reply(refusal);
+    }
 
     const embed = new EmbedBuilder(universalEmbed)
       .setTitle('✅ Marked solved')
       .setDescription(`Closed by <@${interaction.user.id}>.`);
-    await interaction.reply({ embeds: [embed] });
+    if (slow) await interaction.followUp({ embeds: [embed] });
+    else await interaction.reply({ embeds: [embed] });
 
     // Disable the button so it can't be clicked again, then close the thread.
     const originalComponents = interaction.message.components;

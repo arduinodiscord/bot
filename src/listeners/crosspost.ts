@@ -2,6 +2,7 @@ import { Events, Listener, container } from '@sapphire/framework';
 import { EmbedBuilder, type Message } from 'discord.js';
 import { CROSSPOST_LOG_CHANNEL_ID, crosspostChannelIds } from '../utils/config';
 import universalEmbed from '../utils/embed';
+import { isHomeGuild } from '../utils/homeGuild';
 
 /**
  * Auto-publishes (crossposts) messages in configured announcement/feed channels
@@ -15,7 +16,7 @@ export class CrosspostListener extends Listener {
 
   public async run(message: Message) {
     if (crosspostChannelIds.length === 0) return;
-    if (!message.inGuild()) return;
+    if (!message.inGuild() || !isHomeGuild(message.guildId)) return;
     if (!crosspostChannelIds.includes(message.channelId)) return;
     if (!message.crosspostable) return;
 

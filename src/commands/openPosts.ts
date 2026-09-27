@@ -4,6 +4,7 @@ import {
   InteractionContextType,
   MessageFlags,
   TimestampStyles,
+  escapeMarkdown,
   time,
 } from 'discord.js';
 import { helpChannelIds } from '../utils/config';
@@ -13,9 +14,22 @@ import universalEmbed from '../utils/embed';
 const MAX_LISTED = 15;
 
 /**
+ * Make a thread title safe to use as masked-link text: no formatting, and no
+ * brackets that could close the link early and inject one of its own.
+ */
+export function linkLabel(name: string): string {
+  const safe = escapeMarkdown(name.replace(/\s+/g, ' ').trim()).replace(
+    /[[\]()]/g,
+    '\\$&'
+  );
+  return safe || 'Untitled post';
+}
+
+/**
  * `/openposts` — an ephemeral digest of currently-open (active, unsolved) help
  * posts, oldest activity first, so helpers can pick up whatever's been waiting
- * longest. Reuses the same open-post scan as the stale-post sweep.
+ * longest. Reuses the same open-post scan as the stale-post sweep (public
+ * threads only).
  */
 export class OpenPostsCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
@@ -60,7 +74,7 @@ export class OpenPostsCommand extends Command {
     const lines = posts.slice(0, MAX_LISTED).map(({ thread, lastActivityAt }) => {
       const url = `https://discord.com/channels/${thread.guildId}/${thread.id}`;
       const when = time(Math.floor(lastActivityAt / 1000), TimestampStyles.RelativeTime);
-      return `• [${thread.name}](${url}) · last activity ${when}`;
+      return `• [${linkLabel(thread.name)}](${url}) · last activity ${when}`;
     });
 
     if (posts.length > MAX_LISTED)

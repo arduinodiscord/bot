@@ -4,6 +4,7 @@ import {
 } from '@sapphire/framework';
 import { MessageFlags, type ButtonInteraction } from 'discord.js';
 import { resolveTag } from '../utils/resolveTag';
+import { isHomeGuild } from '../utils/homeGuild';
 
 /**
  * Replies (ephemerally) with a tag when a `tag:<name>` button is clicked — e.g.
@@ -23,6 +24,7 @@ export class TagButtonHandler extends InteractionHandler {
 
   public override parse(interaction: ButtonInteraction) {
     if (!interaction.customId.startsWith('tag:')) return this.none();
+    if (!isHomeGuild(interaction.guildId)) return this.none();
     return this.some(interaction.customId.slice('tag:'.length));
   }
 

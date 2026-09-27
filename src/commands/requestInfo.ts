@@ -41,6 +41,17 @@ export class RequestInfoCommand extends Command {
   ) {
     if (!interaction.isMessageContextMenuCommand()) return;
 
+    // Interaction permissions are resolved for this channel (overwrites
+    // included), so read-only channels are refused here.
+    const sendFlag = interaction.channel?.isThread()
+      ? PermissionFlagsBits.SendMessagesInThreads
+      : PermissionFlagsBits.SendMessages;
+    if (!interaction.memberPermissions?.has(sendFlag))
+      return interaction.reply({
+        content: "You can't send messages in this channel, so you can't request info here.",
+        flags: MessageFlags.Ephemeral,
+      });
+
     const target = interaction.targetMessage;
     if (target.author.bot || target.system)
       return interaction.reply({

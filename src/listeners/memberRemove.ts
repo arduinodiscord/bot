@@ -9,6 +9,7 @@ import {
 import { JOIN_LEAVE_LOG_CHANNEL_ID } from '../utils/config';
 import { getPrisma } from '../utils/db';
 import universalEmbed from '../utils/embed';
+import { isHomeGuild } from '../utils/homeGuild';
 
 export class MemberRemoveListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
@@ -16,6 +17,7 @@ export class MemberRemoveListener extends Listener {
   }
 
   public async run(member: GuildMember | PartialGuildMember) {
+    if (!isHomeGuild(member.guild.id)) return;
     await this.recordAnalytics(member.id);
     await this.logLeave(member);
   }

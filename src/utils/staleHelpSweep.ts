@@ -37,6 +37,29 @@ function isNudge(message: Message | null, botId: string | undefined): boolean {
   return message.embeds.some((embed) => embed.description === NUDGE_TEXT);
 }
 
+export type StaleAction = 'nudge' | 'archive' | 'none';
+
+/**
+ * Decide what the sweep should do with one open post. Pure, for testing.
+ *
+ * Never acts when the last message couldn't be fetched: without it we can't
+ * tell whether our nudge is already there, and guessing re-nudges the same
+ * post on every sweep.
+ */
+export function staleAction(post: {
+  lastMessageKnown: boolean;
+  lastIsNudge: boolean;
+  lastActivityAt: number;
+  now: number;
+  nudgeMs: number;
+  archiveMs: number;
+}): StaleAction {
+  if (!post.lastMessageKnown) return 'none';
+  const idle = post.now - post.lastActivityAt;
+  if (post.lastIsNudge) return idle >= post.archiveMs ? 'archive' : 'none';
+  return idle >= post.nudgeMs ? 'nudge' : 'none';
+}
+
 /**
  * One pass: nudge open help posts idle past the nudge threshold, and archive
  * those whose last message is still our nudge after the archive threshold.
@@ -47,21 +70,26 @@ async function sweepOnce(client: Client): Promise<void> {
   const now = Date.now();
   const posts = await fetchOpenHelpPosts(client);
 
-  for (const { thread, lastActivityAt, lastMessage } of posts) {
-    if (isNudge(lastMessage, client.user?.id)) {
-      if (now - lastActivityAt >= helpAssistConfig.staleArchiveMs)
-        await thread
-          .setArchived(true, 'Auto-archived: no activity after nudge')
-          .catch((error) =>
-            container.logger.warn(
-              `Stale sweep: could not archive thread ${thread.id}:`,
-              error
-            )
-          );
-      continue;
-    }
+  for (const { thread, lastActivityAt, lastMessage, lastMessageKnown } of posts) {
+    const action = staleAction({
+      lastMessageKnown,
+      lastIsNudge: isNudge(lastMessage, client.user?.id),
+      lastActivityAt,
+      now,
+      nudgeMs: helpAssistConfig.staleNudgeMs,
+      archiveMs: helpAssistConfig.staleArchiveMs,
+    });
 
-    if (now - lastActivityAt >= helpAssistConfig.staleNudgeMs)
+    if (action === 'archive')
+      await thread
+        .setArchived(true, 'Auto-archived: no activity after nudge')
+        .catch((error) =>
+          container.logger.warn(
+            `Stale sweep: could not archive thread ${thread.id}:`,
+            error
+          )
+        );
+    else if (action === 'nudge')
       await thread
         .send(nudgePayload())
         .catch((error) =>

@@ -9,6 +9,7 @@ import {
 } from 'discord.js';
 import { helpChannelIds, helpAssistConfig } from '../utils/config';
 import universalEmbed from '../utils/embed';
+import { isHomeGuild } from '../utils/homeGuild';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -47,6 +48,7 @@ export class ThreadCreateListener extends Listener {
 
   public async run(thread: AnyThreadChannel, newlyCreated: boolean) {
     if (!newlyCreated) return;
+    if (!isHomeGuild(thread.guildId)) return;
     if (helpChannelIds.length === 0) return;
     if (!thread.parentId || !helpChannelIds.includes(thread.parentId)) return;
 
@@ -74,7 +76,16 @@ export class ThreadCreateListener extends Listener {
     if (!helpAssistConfig.staleSweepEnabled) return;
     if ((thread.autoArchiveDuration ?? 0) >= ThreadAutoArchiveDuration.OneWeek)
       return;
-    if (!thread.manageable) return;
+    // `manageable` throws when the bot's own member isn't cached.
+    if (!thread.guild.members.me)
+      await thread.guild.members.fetchMe().catch(() => null);
+    let manageable = false;
+    try {
+      manageable = thread.manageable;
+    } catch {
+      manageable = false;
+    }
+    if (!manageable) return;
     await thread
       .setAutoArchiveDuration(
         ThreadAutoArchiveDuration.OneWeek,
