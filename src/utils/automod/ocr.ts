@@ -80,24 +80,35 @@ async function ocrAttachment(a: Attachment): Promise<string> {
   // unboundedly. A skip is deliberately NOT cached, so it can be retried later.
   if (active >= automodConfig.ocrMaxConcurrency) return '';
   active++;
+  // The slot is released when the OCR job actually settles, NOT when our
+  // timeout fires: a timed-out recognize() keeps running in the worker, and
+  // releasing early would let new jobs pile up behind it during a raid. While
+  // a slow job holds a slot, new images are skipped instead.
+  const job = runOcr(a)
+    .then((text) => {
+      // Cache genuine completions, even ones that finish after our timeout, so
+      // the next copy of a raid image is read instantly.
+      const result = text.trim();
+      if (cache.size >= MAX_CACHE) {
+        const oldest = cache.keys().next().value;
+        if (oldest !== undefined) cache.delete(oldest);
+      }
+      cache.set(key, result);
+      return result;
+    })
+    .finally(() => {
+      active--;
+    });
   try {
     // withTimeout yields null on timeout; runOcr throws on fetch/decode failure.
-    // Only a genuine completion (a string — possibly '' for a text-free image)
-    // is cached. Transient timeouts/errors return '' WITHOUT caching so they
-    // can't poison the cache and blind OCR for this fingerprint on later posts.
-    const text = await withTimeout(runOcr(a), automodConfig.ocrTimeoutMs);
-    if (text === null) return '';
-    const result = text.trim();
-    if (cache.size >= MAX_CACHE) {
-      const oldest = cache.keys().next().value;
-      if (oldest !== undefined) cache.delete(oldest);
-    }
-    cache.set(key, result);
-    return result;
+    // Transient timeouts/errors return '' WITHOUT caching so they can't poison
+    // the cache and blind OCR for this fingerprint on later posts.
+    const text = await withTimeout(job, automodConfig.ocrTimeoutMs);
+    return text ?? '';
   } catch (e) {
     container.logger.debug(`Automod: OCR failed for ${a.id}:`, e);
     return '';
-  } finally { active--; }
+  }
 }
 
 /** Cap on fetched image bytes, to bound memory / decompression-bomb risk. */
