@@ -1,5 +1,9 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { ApplicationCommandType, MessageFlags } from 'discord.js';
+import {
+  ApplicationCommandType,
+  InteractionContextType,
+  MessageFlags,
+} from 'discord.js';
 import { resolveTag } from '../utils/resolveTag';
 
 /**
@@ -19,7 +23,7 @@ export class RequestInfoCommand extends Command {
       builder
         .setName('Request more info')
         .setType(ApplicationCommandType.Message)
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
     );
   }
 

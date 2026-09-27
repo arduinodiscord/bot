@@ -1,5 +1,10 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { EmbedBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import {
+  EmbedBuilder,
+  InteractionContextType,
+  MessageFlags,
+  PermissionFlagsBits,
+} from 'discord.js';
 import universalEmbed from '../utils/embed';
 import { applySolved, canMarkSolved } from '../utils/solveThread';
 
@@ -19,7 +24,7 @@ export class SolvedCommand extends Command {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .addUserOption((option) =>
           option
             .setName('helper')

@@ -2,6 +2,7 @@ import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
 import {
   ChannelType,
   EmbedBuilder,
+  InteractionContextType,
   MessageFlags,
   PermissionFlagsBits,
 } from 'discord.js';
@@ -26,7 +27,7 @@ export class SayCommand extends Command {
         .setName(this.name)
         .setDescription(this.description)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .addChannelOption((option) =>
           option
             .setName('channel')
