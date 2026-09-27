@@ -7,6 +7,7 @@ import { learningModeActive } from '../utils/automod/learning';
 import { warmOcr } from '../utils/automod/ocr';
 import { seedInviteCache } from '../utils/inviteCache';
 import { startStaleHelpSweep } from '../utils/staleHelpSweep';
+import { runStartupCheck } from '../utils/startupCheck';
 import {
   JOIN_LEAVE_LOG_CHANNEL_ID,
   MOD_LOG_CHANNEL_ID,
@@ -25,6 +26,10 @@ export class ReadyListener extends Listener {
       `Logged in as ${username}#${discriminator} (${id})`
     );
 
+    // Log misconfiguration (wrong guild, missing channels/permissions) loudly.
+    await runStartupCheck(client).catch((error) =>
+      this.container.logger.error('Startup check failed to run:', error)
+    );
     // Connect persistence if configured; the bot runs in-memory otherwise.
     await initDatabase();
     // Warm the automod blocklist from the database (no-op without one).

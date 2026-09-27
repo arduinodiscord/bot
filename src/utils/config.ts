@@ -1,5 +1,11 @@
 import 'dotenv/config';
 
+// docker-compose passes unset variables through as empty strings
+// (`FOO: ${FOO:-}`), and destructuring defaults only apply to `undefined`.
+// Treat empty as unset so every default below actually takes effect.
+for (const [key, value] of Object.entries(process.env))
+  if (value !== undefined && value.trim() === '') delete process.env[key];
+
 // TODO: zod validation would be nicer to have here
 
 // const requiredEnvironment = ['BOT_TOKEN', 'DATABASE_URL'];
