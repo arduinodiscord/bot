@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 export type IncidentLevel =
   | 'burst'
   | 'fanout'
+  | 'cluster'
   | 'blocklist'
   | 'suspect'
   | 'flood'
@@ -27,8 +28,8 @@ export interface Incident {
   level: IncidentLevel;
   reason: string;
   messages: IncidentMessage[];
-  /** Metadata signatures to blocklist if a moderator confirms this is spam. */
-  signatures: string[];
+  /** Content ids (image identity) to blocklist/allowlist on a moderator decision. */
+  contentIds: string[];
   /** Perceptual hashes to blocklist if a moderator confirms this is spam. */
   hashes: string[];
   createdAt: number;
@@ -40,6 +41,12 @@ export interface Incident {
   matched: { label: string; points: number }[];
   /** Distinct user IDs observed in the same cross-user cluster (always includes the author). */
   clusterUserIds: string[];
+  /**
+   * Cluster accounts whose post had the raid shape (images, no text), always
+   * including the author. "Confirm scam" bans only these: a member who shared
+   * the same image with a normal question is listed but never banned in bulk.
+   */
+  raidUserIds: string[];
   /** Concatenated OCR text extracted from image attachments (may be ''). */
   ocrText: string;
   /** Category to use when a moderator confirms and blocklists this incident. */
@@ -68,9 +75,12 @@ const TTL_MS = 24 * 60 * 60 * 1000;
  */
 type IncidentInput = Omit<
   Incident,
-  'id' | 'createdAt' | 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'ocrText' | 'severity' | 'learning'
+  'id' | 'createdAt' | 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'raidUserIds' | 'ocrText' | 'severity' | 'learning'
 > &
-  Partial<Pick<Incident, 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'ocrText' | 'severity' | 'learning'>>;
+  Partial<Pick<Incident, 'score' | 'tier' | 'matched' | 'clusterUserIds' | 'raidUserIds' | 'ocrText' | 'severity' | 'learning'>>;
+
+/** Hard cap on open incidents, so a flood of detections can't grow memory without bound. */
+const MAX_INCIDENTS = 2000;
 
 export function createIncident(data: IncidentInput): Incident {
   const incident: Incident = {
@@ -81,10 +91,15 @@ export function createIncident(data: IncidentInput): Incident {
     tier: data.tier ?? 'medium',
     matched: data.matched ?? [],
     clusterUserIds: data.clusterUserIds ?? [data.userId],
+    raidUserIds: data.raidUserIds ?? [data.userId],
     ocrText: data.ocrText ?? '',
     severity: data.severity ?? 'spam',
     learning: data.learning ?? false,
   };
+  if (incidents.size >= MAX_INCIDENTS) {
+    const oldest = incidents.keys().next().value;
+    if (oldest !== undefined) incidents.delete(oldest);
+  }
   incidents.set(incident.id, incident);
   return incident;
 }

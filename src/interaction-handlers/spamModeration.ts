@@ -14,7 +14,8 @@ import {
   type ButtonInteraction,
 } from 'discord.js';
 import { claimIncident, restoreIncident, type Incident } from '../utils/automod/incidents';
-import { addToBlocklist, addToAllowlist } from '../utils/automod/blocklist';
+import { addToBlocklist, addToAllowlist, checkBlocklist } from '../utils/automod/blocklist';
+import { MOD_LOG_CHANNEL_ID, SERVER_ID } from '../utils/config';
 import { tokenizeOcr, learnKeywords } from '../utils/automod/keywords';
 import {
   banMember,
@@ -25,6 +26,15 @@ import {
 import { clearUser } from '../utils/automod/tracker';
 import { clearFloodUser } from '../utils/automod/flood';
 import { clearCrosspostUser } from '../utils/automod/crosspost';
+
+const REQUIRED_PERMISSION: Record<string, { flag: bigint; name: string }> = {
+  confirmscam: { flag: PermissionFlagsBits.BanMembers, name: 'Ban Members' },
+  ban: { flag: PermissionFlagsBits.BanMembers, name: 'Ban Members' },
+  confirm: { flag: PermissionFlagsBits.ModerateMembers, name: 'Timeout Members' },
+  timeout: { flag: PermissionFlagsBits.ModerateMembers, name: 'Timeout Members' },
+  delete: { flag: PermissionFlagsBits.ManageMessages, name: 'Manage Messages' },
+  dismiss: { flag: PermissionFlagsBits.ManageMessages, name: 'Manage Messages' },
+};
 
 interface ParsedButton {
   action: string;
@@ -49,15 +59,19 @@ export class SpamModerationHandler extends InteractionHandler {
   }
 
   public async run(interaction: ButtonInteraction, parsed: ParsedButton) {
-    // Only staff (anyone who can delete messages) may action alerts.
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages))
+    if (!interaction.guild || interaction.guildId !== SERVER_ID || interaction.channelId !== MOD_LOG_CHANNEL_ID)
+      return interaction.reply({ content: 'These buttons only work in the mod-log channel.', flags: MessageFlags.Ephemeral });
+
+    // Each button needs the Discord permission for what it does, so a role
+    // that can only manage messages (e.g. via a channel overwrite on the
+    // mod-log channel) cannot ban through the bot.
+    const required = REQUIRED_PERMISSION[parsed.action];
+    if (!required) return interaction.reply({ content: 'Unknown action.', flags: MessageFlags.Ephemeral });
+    if (!interaction.memberPermissions?.has([PermissionFlagsBits.ManageMessages, required.flag]))
       return interaction.reply({
-        content: 'You need the Manage Messages permission to use these buttons.',
+        content: `You need the ${required.name} and Manage Messages permissions to use this button.`,
         flags: MessageFlags.Ephemeral,
       });
-
-    if (!interaction.guild)
-      return interaction.reply({ content: 'This only works in a server.', flags: MessageFlags.Ephemeral });
     // Claim before any await so two moderators can't both run the action.
     const incident = claimIncident(parsed.incidentId);
     if (!incident)
@@ -115,7 +129,7 @@ export class SpamModerationHandler extends InteractionHandler {
           `Confirmed image spam by ${moderator.tag}`
         );
         await addToBlocklist(
-          incident.signatures,
+          incident.contentIds,
           incident.hashes,
           moderator.id,
           'confirmed image spam',
@@ -124,7 +138,7 @@ export class SpamModerationHandler extends InteractionHandler {
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
         clearCrosspostUser(incident.userId);
-        const fingerprints = incident.signatures.length + incident.hashes.length;
+        const fingerprints = incident.contentIds.length + incident.hashes.length;
         const blocklisted = fingerprints
           ? ` Blocklisted ${fingerprints} image fingerprint(s) as spam.`
           : '';
@@ -168,22 +182,32 @@ export class SpamModerationHandler extends InteractionHandler {
       }
       case 'confirmscam': {
         const deleted = await deleteIncidentMessages(container.client, incident);
-        const targets = [...new Set([incident.userId, ...incident.clusterUserIds])].slice(0, 10);
+        // Only accounts that posted in the raid shape (images, no text); a
+        // member who shared the same image with a normal message is listed in
+        // the alert but not banned in bulk.
+        const targets = [...new Set([incident.userId, ...incident.raidUserIds])].slice(0, 10);
         let banned = 0;
         for (const id of targets)
           if (await banMember(guild, id, `Confirmed scam by ${moderator.tag}`)) banned++;
-        await addToBlocklist(incident.signatures, incident.hashes, moderator.id, 'confirmed scam', 'scam');
-        if (incident.ocrText) await learnKeywords(tokenizeOcr(incident.ocrText), moderator.id);
+        // Learn words once per distinct image: confirming several alerts from
+        // the same raid must not count as independent confirmations.
+        const newImage =
+          incident.contentIds.length > 0 && checkBlocklist(incident.contentIds, []).exact !== 'scam';
+        await addToBlocklist(incident.contentIds, incident.hashes, moderator.id, 'confirmed scam', 'scam');
+        const learned = newImage && incident.ocrText.length > 0;
+        if (learned) await learnKeywords(tokenizeOcr(incident.ocrText), moderator.id);
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
         clearCrosspostUser(incident.userId);
-        summary = `Confirmed scam. Banned ${banned}/${targets.length} account(s) and deleted ${deleted} message(s). The image is blocklisted as a scam${
-          incident.ocrText ? ' and its text was added to the scam filter' : ''
-        }.`;
+        summary = `Confirmed scam. Banned ${banned}/${targets.length} account(s) and deleted ${deleted} message(s). ${
+          incident.contentIds.length > 0
+            ? `The image is blocklisted as a scam${learned ? ' and its text was added to the scam filter' : ''}.`
+            : 'The image could not be fingerprinted, so it was not blocklisted.'
+        }`;
         break;
       }
       case 'dismiss': {
-        await addToAllowlist(incident.signatures, incident.hashes, moderator.id, 'marked not spam');
+        await addToAllowlist(incident.contentIds, moderator.id, 'marked not spam');
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
         clearCrosspostUser(incident.userId);
@@ -202,7 +226,9 @@ export class SpamModerationHandler extends InteractionHandler {
         }
         if (incident.messages.length > 0 && incident.autoTimedOut)
           undo += ' The deleted messages cannot be restored, so you may want to let the user know.';
-        summary = `Marked as not spam. The image(s) are allowlisted.${undo}`;
+        summary = `Marked as not spam.${
+          incident.contentIds.length > 0 ? ' The image(s) are allowlisted.' : ''
+        }${undo}`;
         break;
       }
       default:

@@ -3,7 +3,7 @@ import Tesseract from 'tesseract.js';
 import type { Attachment, Message } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { automodConfig } from '../config';
-import { isRasterImage, attachmentSignature } from './signature';
+import { isRasterImage } from './signature';
 
 // The English model ships inside the image (@tesseract.js-data/eng), so OCR
 // never downloads from a CDN at runtime: a blocked or flaky CDN used to leave
@@ -69,6 +69,32 @@ export async function warmOcr(): Promise<void> {
 const cache = new Map<string, string>();
 const MAX_CACHE = 500;
 let active = 0;
+const waiting: Array<() => void> = [];
+
+function acquireOcrSlot(): Promise<boolean> {
+  if (active < automodConfig.ocrMaxConcurrency) {
+    active++;
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const grant = () => {
+      clearTimeout(timer);
+      active++;
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      const i = waiting.indexOf(grant);
+      if (i >= 0) waiting.splice(i, 1);
+      resolve(false);
+    }, automodConfig.ocrTimeoutMs);
+    waiting.push(grant);
+  });
+}
+
+function releaseOcrSlot(): void {
+  active--;
+  waiting.shift()?.();
+}
 
 function readableUrl(a: Attachment): string {
   const base = a.proxyURL || a.url;
@@ -88,22 +114,32 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
   }
 }
 
-/** OCR all image attachments on a message; returns concatenated text (may be ''). */
-export async function ocrMessage(message: Message): Promise<string> {
+/**
+ * OCR all raster image attachments on a message; returns concatenated text
+ * (may be ''). `contentIds` are the per-attachment content ids from
+ * imageFingerprints (same order); they key the cache. The metadata signature
+ * must not be used as a key: an uploader controls it, so a benign image could
+ * poison the cached text of a scam image with the same metadata.
+ */
+export async function ocrMessage(
+  message: Message,
+  contentIds: Array<string | null> = []
+): Promise<string> {
   if (!automodConfig.ocrEnabled) return '';
   const images = [...message.attachments.values()].filter(isRasterImage).slice(0, 4);
-  const texts = await Promise.all(images.map((a) => ocrAttachment(a)));
+  const texts = await Promise.all(images.map((a, i) => ocrAttachment(a, contentIds[i] ?? null)));
   return texts.filter(Boolean).join('\n');
 }
 
-async function ocrAttachment(a: Attachment): Promise<string> {
-  const key = attachmentSignature(a);
-  const cached = cache.get(key);
+async function ocrAttachment(a: Attachment, key: string | null): Promise<string> {
+  const cached = key ? cache.get(key) : undefined;
   if (cached !== undefined) return cached;
-  // Best-effort concurrency guard: under load we skip rather than queue
-  // unboundedly. A skip is deliberately NOT cached, so it can be retried later.
-  if (active >= automodConfig.ocrMaxConcurrency) return '';
-  active++;
+  // Wait (bounded) for a slot rather than skipping outright, so a burst of
+  // slow images can't trivially blind OCR for the raid images behind it. A
+  // skip is deliberately NOT cached, so it can be retried later. Raid
+  // detection itself does not depend on OCR (cross-account matching and the
+  // image-only shape carry it); OCR only adds corroboration.
+  if (!(await acquireOcrSlot())) return '';
   // The slot is released when the OCR job actually settles, NOT when our
   // timeout fires: a timed-out recognize() keeps running in the worker, and
   // releasing early would let new jobs pile up behind it during a raid. While
@@ -113,6 +149,7 @@ async function ocrAttachment(a: Attachment): Promise<string> {
       // Cache genuine completions, even ones that finish after our timeout, so
       // the next copy of a raid image is read instantly.
       const result = text.trim();
+      if (!key) return result;
       if (cache.size >= MAX_CACHE) {
         const oldest = cache.keys().next().value;
         if (oldest !== undefined) cache.delete(oldest);
@@ -120,9 +157,7 @@ async function ocrAttachment(a: Attachment): Promise<string> {
       cache.set(key, result);
       return result;
     })
-    .finally(() => {
-      active--;
-    });
+    .finally(releaseOcrSlot);
   try {
     // withTimeout yields null on timeout; runOcr throws on fetch/decode failure.
     // Transient timeouts/errors return '' WITHOUT caching so they can't poison

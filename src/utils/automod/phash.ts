@@ -2,7 +2,8 @@ import { Jimp, intToRGBA } from 'jimp';
 import type { Attachment, Message } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { automodConfig } from '../config';
-import { attachmentSignature, isRasterImage } from './signature';
+import { createHash } from 'node:crypto';
+import { isRasterImage } from './signature';
 
 // pHash parameters: resize to DCT_INPUT_SIZE×DCT_INPUT_SIZE, then keep the
 // top-left DCT_COEFF_SIZE×DCT_COEFF_SIZE low-frequency block (64 bits).
@@ -56,13 +57,6 @@ function releaseSlot(): void {
   const next = waiting.shift();
   if (next) next();
 }
-
-/**
- * Hashes of recently seen files, keyed by metadata signature: every identical
- * copy in a raid after the first costs nothing. Only successes are cached.
- */
-const hashCache = new Map<string, string>();
-const MAX_HASH_CACHE = 1000;
 
 /**
  * Race a promise against a timeout, resolving to `null` if the timeout wins.
@@ -214,63 +208,108 @@ function thumbnailUrl(attachment: Attachment): string {
   return `${base}${separator}width=64&height=64&format=png`;
 }
 
+/** Fingerprints for one image attachment. Either may be missing on failure. */
+export interface ImageFingerprint {
+  /**
+   * SHA-256 of the thumbnail bytes Discord's media proxy served for this
+   * image. This is the image's identity: it depends on the actual pixels, so
+   * unlike the metadata signature (type, byte size, dimensions — all chosen by
+   * the uploader) it cannot be forged to impersonate another image.
+   */
+  contentId: string | null;
+  /** Perceptual hash, for near-duplicate (re-encoded / resized) matching. */
+  hash: string | null;
+}
+
+export interface MessageFingerprints {
+  images: ImageFingerprint[];
+  contentIds: string[];
+  hashes: string[];
+}
+
 /**
- * Perceptual hashes for every image attachment on a message. Best-effort: any
- * attachment that fails to fetch or decode is skipped (the metadata signature
- * still covers it). Never throws.
+ * Content ids and perceptual hashes for every raster image on a message.
+ * Best-effort: an attachment that fails to fetch or decode yields nulls.
+ * Never throws.
  */
-export async function perceptualHashes(message: Message): Promise<string[]> {
-  const images = [...message.attachments.values()]
+export async function imageFingerprints(message: Message): Promise<MessageFingerprints> {
+  const attachments = [...message.attachments.values()]
     .filter(isRasterImage)
     .slice(0, MAX_ATTACHMENTS);
 
-  const hashes = await Promise.all(
-    images.map(async (attachment) => {
-      const key = attachmentSignature(attachment);
-      const cached = hashCache.get(key);
-      if (cached) return cached;
+  const images = await Promise.all(
+    attachments.map(async (attachment): Promise<ImageFingerprint> => {
+      const none = { contentId: null, hash: null };
       if (!(await acquireSlot())) {
         container.logger.info(
-          `Automod: skipped perceptual hash for attachment ${attachment.id} (hashing queue full).`
+          `Automod: skipped fingerprinting attachment ${attachment.id} (queue full).`
         );
-        return null;
+        return none;
       }
       try {
         const response = await fetch(thumbnailUrl(attachment), {
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
-        if (!response.ok) return null;
+        if (!response.ok) return none;
         const len = Number(response.headers.get('content-length') ?? 0);
-        if (len > MAX_IMAGE_BYTES) return null;
-        const bytes = await response.arrayBuffer();
+        if (len > MAX_IMAGE_BYTES) return none;
+        const bytes = Buffer.from(await response.arrayBuffer());
         // content-length can be absent; enforce the cap on what we received.
-        if (bytes.byteLength > MAX_IMAGE_BYTES) return null;
+        if (bytes.byteLength > MAX_IMAGE_BYTES) return none;
+        const contentId = createHash('sha256').update(bytes).digest('hex');
         // Bound the decode: a crafted image can hang Jimp.read with no abort.
-        const hash = await withTimeout(pHashFromBuffer(Buffer.from(bytes)), DECODE_TIMEOUT_MS);
-        if (hash) {
-          if (hashCache.size >= MAX_HASH_CACHE) {
-            const oldest = hashCache.keys().next().value;
-            if (oldest !== undefined) hashCache.delete(oldest);
-          }
-          hashCache.set(key, hash);
-        }
-        return hash;
+        const hash = await withTimeout(pHashFromBuffer(bytes), DECODE_TIMEOUT_MS).catch(
+          () => null
+        );
+        return { contentId, hash };
       } catch (error) {
         container.logger.debug(
-          `Automod: could not perceptual-hash attachment ${attachment.id}:`,
+          `Automod: could not fingerprint attachment ${attachment.id}:`,
           error
         );
-        return null;
+        return none;
       } finally {
         releaseSlot();
       }
     })
   );
 
-  return hashes.filter((hash): hash is string => hash !== null);
+  return {
+    images,
+    contentIds: images.flatMap((i) => (i.contentId ? [i.contentId] : [])),
+    hashes: images.flatMap((i) => (i.hash ? [i.hash] : [])),
+  };
 }
 
-/** Test-only reset. */
-export function __resetPhash(): void {
-  hashCache.clear();
+/** Largest evidence image we attach to a mod alert. */
+const MAX_EVIDENCE_BYTES = 4 * 1024 * 1024;
+const EVIDENCE_TIMEOUT_MS = 3000;
+
+/**
+ * A moderate-size PNG copy of the message's first raster image, fetched before
+ * the bot deletes the message so the alert still shows moderators what was
+ * posted. Best-effort: resolves undefined on any failure, never throws.
+ */
+export async function fetchEvidence(message: Message): Promise<Buffer | undefined> {
+  const first = [...message.attachments.values()].find(isRasterImage);
+  if (!first) return undefined;
+  try {
+    const base = first.proxyURL || first.url;
+    const url = `${base}${base.includes('?') ? '&' : '?'}width=512&height=512&format=png`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(EVIDENCE_TIMEOUT_MS) });
+    if (!response.ok) return undefined;
+    if (Number(response.headers.get('content-length') ?? 0) > MAX_EVIDENCE_BYTES) return undefined;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return bytes.byteLength <= MAX_EVIDENCE_BYTES ? bytes : undefined;
+  } catch {
+    return undefined;
+  }
 }
+
+/** Perceptual hashes only (kept for callers that need nothing else). */
+export async function perceptualHashes(message: Message): Promise<string[]> {
+  return (await imageFingerprints(message)).hashes;
+}
+
+/** Test-only reset (no cached state remains; kept for test symmetry). */
+export function __resetPhash(): void {}

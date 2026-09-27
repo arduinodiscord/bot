@@ -53,6 +53,12 @@ export function tokenizeOcr(text: string): string[] {
   return (text.toLowerCase().match(/[a-z]+/g) ?? []).filter((t) => t.length >= 3);
 }
 
+/** Built-in seed keywords present in the text (a subset of matchKeywords). */
+export function matchSeedKeywords(text: string): string[] {
+  const seeds = new Set(seedScamKeywords);
+  return matchKeywords(text).filter((k) => seeds.has(k));
+}
+
 /** Distinct scam keywords (seed + active learned) present in the text. */
 export function matchKeywords(text: string): string[] {
   const tokens = new Set(tokenizeOcr(text));

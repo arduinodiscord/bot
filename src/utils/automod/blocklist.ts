@@ -4,46 +4,43 @@ import { getPrisma } from '../db';
 import { hammingDistance } from './phash';
 
 /**
- * In-memory mirror of the blocklist, kept warm so lookups never touch the
- * database on the hot path. Populated from the database on startup (when one is
- * configured) and updated immediately whenever a moderator confirms spam, so
- * the feature works fully in-memory when no database is present.
+ * Moderator-trained image lists, mirrored in memory so lookups never touch the
+ * database on the hot path. Loaded from the database at startup (when one is
+ * configured) and updated immediately on every moderator decision, so the
+ * feature also works fully in-memory.
+ *
+ * Fingerprint kinds:
+ * - `sha`: content id (SHA-256 of the proxy thumbnail bytes). Exact identity
+ *   that an uploader cannot forge. The only kind that can trigger an auto-ban
+ *   or an allowlist skip.
+ * - `phash`: perceptual hash, matched within a Hamming distance. Catches
+ *   re-encoded variants, but a lookalike can land within the threshold, so a
+ *   near match is only ever treated as evidence, never as confirmation.
+ * - `meta` rows (old metadata signatures, forgeable) are ignored on load.
  */
-const exactSignatures = new Set<string>();
-const perceptualHashes = new Set<string>();
-const scamSignatures = new Set<string>(); // severity === 'scam' (meta)
-const scamHashes = new Set<string>();     // severity === 'scam' (phash)
-const allowSignatures = new Set<string>();
-const allowHashes = new Set<string>();
+export type FingerprintKind = 'sha' | 'phash';
+export type Severity = 'scam' | 'spam';
 
-export type FingerprintKind = 'meta' | 'phash';
+const blockExact = new Map<string, Severity>();
+const blockNear = new Map<string, Severity>();
+const allowExact = new Set<string>();
 
-/** Total confirmed fingerprints (metadata + perceptual) in the blocklist. */
+/** Total confirmed fingerprints in the blocklist (drives learning mode). */
 export function blocklistSize(): number {
-  return exactSignatures.size + perceptualHashes.size;
+  return blockExact.size + blockNear.size;
 }
 
 /** Test-only reset. */
 export function __resetBlocklist(): void {
-  for (const set of [
-    exactSignatures,
-    perceptualHashes,
-    scamSignatures,
-    scamHashes,
-    allowSignatures,
-    allowHashes,
-  ])
-    set.clear();
+  blockExact.clear();
+  blockNear.clear();
+  allowExact.clear();
 }
 
-export interface BlocklistMatch {
-  blocked: boolean;
-  severity: 'scam' | 'spam' | null;
-  /** Fingerprints from the input that matched the blocklist. */
-  matched: string[];
-}
+const worse = (a: Severity | null, b: Severity | null): Severity | null =>
+  a === 'scam' || b === 'scam' ? 'scam' : a ?? b;
 
-/** Load the persisted blocklist into memory. Safe to call with no database. */
+/** Load the persisted lists into memory. Safe to call with no database. */
 export async function loadBlocklist(): Promise<void> {
   const prisma = getPrisma();
   if (!prisma) return;
@@ -52,154 +49,104 @@ export async function loadBlocklist(): Promise<void> {
       select: { signature: true, kind: true, severity: true },
     });
     for (const { signature, kind, severity } of rows) {
-      (kind === 'phash' ? perceptualHashes : exactSignatures).add(signature);
-      if (severity === 'scam')
-        (kind === 'phash' ? scamHashes : scamSignatures).add(signature);
+      const sev: Severity = severity === 'scam' ? 'scam' : 'spam';
+      if (kind === 'sha') blockExact.set(signature, sev);
+      else if (kind === 'phash') blockNear.set(signature, sev);
     }
-
     const allowRows = await prisma.allowSignature.findMany({
       select: { signature: true, kind: true },
     });
-    for (const { signature, kind } of allowRows)
-      (kind === 'phash' ? allowHashes : allowSignatures).add(signature);
+    for (const { signature, kind } of allowRows) if (kind === 'sha') allowExact.add(signature);
 
     container.logger.info(
-      `Automod: loaded ${exactSignatures.size} signature(s) and ${perceptualHashes.size} perceptual hash(es) from the blocklist (${scamSignatures.size + scamHashes.size} scam), ${allowSignatures.size + allowHashes.size} allowlist entry/entries.`
+      `Automod: loaded ${blockExact.size} exact and ${blockNear.size} perceptual blocklist fingerprint(s), ${allowExact.size} allowlisted image(s).`
     );
   } catch (error) {
     container.logger.error('Loading blocklist failed:', error);
   }
 }
 
-/**
- * Check incoming fingerprints against the blocklist. Metadata signatures match
- * exactly; perceptual hashes match within the configured Hamming distance.
- */
-export function isBlocklisted(
-  signatures: string[],
-  hashes: string[]
-): BlocklistMatch {
-  const matched = new Set<string>();
-
-  for (const signature of signatures)
-    if (exactSignatures.has(signature)) matched.add(signature);
-
-  for (const hash of hashes)
-    for (const known of perceptualHashes)
-      if (hammingDistance(hash, known) <= automodConfig.phashThreshold) {
-        matched.add(hash);
-        break;
-      }
-
-  const blocked = matched.size > 0;
-
-  let severity: 'scam' | 'spam' | null = null;
-  if (blocked) {
-    // Determine if any matched fingerprint is in the scam sets.
-    let isScam = false;
-    for (const m of matched) {
-      if (scamSignatures.has(m)) { isScam = true; break; }
-      for (const known of scamHashes)
-        if (hammingDistance(m, known) <= automodConfig.phashThreshold) {
-          isScam = true;
-          break;
-        }
-      if (isScam) break;
-    }
-    severity = isScam ? 'scam' : 'spam';
-  }
-
-  return { blocked, severity, matched: [...matched] };
+export interface BlocklistMatch {
+  /** Severity of an exact content match, if any. */
+  exact: Severity | null;
+  /** Severity of a perceptual near match, if any (and no exact match). */
+  near: Severity | null;
 }
 
-/**
- * Check if incoming fingerprints are in the allowlist. Allowlisted images
- * suppress spam alerts even when they cluster-match or blocklist-match.
- */
-export function isAllowlisted(signatures: string[], hashes: string[]): boolean {
-  if (signatures.some((s) => allowSignatures.has(s))) return true;
-  for (const h of hashes)
-    for (const known of allowHashes)
-      if (hammingDistance(h, known) <= automodConfig.phashThreshold) return true;
-  return false;
+/** Check an image's fingerprints against the blocklist. */
+export function checkBlocklist(contentIds: string[], hashes: string[]): BlocklistMatch {
+  let exact: Severity | null = null;
+  for (const id of contentIds) exact = worse(exact, blockExact.get(id) ?? null);
+
+  let near: Severity | null = null;
+  if (!exact)
+    for (const hash of hashes)
+      for (const [known, sev] of blockNear)
+        if (hammingDistance(hash, known) <= automodConfig.phashThreshold) near = worse(near, sev);
+
+  return { exact, near };
 }
 
-/** Add fingerprints to the blocklist (in-memory always; persisted if possible). */
+/** Whether this exact image was marked "Not spam" by a moderator. */
+export const isAllowlisted = (contentId: string): boolean => allowExact.has(contentId);
+
+/**
+ * Add fingerprints to the blocklist. Severity only ever escalates: an image
+ * first confirmed as spam and later as scam becomes scam, in memory and in the
+ * database, so auto-ban survives a restart.
+ */
 export async function addToBlocklist(
-  signatures: string[],
+  contentIds: string[],
   hashes: string[],
   addedBy: string,
   reason: string,
-  severity: 'scam' | 'spam' = 'spam'
+  severity: Severity = 'spam'
 ): Promise<void> {
-  for (const signature of signatures) {
-    exactSignatures.add(signature);
-    if (severity === 'scam') scamSignatures.add(signature);
-  }
-  for (const hash of hashes) {
-    perceptualHashes.add(hash);
-    if (severity === 'scam') scamHashes.add(hash);
+  const entries: Array<{ signature: string; kind: FingerprintKind }> = [
+    ...contentIds.map((signature) => ({ signature, kind: 'sha' as const })),
+    ...hashes.map((signature) => ({ signature, kind: 'phash' as const })),
+  ];
+  for (const { signature, kind } of entries) {
+    const map = kind === 'sha' ? blockExact : blockNear;
+    map.set(signature, worse(map.get(signature) ?? null, severity)!);
   }
 
   const prisma = getPrisma();
-  if (!prisma) return;
-
-  const rows = [
-    ...signatures.map((signature) => ({
-      signature,
-      kind: 'meta' as FingerprintKind,
-      addedBy,
-      reason,
-      severity,
-    })),
-    ...hashes.map((signature) => ({
-      signature,
-      kind: 'phash' as FingerprintKind,
-      addedBy,
-      reason,
-      severity,
-    })),
-  ];
-  if (rows.length === 0) return;
-
+  if (!prisma || entries.length === 0) return;
   try {
-    await prisma.spamSignature.createMany({ data: rows, skipDuplicates: true });
+    await prisma.$transaction(
+      entries.map(({ signature, kind }) =>
+        prisma.spamSignature.upsert({
+          where: { signature },
+          create: { signature, kind, addedBy, reason, severity },
+          // Escalate spam -> scam; never downgrade scam.
+          update: severity === 'scam' ? { severity: 'scam', kind } : { kind },
+        })
+      )
+    );
   } catch (error) {
     container.logger.error('Persisting blocklist fingerprints failed:', error);
   }
 }
 
-/** Add fingerprints to the allowlist (in-memory always; persisted if possible). */
+/**
+ * Mark exact images as not spam. Only content ids are stored: a perceptual
+ * allowlist would let a scam image that merely resembles an allowlisted one
+ * skip every check.
+ */
 export async function addToAllowlist(
-  signatures: string[],
-  hashes: string[],
+  contentIds: string[],
   addedBy: string,
   reason?: string
 ): Promise<void> {
-  for (const signature of signatures) allowSignatures.add(signature);
-  for (const hash of hashes) allowHashes.add(hash);
-
+  for (const id of contentIds) allowExact.add(id);
   const prisma = getPrisma();
-  if (!prisma) return;
-
-  const rows = [
-    ...signatures.map((signature) => ({
-      signature,
-      kind: 'meta' as FingerprintKind,
-      addedBy,
-      reason,
-    })),
-    ...hashes.map((signature) => ({
-      signature,
-      kind: 'phash' as FingerprintKind,
-      addedBy,
-      reason,
-    })),
-  ];
-  if (rows.length === 0) return;
-
+  if (!prisma || contentIds.length === 0) return;
   try {
-    await prisma.allowSignature.createMany({ data: rows, skipDuplicates: true });
+    await prisma.allowSignature.createMany({
+      data: contentIds.map((signature) => ({ signature, kind: 'sha', addedBy, reason })),
+      skipDuplicates: true,
+    });
   } catch (error) {
     container.logger.error('Persisting allowlist fingerprints failed:', error);
   }

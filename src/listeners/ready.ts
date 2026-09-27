@@ -5,6 +5,7 @@ import { blocklistSize, loadBlocklist } from '../utils/automod/blocklist';
 import { loadKeywords } from '../utils/automod/keywords';
 import { learningModeActive } from '../utils/automod/learning';
 import { warmOcr } from '../utils/automod/ocr';
+import { markAutomodReady } from '../utils/automod/state';
 import { seedInviteCache } from '../utils/inviteCache';
 import { startStaleHelpSweep } from '../utils/staleHelpSweep';
 import { runStartupCheck } from '../utils/startupCheck';
@@ -42,6 +43,8 @@ export class ReadyListener extends Listener {
     await loadBlocklist();
     // Load learned scam keywords from the database (no-op without one).
     await loadKeywords();
+    // Only now may the image automod run (see automod/state.ts).
+    markAutomodReady();
     this.logAutomodStatus();
     // Pre-initialize the OCR worker (model download) off the message path.
     void warmOcr();

@@ -1,8 +1,8 @@
 import { Events, Listener, container } from '@sapphire/framework';
 import { PermissionFlagsBits, type GuildMember, type Message } from 'discord.js';
 import { SERVER_ID, MOD_LOG_CHANNEL_ID, automodConfig } from '../utils/config';
-import { imageSignatures, isImageAttachment } from '../utils/automod/signature';
-import { perceptualHashes } from '../utils/automod/phash';
+import { imageSignatures } from '../utils/automod/signature';
+import { imageFingerprints, fetchEvidence, type ImageFingerprint } from '../utils/automod/phash';
 import { ocrMessage } from '../utils/automod/ocr';
 import {
   recordImageMessage,
@@ -20,11 +20,12 @@ import {
   markCrosspostAlerted,
   tokenize,
 } from '../utils/automod/crosspost';
-import { isBlocklisted, isAllowlisted } from '../utils/automod/blocklist';
+import { checkBlocklist, isAllowlisted } from '../utils/automod/blocklist';
+import { isAutomodReady } from '../utils/automod/state';
 import { learningModeActive } from '../utils/automod/learning';
 import { recordAndCluster } from '../utils/automod/globalIndex';
-import { matchKeywords } from '../utils/automod/keywords';
-import { scoreSignals, type Tier } from '../utils/automod/score';
+import { matchKeywords, matchSeedKeywords } from '../utils/automod/keywords';
+import { scoreSignals, WIDE_SPREAD, type Signals, type Tier } from '../utils/automod/score';
 import {
   createIncident,
   type Incident,
@@ -37,6 +38,7 @@ import {
   type AutoActionResult,
   timeoutMember,
   banMember,
+  MAX_DELETE_PER_INCIDENT,
 } from '../utils/automod/console';
 
 /** Severity order, so a more severe detection can break through the alert cooldown. */
@@ -64,25 +66,41 @@ export class MessageCreateListener extends Listener {
       container.logger.error('Automod: crosspost detector failed:', error)
     );
 
+    // Nothing below may run before the blocklist has loaded, or a confirmed
+    // scam image reposted during startup would be scored as unknown.
+    if (!isAutomodReady()) return;
+
+    // Metadata signatures are uploader-controlled, so they only feed the
+    // per-user tracker (where forging them can only hurt the forger). Identity
+    // across users, the blocklist and the allowlist use content ids.
     const signatures = imageSignatures(message);
     if (signatures.length === 0) return;
+    const imageCount = signatures.length;
 
     const now = Date.now();
-    // Perceptual hashes are best-effort (network fetch + decode); the metadata
-    // signatures still cover anything that fails to hash.
-    const hashes = await perceptualHashes(message);
+    // Content ids + perceptual hashes are best-effort (network fetch + decode).
+    const fp = await imageFingerprints(message);
 
-    // Moderator-vetted images are never spam: short-circuit before spending any
-    // OCR / clustering work on them.
-    if (isAllowlisted(signatures, hashes)) {
+    // An exact confirmed-scam match always wins, even over an allowlist entry.
+    const vetted = (i: ImageFingerprint) => Boolean(i.contentId && isAllowlisted(i.contentId));
+    const unvetted = fp.images.filter((i) => !vetted(i));
+    const contentIds = unvetted.flatMap((i) => (i.contentId ? [i.contentId] : []));
+    const hashes = unvetted.flatMap((i) => (i.hash ? [i.hash] : []));
+    const block = checkBlocklist(fp.contentIds, hashes);
+    // Skip only when EVERY image is a moderator-vetted exact image: one
+    // allowlisted picture must not carry a scam image through with it.
+    if (fp.images.length === imageCount && unvetted.length === 0 && block.exact !== 'scam') {
       container.logger.info(
-        `Automod: image from ${message.author.id} in ${message.channelId} matched the allowlist ("Not spam"); skipped.`
+        `Automod: image(s) from ${message.author.id} in ${message.channelId} were marked "Not spam"; skipped.`
       );
       return;
     }
 
     // OCR text feeds the scam-keyword signal; best-effort and may be ''.
-    const ocrText = await ocrMessage(message);
+    const ocrText = await ocrMessage(
+      message,
+      fp.images.map((i) => i.contentId)
+    );
 
     // New members get a stricter burst threshold so join-then-spam trips
     // faster; tenure is useless for compromised veterans, who are instead
@@ -102,44 +120,46 @@ export class MessageCreateListener extends Listener {
         : {}
     );
 
+    const content = message.content.trim();
+    const imageOnly = content === '';
+
     // Cross-user clustering: the same image posted by several accounts.
     const cluster = recordAndCluster({
       userId: message.author.id,
       channelId: message.channelId,
       messageId: message.id,
       at: now,
-      signatures,
+      contentIds,
       hashes,
+      imageOnly,
     });
 
-    const { blocked, severity } = isBlocklisted(signatures, hashes);
-
     // Corroborating content signals.
-    const imageCount = [...message.attachments.values()].filter(
-      isImageAttachment
-    ).length;
-    const imageOnlyPair = message.content.trim() === '' && imageCount === 2;
-    const hasLinkOrMention =
-      /https?:\/\//i.test(message.content) || message.mentions.everyone;
+    const imageOnlyPair = imageOnly && imageCount === 2;
+    const massMention = /@(everyone|here)\b/.test(content);
+    const hasLinkOrMention = /https?:\/\//i.test(content) || massMention;
     // Scam images usually carry their payload link inside the image itself,
-    // where the message-content check above cannot see it.
+    // where the content check above cannot see it.
     const ocrHasLink = /https?:\/\/|www\.|discord\.gg\/|t\.me\//i.test(ocrText);
 
     // Fold every signal into a single confidence score + tier.
-    const signals = {
-      scamBlocklist: severity === 'scam',
-      spamBlocklist: severity === 'spam',
+    const signals: Signals = {
+      scamExact: block.exact === 'scam',
+      spamExact: block.exact === 'spam',
+      nearBlocklist: block.near !== null,
       clusterUsers: cluster.userIds.length,
       fanoutChannels:
         detection.level === 'fanout' ? detection.channels.length : 0,
       keywordMatches: matchKeywords(ocrText).length,
+      seedKeywordMatches: matchSeedKeywords(ocrText).length,
       newAccount: isNewMember,
-      hasLinkOrMention: Boolean(hasLinkOrMention),
+      hasLinkOrMention,
+      massMention,
       ocrHasLink,
       imageOnlyPair,
       burst: detection.level === 'burst',
     };
-    const { score, tier, matched: matchedSignals } = scoreSignals(signals);
+    const { score, tier, matched: matchedSignals, newAccountOnly } = scoreSignals(signals);
     const signalSummary =
       matchedSignals.map((m) => `${m.label} (+${m.points})`).join(', ') || 'none';
     container.logger.debug(
@@ -151,8 +171,10 @@ export class MessageCreateListener extends Listener {
     // keywords — or, with the catch-all opted in, every image message. The
     // usual tier gate takes over once the corpus has grown.
     const learning = learningModeActive();
+    // Any warning sign counts for learning, except being a new member alone.
+    const suspicious = tier !== 'none' || (score > 0 && !newAccountOnly);
     if (learning) {
-      if (score <= 0 && !automodConfig.learningCatchAll) return;
+      if (!suspicious && !automodConfig.learningCatchAll) return;
     } else {
       if (tier === 'none') return;
       if (tier === 'low' && !automodConfig.logLowConfidence) {
@@ -165,48 +187,52 @@ export class MessageCreateListener extends Listener {
       }
     }
 
-    // Deduped message list: cluster events + per-user detection events + the
-    // current message, keyed by message id.
+    // Messages this incident covers. The author's own always count. Another
+    // account's message is only included when it also has the raid shape
+    // (images, no text) and this one does too, or the spread is wide: a member
+    // who shared the same diagram with a normal question must never have
+    // their message deleted because someone else reposted it.
     const msgMap = new Map<string, { channelId: string; messageId: string }>();
-    for (const e of cluster.events)
-      msgMap.set(e.messageId, {
-        channelId: e.channelId,
-        messageId: e.messageId,
-      });
+    const raidUserIds = new Set<string>([message.author.id]);
+    for (const e of cluster.events) {
+      if (e.userId === message.author.id) {
+        msgMap.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
+        continue;
+      }
+      if (e.imageOnly) raidUserIds.add(e.userId);
+      if (e.imageOnly && (imageOnly || cluster.userIds.length >= WIDE_SPREAD))
+        msgMap.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
+    }
     if (detection.level !== 'none')
       for (const e of detection.events)
-        msgMap.set(e.messageId, {
-          channelId: e.channelId,
-          messageId: e.messageId,
-        });
-    msgMap.set(message.id, {
-      channelId: message.channelId,
-      messageId: message.id,
-    });
+        msgMap.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
+    msgMap.set(message.id, { channelId: message.channelId, messageId: message.id });
     const messages = [...msgMap.values()];
 
     // Incident level drives the console title/label; the tier drives colour and
-    // auto-action. A blocklist hit is always labelled as such; otherwise a
-    // cross-user cluster or channel fan-out reads as fan-out, a burst as a
-    // burst, and anything scored purely from corroborating signals (keywords,
-    // tenure, links) as a plain suspect.
+    // auto-action.
+    const blocked = block.exact !== null || block.near !== null;
+    const multiAccount = signals.clusterUsers >= automodConfig.clusterMinUsers;
     const level: IncidentLevel = blocked
       ? 'blocklist'
-      : signals.clusterUsers >= automodConfig.clusterMinUsers ||
-          signals.fanoutChannels >= automodConfig.fanoutChannels
-        ? 'fanout'
-        : signals.burst
-          ? 'burst'
-          : 'suspect';
+      : multiAccount
+        ? 'cluster'
+        : signals.fanoutChannels >= automodConfig.fanoutChannels
+          ? 'fanout'
+          : signals.burst
+            ? 'burst'
+            : 'suspect';
 
-    const reason = blocked
-      ? `Matched a known ${severity} image`
-      : signals.clusterUsers >= automodConfig.clusterMinUsers
-        ? `Same image from ${signals.clusterUsers} accounts across ${new Set(cluster.events.map((e) => e.channelId)).size} channel(s)`
-        : detection.reason ||
-          (score > 0
-            ? 'Image flagged by confidence scoring'
-            : 'No suspicious signals. Posted because learning mode is on');
+    const reason = block.exact
+      ? `Exact copy of an image moderators confirmed as ${block.exact}`
+      : block.near
+        ? `Looks like an image moderators confirmed as ${block.near}`
+        : multiAccount
+          ? `Same image from ${signals.clusterUsers} accounts in ${new Set(cluster.events.map((e) => e.channelId)).size} channel(s)`
+          : detection.reason ||
+            (score > 0
+              ? 'Flagged by the image checks'
+              : 'No warning signs. Posted because learning mode shows every image');
 
     const incident = createIncident({
       userId: message.author.id,
@@ -214,7 +240,7 @@ export class MessageCreateListener extends Listener {
       level,
       reason,
       messages,
-      signatures,
+      contentIds,
       hashes,
       score,
       // A learning-mode hit may score below every threshold ('none'); it is
@@ -222,40 +248,45 @@ export class MessageCreateListener extends Listener {
       tier: tier === 'none' ? 'low' : tier,
       matched: matchedSignals,
       clusterUserIds: cluster.userIds,
+      raidUserIds: [...raidUserIds],
       ocrText,
-      severity: severity ?? 'spam',
+      severity: block.exact ?? block.near ?? 'spam',
       // Flag alerts that only exist because of learning mode, so the console
       // explains why moderators are seeing a low-confidence hit.
       learning: learning && (tier === 'none' || (tier === 'low' && !automodConfig.logLowConfidence)),
     });
 
-    // Tiered enforcement, capped at the approved ceiling: only a confirmed scam
-    // blocklist match (the sole path to `critical`) auto-bans; `high` deletes
-    // and times out; medium/low alert only and wait for a human. Enforcement
-    // always runs — the alert cooldown below only throttles mod-log posts.
+    // Tiered enforcement, capped at the approved ceiling: only an exact
+    // confirmed-scam match (the sole path to `critical`) auto-bans; `high`
+    // times out and deletes; medium/low alert only and wait for a human.
+    // Enforcement always runs — the alert cooldown below only throttles
+    // mod-log posts.
     let autoAction: AutoActionResult | null = null;
-    if (tier === 'critical') {
-      // Auto-ban ONLY the confirmed-scam author. Cluster members are joined by
-      // similarity and are not independently confirmed, so we do not auto-ban
-      // them here — each raider posting the blocklisted image is banned as the
-      // author of their own message. The cluster is still recorded on the
-      // incident and surfaced in the alert for one-click mod action.
-      autoAction = {
-        attempted: incident.messages.length,
-        deleted: await deleteIncidentMessages(container.client, incident).catch(() => 0),
-        banned: await banMember(message.guild, message.author.id, `Automod: ${reason}`).catch(
+    let evidence: Buffer | undefined;
+    if (tier === 'critical' || tier === 'high') {
+      // Grab a copy of the image first: once deleted, moderators can't see it.
+      const evidenceFetch = fetchEvidence(message);
+      const attempted = Math.min(messages.length, MAX_DELETE_PER_INCIDENT);
+      if (tier === 'critical') {
+        // Auto-ban ONLY the author. Each raider posting the blocklisted image
+        // is banned as the author of their own message; the rest of the
+        // cluster is listed in the alert for one-click moderator action.
+        const banned = banMember(message.guild, message.author.id, `Automod: ${reason}`).catch(
           () => false
-        ),
-      };
-    } else if (tier === 'high') {
-      autoAction = {
-        attempted: incident.messages.length,
-        deleted: await deleteIncidentMessages(container.client, incident).catch(() => 0),
-        timedOut: await timeoutMember(message.guild, message.author.id, `Automod: ${reason}`).catch(
+        );
+        evidence = await evidenceFetch;
+        const deleted = await deleteIncidentMessages(container.client, incident).catch(() => 0);
+        autoAction = { attempted, deleted, banned: await banned };
+      } else {
+        // Time out first so the raider stops posting while deletes run.
+        const timedOut = timeoutMember(message.guild, message.author.id, `Automod: ${reason}`).catch(
           () => false
-        ),
-      };
-      incident.autoTimedOut = autoAction.timedOut;
+        );
+        evidence = await evidenceFetch;
+        const deleted = await deleteIncidentMessages(container.client, incident).catch(() => 0);
+        autoAction = { attempted, deleted, timedOut: await timedOut };
+        incident.autoTimedOut = autoAction.timedOut;
+      }
     }
 
     const rank = TIER_RANK[tier];
@@ -269,8 +300,10 @@ export class MessageCreateListener extends Listener {
     }
     markAlerted(message.author.id, now, rank);
 
-    const previewUrl = message.attachments.first()?.proxyURL;
-    await this.postAlert(message, incident, autoAction, previewUrl);
+    await this.postAlert(message, incident, autoAction, {
+      image: evidence,
+      previewUrl: message.attachments.first()?.proxyURL,
+    });
   }
 
   /**
@@ -305,7 +338,7 @@ export class MessageCreateListener extends Listener {
         messageId: m.messageId,
       })),
       // Flooding leaves no image fingerprints to blocklist.
-      signatures: [],
+      contentIds: [],
       hashes: [],
     });
 
@@ -363,7 +396,7 @@ export class MessageCreateListener extends Listener {
       reason: detection.reason,
       messages,
       // Cross-posting leaves no image fingerprints to blocklist.
-      signatures: [],
+      contentIds: [],
       hashes: [],
     });
 
@@ -409,7 +442,7 @@ export class MessageCreateListener extends Listener {
     message: Message<true>,
     incident: Incident,
     autoAction: AutoActionResult | null,
-    previewUrl?: string
+    evidence?: { image?: Buffer; previewUrl?: string }
   ): Promise<void> {
     const channel = await container.client.channels
       .fetch(MOD_LOG_CHANNEL_ID)
@@ -426,7 +459,7 @@ export class MessageCreateListener extends Listener {
       (await message.guild.members.fetch(message.author.id).catch(() => null));
 
     try {
-      await channel.send(buildAlertPayload(incident, member, autoAction, previewUrl));
+      await channel.send(buildAlertPayload(incident, member, autoAction, evidence));
     } catch (error) {
       // The auto-action (if any) already happened; make sure it is not lost.
       container.logger.error(

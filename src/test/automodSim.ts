@@ -9,7 +9,10 @@
 import { SIM_GUILD_ID, SIM_MOD_LOG_ID } from './simEnv';
 import { container } from '@sapphire/framework';
 import { Collection, PermissionFlagsBits, type MessageCreateOptions } from 'discord.js';
+import { createHash } from 'node:crypto';
 import { Jimp } from 'jimp';
+import { markAutomodReady } from '../utils/automod/state';
+import { __resetDeletes } from '../utils/automod/console';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -196,6 +199,10 @@ export async function makeImage(seed: number): Promise<SimImage> {
   return { key, bytes: png.length, width: 160, height: 120 };
 }
 
+/** The content id the bot will compute for an image (SHA-256 of served bytes). */
+export const contentIdOf = (img: SimImage): string =>
+  createHash('sha256').update(imageBytes.get(img.key)!).digest('hex');
+
 let fetchCount = 0;
 /** Number of image fetches served (pHash). */
 export const imageFetches = () => fetchCount;
@@ -273,6 +280,8 @@ const logger = {
 /** Fresh world: new guild/members/recorders, fresh Sapphire container fakes. */
 export function resetWorld(): World {
   deleted.clear();
+  __resetDeletes();
+  markAutomodReady(true);
   world = {
     guild: makeGuild(),
     deletes: [],
@@ -337,11 +346,28 @@ export interface FakeInteraction {
   edits: string[];
 }
 
-export function makeButtonInteraction(action: string, incidentId: string, modId = 'mod-1') {
+/** Permissions a moderator clicking a button has. Default: full moderator. */
+const FULL_MOD = [
+  PermissionFlagsBits.ManageMessages,
+  PermissionFlagsBits.ModerateMembers,
+  PermissionFlagsBits.BanMembers,
+];
+
+export function makeButtonInteraction(
+  action: string,
+  incidentId: string,
+  modId = 'mod-1',
+  perms: bigint[] = FULL_MOD
+) {
   const interaction = {
     customId: `automod:${action}:${incidentId}`,
-    memberPermissions: { has: (flag: bigint) => flag === PermissionFlagsBits.ManageMessages },
+    memberPermissions: {
+      has: (flag: bigint | bigint[]) =>
+        (Array.isArray(flag) ? flag : [flag]).every((f) => perms.includes(f)),
+    },
     guild: world.guild,
+    guildId: SIM_GUILD_ID,
+    channelId: SIM_MOD_LOG_ID,
     user: { id: modId, tag: `${modId}#0` },
     deferred: false,
     replied: false,

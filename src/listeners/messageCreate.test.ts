@@ -7,7 +7,7 @@
 import '../test/simEnv';
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import type { Message, ButtonInteraction } from 'discord.js';
+import { PermissionFlagsBits, type Message, type ButtonInteraction } from 'discord.js';
 import { MessageCreateListener } from './messageCreate';
 import { SpamModerationHandler } from '../interaction-handlers/spamModeration';
 import { __resetTracker } from '../utils/automod/tracker';
@@ -33,6 +33,7 @@ import {
   tierOf,
   incidentIdOf,
   makeButtonInteraction,
+  contentIdOf,
   type FakeMember,
   type PostOptions,
   type SimImage,
@@ -144,8 +145,8 @@ test(
   }
 );
 
-test('2: three accounts post an identical single image with text -> high on the third', async () => {
-  const [a, b, c] = ['u1', 'u2', 'u3'].map((id) => addMember(id));
+test('2: identical image with text: 3 accounts -> medium; the 4th -> high, deleting only its own post', async () => {
+  const [a, b, c, d] = ['u1', 'u2', 'u3', 'u4'].map((id) => addMember(id));
   await post(a, { images: [diagram], content: QUESTION, channelId: 'c1' });
   await post(b, { images: [diagram], content: 'Same problem here, any ideas how to fix this?', channelId: 'c2' });
   assert.equal(world.deletes.length, 0, 'two accounts sharing an image with text must not auto-act');
@@ -153,11 +154,16 @@ test('2: three accounts post an identical single image with text -> high on the 
   assert.equal(tierOf(imageAlerts().at(-1)!), 'MEDIUM');
 
   await post(c, { images: [diagram], content: 'Has anyone seen this before? It keeps happening', channelId: 'c3' });
+  assert.equal(tierOf(imageAlerts().at(-1)!), 'MEDIUM', 'three members sharing a popular image is not a raid');
+  assert.equal(world.deletes.length, 0);
+
+  const m4 = await post(d, { images: [diagram], content: 'Same here, my board does this too', channelId: 'c4' });
   const last = imageAlerts().at(-1)!;
   assert.equal(tierOf(last), 'HIGH');
-  assert.match(field(last, 'Signal')!, /Same image from 3 accounts/);
-  assert.equal(timedOut('u3').length, 1);
-  assert.equal(world.deletes.length, 3);
+  assert.match(field(last, 'Signal')!, /Same image from 4 accounts/);
+  assert.equal(timedOut('u4').length, 1);
+  // The others posted with text: their messages are never deleted for it.
+  assert.deepEqual(deletedIds(), [m4.id]);
   assert.match(field(last, AUTO_ACTION_FIELD)!, /✅ Timed out/);
 });
 
@@ -177,23 +183,27 @@ test('3: two regular members share an image with a text question -> medium, aler
   assert.equal(world.bans.length, 0);
 });
 
-test('4: new member cross-posts screenshot + text: 2 channels -> medium alert only; 3 channels -> high', async () => {
+test('4: new member cross-posts screenshot + text: 2-3 channels -> medium alert only; 4 channels -> high', async () => {
   const n = addNewMember('newbie');
   await post(n, { images: [screenshot], content: QUESTION, channelId: 'ch-a' });
   await post(n, { images: [screenshot], content: QUESTION, channelId: 'ch-b' });
 
   let last = imageAlerts().at(-1)!;
   assert.equal(tierOf(last), 'MEDIUM');
-  assert.match(field(last, 'Signal')!, /fan-out/i);
+  assert.match(field(last, 'Signal')!, /several channels/i);
   assert.equal(world.deletes.length, 0, '2 channels must not delete');
   assert.equal(world.timeouts.length, 0, '2 channels must not time out');
 
   await post(n, { images: [screenshot], content: QUESTION, channelId: 'ch-c' });
+  assert.equal(world.deletes.length, 0, '3 channels must not delete');
+  assert.equal(world.timeouts.length, 0, '3 channels must not time out');
+
+  await post(n, { images: [screenshot], content: QUESTION, channelId: 'ch-d' });
   last = imageAlerts().at(-1)!;
   assert.equal(tierOf(last), 'HIGH');
-  assert.equal(world.deletes.length, 3);
+  assert.equal(world.deletes.length, 4);
   assert.equal(timedOut('newbie').length, 1);
-  assert.match(field(last, AUTO_ACTION_FIELD)!, /✅ Deleted 3\/3/);
+  assert.match(field(last, AUTO_ACTION_FIELD)!, /✅ Deleted 4\/4/);
 });
 
 test('5: repeat spam inside the cooldown is still enforced; mod-log throttled except on escalation', async () => {
@@ -214,7 +224,7 @@ test('5: repeat spam inside the cooldown is still enforced; mod-log throttled ex
   assert.ok(world.logs.some((l) => l.level === 'info' && String(l.args[0]).includes('suppressed by cooldown')));
 
   // Escalation: the image is now a confirmed scam -> critical breaks through.
-  await addToBlocklist(['image/png|' + raidA.bytes + '|160x120'], [], 'mod', 'test', 'scam');
+  await addToBlocklist([contentIdOf(raidA)], [], 'mod', 'test', 'scam');
   const m5 = await post(b, { images: [raidA, raidB] });
   assert.equal(imageAlerts().length, alertsAfterHigh + 1, 'escalation to critical is alerted');
   assert.equal(tierOf(imageAlerts().at(-1)!), 'CRITICAL');
@@ -303,7 +313,7 @@ test('10: "Not spam" on an auto-timed-out incident lifts the timeout and allowli
   assert.equal(world.alerts.length, alerts, 'allowlisted image is skipped');
   assert.equal(world.deletes.length, deletes);
   assert.equal(world.timeouts.length, timeouts);
-  assert.ok(world.logs.some((l) => String(l.args[0]).includes('matched the allowlist')));
+  assert.ok(world.logs.some((l) => String(l.args[0]).includes('marked "Not spam"; skipped')));
 });
 
 test('11: two moderators click the same button concurrently -> the action runs once', async () => {
@@ -333,4 +343,64 @@ test('12: learning mode: a single image-only 2-image post from an established ac
   assert.equal(world.deletes.length, 0);
   assert.equal(world.timeouts.length, 0);
   assert.equal(world.bans.length, 0);
+});
+
+// ------------------------------------------------------------- security review
+
+test('S1: an image forged to match a confirmed scam image\'s metadata is NOT banned', async () => {
+  // Confirm a real scam raid.
+  await post(addMember('s1a'), { images: [raidA, raidB] });
+  await post(addMember('s1b'), { images: [raidA, raidB] });
+  await click('confirmscam', incidentIdOf(imageAlerts().at(-1)!));
+  const bans = world.bans.length;
+
+  // An innocent image padded to the scam file's exact type, size and dimensions.
+  const forged: SimImage = { ...diagram, bytes: raidA.bytes, width: raidA.width, height: raidA.height };
+  await post(addMember('innocent'), { images: [forged], content: QUESTION, channelId: 'help' });
+  assert.equal(world.bans.length, bans, 'metadata is not identity: no auto-ban');
+  assert.ok(!world.timeouts.some((t) => t.userId === 'innocent'));
+});
+
+test('S2: a scam image riding along with an allowlisted image is still checked', async () => {
+  // A mod marks the diagram "Not spam".
+  await post(addMember('s2a'), { images: [diagram, screenshot] });
+  await post(addMember('s2b'), { images: [diagram, screenshot] });
+  await click('dismiss', incidentIdOf(imageAlerts().at(-1)!));
+  // A confirmed scam image posted together with the allowlisted diagram.
+  await addToBlocklist([contentIdOf(raidA)], [], 'mod', 'test', 'scam');
+  await post(addNewMember('s2c'), { images: [diagram, raidA], channelId: 'other' });
+  assert.ok(world.bans.some((b) => b.userId === 's2c'), 'the scam image is not carried through');
+});
+
+test('S3: reposting a member\'s image does not delete their post or get them banned', async () => {
+  const alice = addMember('alice');
+  const mallory = addNewMember('mallory');
+  const a = await post(alice, { images: [diagram], content: QUESTION, channelId: 'help' });
+  // Mallory reposts it with @everyone: high for Mallory.
+  await post(mallory, { images: [diagram], content: '@everyone look', channelId: 'general' });
+  const last = imageAlerts().at(-1)!;
+  assert.equal(tierOf(last), 'HIGH');
+  assert.ok(!deletedIds().includes(a.id), "Alice's message is left alone");
+  assert.ok(timedOut('mallory').length === 1 && timedOut('alice').length === 0);
+
+  await click('confirmscam', incidentIdOf(last));
+  assert.ok(world.bans.some((b) => b.userId === 'mallory'));
+  assert.ok(!world.bans.some((b) => b.userId === 'alice'), 'a member who posted with text is not bulk-banned');
+});
+
+test('S4: a moderator without Ban Members cannot ban through the buttons', async () => {
+  await post(addMember('s4a'), { images: [raidA, raidB] });
+  await post(addMember('s4b'), { images: [raidA, raidB] });
+  const id = incidentIdOf(imageAlerts().at(-1)!);
+  const helper = makeButtonInteraction('confirmscam', id, 'helper', [PermissionFlagsBits.ManageMessages]);
+  await handler.run(helper as unknown as ButtonInteraction, { action: 'confirmscam', incidentId: id });
+  assert.equal(world.bans.length, 0);
+  assert.match(helper.replies[0], /Ban Members/);
+});
+
+test('S5: a tutorial link, or a URL in a diagram, is not scam evidence', async () => {
+  await post(addMember('s5a'), { images: [diagram], content: 'Wiring from https://docs.arduino.cc/tutorials', channelId: 'help-1' });
+  await post(addMember('s5b'), { images: [diagram], content: 'I followed https://docs.arduino.cc too', channelId: 'help-2' });
+  assert.equal(tierOf(imageAlerts().at(-1)!), 'MEDIUM');
+  assert.equal(world.deletes.length + world.timeouts.length, 0);
 });

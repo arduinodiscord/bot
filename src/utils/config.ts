@@ -276,7 +276,9 @@ export const automodConfig = {
 const DEFAULT_SCAM_KEYWORDS = [
   'crypto', 'airdrop', 'withdraw', 'withdrawal', 'giveaway', 'free', 'gift',
   'nitro', 'elon', 'musk', 'mrbeast', 'beast games', 'claim', 'wallet',
-  'bonus', 'promo', 'reward', 'bitcoin', 'eth', 'usdt',
+  // 'eth' is deliberately absent: it is printed on Ethernet boards and
+  // modules (e.g. WT32-ETH01) that members post photos of.
+  'bonus', 'promo', 'reward', 'bitcoin', 'ethereum', 'usdt',
 ];
 
 /** Seed scam keywords; AUTOMOD_SCAM_KEYWORDS (comma-separated) replaces them. */

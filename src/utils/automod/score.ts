@@ -1,13 +1,19 @@
 import { automodConfig } from '../config';
 
 export interface Signals {
-  scamBlocklist: boolean;
-  spamBlocklist: boolean;
+  /** Exact content match to an image a moderator confirmed as a scam. */
+  scamExact: boolean;
+  /** Exact content match to an image a moderator confirmed as spam. */
+  spamExact: boolean;
+  /** Perceptual near match to any blocklisted image (evidence, not proof). */
+  nearBlocklist: boolean;
   clusterUsers: number;   // distinct accounts sharing this image (incl. author)
   fanoutChannels: number; // distinct channels one user posted the image in
-  keywordMatches: number; // distinct OCR scam keywords matched
+  keywordMatches: number; // distinct OCR scam keywords matched (seed + learned)
+  seedKeywordMatches: number; // of which built-in seed keywords
   newAccount: boolean;
-  hasLinkOrMention: boolean;
+  hasLinkOrMention: boolean; // a URL in the message, or @everyone/@here
+  massMention: boolean;      // @everyone / @here written in the message
   ocrHasLink: boolean;    // a URL / invite link inside the image text itself
   imageOnlyPair: boolean; // image-only message with exactly 2 images
   burst: boolean;
@@ -16,33 +22,51 @@ export interface Signals {
 export type Tier = 'none' | 'low' | 'medium' | 'high' | 'critical';
 
 export interface MatchedSignal { label: string; points: number; }
-export interface ScoreResult { score: number; tier: Tier; matched: MatchedSignal[]; }
+export interface ScoreResult {
+  score: number;
+  tier: Tier;
+  matched: MatchedSignal[];
+  /** True when being a new member is the only thing that matched. */
+  newAccountOnly: boolean;
+}
 
 // Corroborating contribution is capped below scoreHigh so weak signals alone
 // can never reach the auto-action tier.
 const CORROBORATING_CAP = 45;
 
+/** Accounts / channels at which a spread alone justifies auto-action. */
+export const WIDE_SPREAD = 4;
+
 export function scoreSignals(s: Signals): ScoreResult {
-  if (s.scamBlocklist)
-    return { score: 100, tier: 'critical', matched: [{ label: 'Known scam image (mod-confirmed)', points: 100 }] };
+  // Only an exact, mod-confirmed scam image can auto-ban. A perceptual near
+  // match could be an innocent original that a confirmed scam was built on.
+  if (s.scamExact)
+    return {
+      score: 100,
+      tier: 'critical',
+      matched: [{ label: 'Known scam image (mod-confirmed)', points: 100 }],
+      newAccountOnly: false,
+    };
 
   const strong: MatchedSignal[] = [];
-  if (s.spamBlocklist) strong.push({ label: 'Known spam image (mod-confirmed)', points: automodConfig.scoreHigh });
+  if (s.spamExact) strong.push({ label: 'Known spam image (mod-confirmed)', points: automodConfig.scoreHigh });
+  else if (s.nearBlocklist)
+    strong.push({ label: 'Looks like a blocklisted image', points: 50 });
   if (s.clusterUsers >= automodConfig.clusterMinUsers) {
     const extra = Math.min((s.clusterUsers - 2) * 12, 30);
     strong.push({ label: `Same image from ${s.clusterUsers} accounts`, points: 50 + Math.max(0, extra) });
   }
   if (s.fanoutChannels >= automodConfig.fanoutChannels)
-    strong.push({ label: `Image fanned across ${s.fanoutChannels} channels`, points: 50 });
+    strong.push({ label: `Image posted in ${s.fanoutChannels} channels`, points: 50 });
 
   const corrob: MatchedSignal[] = [];
   if (s.keywordMatches > 0)
-    corrob.push({ label: `OCR scam keywords x${s.keywordMatches}`, points: Math.min(s.keywordMatches * 12, 30) });
-  if (s.newAccount) corrob.push({ label: 'New / low-tenure account', points: 18 });
-  if (s.hasLinkOrMention) corrob.push({ label: 'Contains link or @everyone/@here', points: 18 });
-  if (s.ocrHasLink) corrob.push({ label: 'Link inside image text (OCR)', points: 12 });
-  if (s.imageOnlyPair) corrob.push({ label: 'Image-only, exactly 2 images', points: 8 });
-  if (s.burst) corrob.push({ label: 'Image burst', points: 12 });
+    corrob.push({ label: `Scam words in image x${s.keywordMatches}`, points: Math.min(s.keywordMatches * 12, 30) });
+  if (s.newAccount) corrob.push({ label: 'New member', points: 18 });
+  if (s.hasLinkOrMention) corrob.push({ label: 'Link or @everyone/@here in message', points: 18 });
+  if (s.ocrHasLink) corrob.push({ label: 'Link inside image text', points: 12 });
+  if (s.imageOnlyPair) corrob.push({ label: 'Two images, no text', points: 8 });
+  if (s.burst) corrob.push({ label: 'Many images in a short time', points: 12 });
 
   const strongTotal = strong.reduce((n, m) => n + m.points, 0);
   const corrobTotal = Math.min(corrob.reduce((n, m) => n + m.points, 0), CORROBORATING_CAP);
@@ -57,20 +81,27 @@ export function scoreSignals(s: Signals): ScoreResult {
   // an established member is computed and then silently discarded.
   else if (s.burst) tier = 'low';
 
-  // Auto-action guard. A single strong signal on its own is ambiguous in a
-  // help server: two members can share the same popular diagram, and a
-  // newcomer often posts the same screenshot in two channels. Unless a
-  // moderator already confirmed the image, auto-action also needs either
-  // scam-shaped content (2+ scam words or a link in the image, a link or
-  // @everyone in the message, or the image-only pair the raids use) or a
-  // spread no ordinary member produces (3+ accounts or 3+ channels). Account
-  // tenure alone does not count. Otherwise the detection is capped at medium:
-  // an alert, and a human decides.
-  const scamContent =
-    s.keywordMatches >= 2 || s.ocrHasLink || s.hasLinkOrMention || s.imageOnlyPair;
-  const wideSpread = s.clusterUsers >= 3 || s.fanoutChannels >= 3;
-  if (tier === 'high' && !s.spamBlocklist && !scamContent && !wideSpread)
-    tier = 'medium';
+  // Being new is not suspicious by itself. Without this, every image a new
+  // member posts in their first days would raise an alert.
+  const newAccountOnly = strong.length === 0 && corrob.length === 1 && s.newAccount;
+  if (newAccountOnly) tier = 'none';
 
-  return { score, tier, matched: [...strong, ...corrob] };
+  // Auto-action guard. A strong signal on its own is ambiguous in a help
+  // server: members share the same popular diagram, and a newcomer often posts
+  // one screenshot in a few channels. Unless the exact image was already
+  // confirmed as spam, auto-action also needs scam-shaped content or a spread
+  // no ordinary member produces. What counts as scam content is deliberately
+  // narrow: a tutorial link in the message or "www.arduino.cc" in a diagram is
+  // not; learned keywords are not (mods could be tricked into teaching common
+  // words); only built-in scam words, a link in an image that also has scam
+  // words, @everyone/@here, or the two-images-no-text shape the raids use.
+  const scamContent =
+    s.imageOnlyPair ||
+    s.massMention ||
+    s.seedKeywordMatches >= 2 ||
+    (s.ocrHasLink && s.seedKeywordMatches >= 1);
+  const wideSpread = s.clusterUsers >= WIDE_SPREAD || s.fanoutChannels >= WIDE_SPREAD;
+  if (tier === 'high' && !s.spamExact && !scamContent && !wideSpread) tier = 'medium';
+
+  return { score, tier, matched: [...strong, ...corrob], newAccountOnly };
 }

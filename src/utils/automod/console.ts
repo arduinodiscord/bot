@@ -31,7 +31,8 @@ function tierColor(tier: Incident['tier']): number {
 }
 
 const LEVEL_LABEL: Record<IncidentLevel, string> = {
-  fanout: 'Cross-channel fan-out',
+  fanout: 'Same image in several channels',
+  cluster: 'Same image from several accounts',
   blocklist: 'Known spam image',
   burst: 'Image burst',
   suspect: 'Suspicious image',
@@ -42,6 +43,7 @@ const LEVEL_LABEL: Record<IncidentLevel, string> = {
 /** Headline shown at the top of an alert, by incident kind. */
 const LEVEL_TITLE: Record<IncidentLevel, string> = {
   fanout: 'Possible image spam',
+  cluster: 'Possible image spam',
   blocklist: 'Possible image spam',
   burst: 'Possible image spam',
   suspect: 'Possible image spam',
@@ -110,7 +112,7 @@ function actionButton(
 
 /** Plain explanation of every alert button, shown on each alert. */
 const BUTTON_GUIDE = [
-  '**Confirm scam**: only for real scam graphics. Deletes the messages and bans the poster plus other accounts that posted the same image (up to 10 accounts). Blocklists the image, so anyone who posts it again is banned automatically. Also adds words from the image text to the scam filter.',
+  '**Confirm scam**: only for real scam graphics. Deletes the messages and bans the poster, plus other accounts that posted the same image with no text (up to 10). Accounts that posted it with a normal message are not banned. Blocklists the exact image, so anyone who posts it again is banned automatically. Also adds words from the image text to the scam filter.',
   '**Confirm spam**: deletes the messages, times out the user and blocklists the image as spam. Future posts of it are deleted and the poster is timed out automatically.',
   '**Time out only** / **Ban this user only** / **Delete messages only**: act on this user or these messages. Nothing is blocklisted. Ban also deletes their last 24 hours of messages.',
   '**Not spam**: permanently allowlists the image so it is never flagged again, and lifts the timeout the bot applied. Deleted messages cannot be restored.',
@@ -121,11 +123,18 @@ export function buildAlertPayload(
   incident: Incident,
   member: GuildMember | null,
   autoAction: AutoActionResult | null,
-  previewUrl?: string
+  evidence?: { image?: Buffer; previewUrl?: string }
 ): MessageCreateOptions {
+  // Capped so a wide raid can't push the field past Discord's 1024-char limit
+  // (which would make the whole alert fail to send).
+  const channels = [...new Set(incident.messages.map((m) => `<#${m.channelId}>`))];
   const channelMentions =
-    [...new Set(incident.messages.map((m) => `<#${m.channelId}>`))].join(' ') ||
-    '—';
+    channels.length === 0
+      ? '—'
+      : channels.slice(0, 10).join(' ') + (channels.length > 10 ? ` +${channels.length - 10} more` : '');
+  // The offending image is usually deleted by the time a moderator looks, so
+  // attach our own copy; fall back to Discord's (soon dead) proxy URL.
+  const previewUrl = evidence?.image ? 'attachment://evidence.png' : evidence?.previewUrl;
 
   const jumpLinks =
     incident.messages
@@ -167,19 +176,23 @@ export function buildAlertPayload(
     const cap = 10;
     const shown = incident.clusterUserIds.slice(0, cap);
     const overflow = incident.clusterUserIds.length - shown.length;
+    const raid = new Set(incident.raidUserIds);
     const accountsValue =
-      shown.map((id) => `<@${id}>`).join(' ') + (overflow > 0 ? ` +${overflow} more` : '');
+      shown.map((id) => `<@${id}>${raid.has(id) ? '' : ' (with text)'}`).join(' ') +
+      (overflow > 0 ? ` +${overflow} more` : '');
     embed.addFields({ name: 'Accounts', value: accountsValue });
   }
 
   // OCR detected text (untrusted — hard-capped at 200 chars, newlines collapsed).
   if (incident.ocrText.length > 0) {
     const MAX_OCR = 180;
-    let ocrDisplay = incident.ocrText.replace(/\s*\n\s*/g, ' ').trim();
+    let ocrDisplay = incident.ocrText.replace(/\s*\n\s*/g, ' ').replace(/`/g, "'").trim();
     if (ocrDisplay.length > MAX_OCR) {
       ocrDisplay = ocrDisplay.slice(0, MAX_OCR) + '…';
     }
-    embed.addFields({ name: 'Detected text', value: ocrDisplay });
+    // Code block: attacker-controlled text must not render as masked links
+    // or formatting in the mod channel.
+    embed.addFields({ name: 'Detected text', value: '```\n' + ocrDisplay + '\n```' });
   }
 
   // Thumbnail: prefer the offending image preview; fall back to member avatar.
@@ -258,7 +271,12 @@ export function buildAlertPayload(
     actionButton('dismiss', 'Not spam: allowlist image, lift timeout', ButtonStyle.Success, incident.id)
   );
 
-  return { embeds: [embed], components: [row1, row2] };
+  return {
+    embeds: [embed],
+    components: [row1, row2],
+    files: evidence?.image ? [{ attachment: evidence.image, name: 'evidence.png' }] : [],
+    allowedMentions: { parse: [] },
+  };
 }
 
 /** Apply a timeout to a member. Returns false if blocked by hierarchy/perms. */
@@ -332,32 +350,59 @@ export async function banMember(
 const UNKNOWN_MESSAGE = 10008;
 
 /**
+ * Messages already deleted or being deleted, shared across handlers. In a raid
+ * every new detection includes the earlier raiders' messages; without this,
+ * each handler re-deleted all of them (quadratic API calls under rate limits).
+ */
+const deletedRecently = new Map<string, Promise<boolean>>();
+const DELETED_TTL_MS = 10 * 60_000;
+/** Most messages one incident may delete, as a blast-radius limit. */
+export const MAX_DELETE_PER_INCIDENT = 25;
+
+/**
  * Delete every message recorded on an incident. Returns how many are gone —
  * a message that was already deleted (by its author, a mod, or an earlier
  * pass) counts as gone, since the goal is achieved.
  */
+/** Test-only reset. */
+export function __resetDeletes(): void {
+  deletedRecently.clear();
+}
+
 export async function deleteIncidentMessages(
   client: Client,
   incident: Pick<Incident, 'messages'>
 ): Promise<number> {
-  let deleted = 0;
-  for (const { channelId, messageId } of incident.messages) {
-    const channel = await client.channels.fetch(channelId).catch(() => null);
-    if (!channel || !channel.isTextBased() || channel.isDMBased()) {
-      container.logger.warn(`Automod: cannot delete ${messageId}: channel ${channelId} unavailable.`);
-      continue;
-    }
-    const ok = await channel.messages
-      .delete(messageId)
-      .then(() => true)
-      .catch((error: { code?: number }) => {
-        if (error?.code === UNKNOWN_MESSAGE) return true;
-        container.logger.warn(`Automod: deleting ${messageId} in ${channelId} failed:`, error);
-        return false;
-      });
-    if (ok) deleted++;
-  }
-  return deleted;
+  const results = await Promise.all(
+    incident.messages.slice(0, MAX_DELETE_PER_INCIDENT).map(({ channelId, messageId }) => {
+      const pending = deletedRecently.get(messageId);
+      if (pending) return pending;
+      const attempt = (async () => {
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        if (!channel || !channel.isTextBased() || channel.isDMBased()) {
+          container.logger.warn(`Automod: cannot delete ${messageId}: channel ${channelId} unavailable.`);
+          return false;
+        }
+        return channel.messages
+          .delete(messageId)
+          .then(() => true)
+          .catch((error: { code?: number }) => {
+            if (error?.code === UNKNOWN_MESSAGE) return true;
+            container.logger.warn(`Automod: deleting ${messageId} in ${channelId} failed:`, error);
+            return false;
+          });
+      })();
+      deletedRecently.set(messageId, attempt);
+      // Forget failures immediately (so a mod retry works) and successes later.
+      void attempt.then((ok) =>
+        ok
+          ? setTimeout(() => deletedRecently.delete(messageId), DELETED_TTL_MS).unref()
+          : deletedRecently.delete(messageId)
+      );
+      return attempt;
+    })
+  );
+  return results.filter(Boolean).length;
 }
 
 /** Best-effort audit log of a moderation action (no-op without a database). */
