@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [revamp, staging, main]
+  pull_request:
+    branches: [revamp, staging, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # postinstall runs `prisma generate`; no DATABASE_URL is needed for it
+      # or for `prisma validate` (prisma.config.ts omits the datasource).
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npm run build
+      - run: npm test
+        env:
+          BOT_TOKEN: test
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t arduino-bot:ci .
