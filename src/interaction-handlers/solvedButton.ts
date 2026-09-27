@@ -12,7 +12,11 @@ import {
   type ButtonInteraction,
 } from 'discord.js';
 import universalEmbed from '../utils/embed';
-import { applySolved, canMarkSolved } from '../utils/solveThread';
+import {
+  applySolved,
+  canMarkSolved,
+  describeSolveFailure,
+} from '../utils/solveThread';
 
 /** Handles the "Mark Solved" button posted in help threads (forum or text). */
 export class SolvedButtonHandler extends InteractionHandler {
@@ -54,6 +58,7 @@ export class SolvedButtonHandler extends InteractionHandler {
     await interaction.reply({ embeds: [embed] });
 
     // Disable the button so it can't be clicked again, then close the thread.
+    const originalComponents = interaction.message.components;
     const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId('solved')
@@ -64,7 +69,22 @@ export class SolvedButtonHandler extends InteractionHandler {
     await interaction.message
       .edit({ components: [disabledRow] })
       .catch(() => null);
-    await applySolved(channel);
+    const result = await applySolved(channel);
+    const failure = describeSolveFailure(result);
+    if (failure) {
+      this.container.logger.warn(
+        `[solved] Failed to fully close thread ${channel.id} (renamed=${result.renamed}, archived=${result.archived}):`,
+        result.error
+      );
+      // Thread is still open: put the original button back so it can be retried.
+      if (!result.archived)
+        await interaction.message
+          .edit({ components: originalComponents })
+          .catch(() => null);
+      await interaction
+        .followUp({ content: failure, flags: MessageFlags.Ephemeral })
+        .catch(() => null);
+    }
     return undefined;
   }
 }

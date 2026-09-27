@@ -41,11 +41,15 @@ export class MemberRemoveListener extends Listener {
       .catch(() => null);
     if (!channel?.isSendable()) return;
 
+    // Uncached leavers arrive as partials (Partials.GuildMember): only the id
+    // and the user object from the gateway payload are guaranteed, so avoid
+    // anything that needs member data and guard the user just in case.
+    const user = member.user as typeof member.user | null | undefined;
     const embed = new EmbedBuilder(universalEmbed)
       .setTitle('📤 Member left')
       .setAuthor({
-        name: member.user.tag,
-        iconURL: member.displayAvatarURL(),
+        name: user?.tag ?? `Unknown user (${member.id})`,
+        iconURL: user?.displayAvatarURL(),
       })
       .setDescription(`<@${member.id}>`)
       .setFooter({ text: `ID: ${member.id}` })

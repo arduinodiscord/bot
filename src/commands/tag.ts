@@ -1,16 +1,46 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { EmbedBuilder, MessageFlags } from 'discord.js';
+import {
+  EmbedBuilder,
+  InteractionContextType,
+  MessageFlags,
+} from 'discord.js';
 import { BOT_COMMANDS_CHANNEL_ID } from '../utils/config';
 import tags from '../utils/tags';
 import { resolveTag } from '../utils/resolveTag';
 import universalEmbed from '../utils/embed';
+
+/**
+ * `/tag name` choices. Must list every key in the tags map (checked by
+ * tags.test.ts); Discord allows at most 25.
+ */
+export const TAG_CHOICES = [
+  { name: 'AI', value: 'ai' },
+  { name: 'ask', value: 'ask' },
+  { name: 'avrdude', value: 'avrdude' },
+  { name: 'codeblock', value: 'codeblock' },
+  { name: 'debounce', value: 'debounce' },
+  { name: 'espcomm', value: 'espcomm' },
+  { name: 'help', value: 'help' },
+  { name: 'hid', value: 'hid' },
+  { name: 'lab', value: 'lab' },
+  { name: 'language', value: 'language' },
+  { name: 'levelShifter', value: 'levelShifter' },
+  { name: 'libmissing', value: 'libmissing' },
+  { name: 'needinfo', value: 'needinfo' },
+  { name: 'ninevolt', value: 'ninevolt' },
+  { name: 'power', value: 'power' },
+  { name: 'pullup', value: 'pullup' },
+  { name: 'reinstall', value: 'reinstall' },
+  { name: 'wiki', value: 'wiki' },
+];
 
 export class TagCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
     super(context, {
       ...options,
       name: 'tag',
-      description: 'Send a tag ephemerally.',
+      description:
+        'Post a help tag (most tags are posted in the bot-commands channel).',
     });
   }
 
@@ -21,36 +51,18 @@ export class TagCommand extends Command {
       builder
         .setName(this.name)
         .setDescription(this.description)
+        .setContexts(InteractionContextType.Guild)
         .addStringOption((option) =>
           option
             .setName('name')
             .setDescription('Tag to see')
             .setRequired(true)
-            .addChoices(
-              { name: 'AI', value: 'ai' },
-              { name: 'ask', value: 'ask' },
-              { name: 'avrdude', value: 'avrdude' },
-              { name: 'codeblock', value: 'codeblock' },
-              { name: 'debounce', value: 'debounce' },
-              { name: 'espcomm', value: 'espcomm' },
-              { name: 'help', value: 'help' },
-              { name: 'hid', value: 'hid' },
-              { name: 'lab', value: 'lab' },
-              { name: 'language', value: 'language' },
-              { name: 'levelShifter', value: 'levelShifter' },
-              { name: 'libmissing', value: 'libmissing' },
-              { name: 'needinfo', value: 'needinfo' },
-              { name: 'ninevolt', value: 'ninevolt' },
-              { name: 'power', value: 'power' },
-              { name: 'pullup', value: 'pullup' },
-              { name: 'reinstall', value: 'reinstall' },
-              { name: 'wiki', value: 'wiki' },
-            ),
+            .addChoices(...TAG_CHOICES),
         )
         .addUserOption((option) =>
           option
             .setName('user')
-            .setDescription('User to ping in the bot commands channel.')
+            .setDescription('User to ping with the tag.')
             .setRequired(false),
         );
     });
@@ -70,39 +82,73 @@ export class TagCommand extends Command {
         flags: MessageFlags.Ephemeral,
       });
 
-    // Ping the requested user when the tag didn't already include a mention.
-    if (user && !payload.content) payload.content = `<@${user.id}>`;
+    // Always ping a requested user. Templated tags (e.g. needinfo) already
+    // include the mention; everything else gets it prepended.
+    if (user) {
+      const mention = `<@${user.id}>`;
+      if (!payload.content?.includes(mention))
+        payload.content = payload.content
+          ? `${mention}\n${payload.content}`
+          : mention;
+    }
+    // Only ever ping the requested user, never anything embedded in tag text.
+    const message = {
+      ...payload,
+      allowedMentions: { users: user ? [user.id] : [] },
+    };
 
     // Tags default to bot-commands-channel-only unless they opt out.
-    if (tag.botCommandsOnly === false) return interaction.reply(payload);
+    if (tag.botCommandsOnly === false) return interaction.reply(message);
 
-    const botCommandsChannel = await interaction.client.channels
-      .fetch(BOT_COMMANDS_CHANNEL_ID)
-      .catch(() => null);
+    // Posting to another channel can be slow or fail; acknowledge within
+    // Discord's 3s window first so the user never sees "did not respond".
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const botCommandsChannel = BOT_COMMANDS_CHANNEL_ID
+      ? await interaction.client.channels
+          .fetch(BOT_COMMANDS_CHANNEL_ID)
+          .catch(() => null)
+      : null;
     if (!botCommandsChannel?.isSendable())
-      return interaction.reply({
+      return interaction.editReply({
         content: 'The bot-commands channel is unavailable.',
-        flags: MessageFlags.Ephemeral,
       });
 
-    await botCommandsChannel.send(payload);
-
-    if (user)
-      return interaction.reply({
-        content: `<@${user.id}> you've been tagged with standard helpful info.`,
-        embeds: [
-          new EmbedBuilder(universalEmbed)
-            .setTitle('Your answer is in the Bot-Commands Channel...')
-            .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`),
-        ],
+    try {
+      await botCommandsChannel.send(message);
+    } catch (error) {
+      this.container.logger.error(
+        `[tag] Failed to post "${tagName}" in bot-commands:`,
+        error
+      );
+      return interaction.editReply({
+        content: `I couldn't post that tag in <#${BOT_COMMANDS_CHANNEL_ID}> (I may be missing permissions there). Please let a moderator know.`,
       });
-    return interaction.reply({
+    }
+
+    await interaction.editReply({
       embeds: [
         new EmbedBuilder(universalEmbed)
           .setTitle('Requested info was sent in the Bot-Commands Channel')
           .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`),
       ],
-      flags: MessageFlags.Ephemeral,
     });
+
+    // Point the tagged user at the info from the channel they're in.
+    if (user)
+      await interaction
+        .followUp({
+          content: `<@${user.id}> you've been tagged with standard helpful info.`,
+          embeds: [
+            new EmbedBuilder(universalEmbed)
+              .setTitle('Your answer is in the Bot-Commands Channel...')
+              .setDescription(`See <#${BOT_COMMANDS_CHANNEL_ID}> for your info!`),
+          ],
+          allowedMentions: { users: [user.id] },
+        })
+        .catch((error) =>
+          this.container.logger.warn('[tag] Failed to post pointer:', error)
+        );
+    return undefined;
   }
 }

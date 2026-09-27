@@ -1,6 +1,7 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
 import {
   EmbedBuilder,
+  InteractionContextType,
   MessageFlags,
   TimestampStyles,
   time,
@@ -32,7 +33,7 @@ export class OpenPostsCommand extends Command {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
     );
   }
 

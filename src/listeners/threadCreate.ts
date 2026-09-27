@@ -4,6 +4,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  ThreadAutoArchiveDuration,
   type AnyThreadChannel,
 } from 'discord.js';
 import { helpChannelIds, helpAssistConfig } from '../utils/config';
@@ -49,6 +50,8 @@ export class ThreadCreateListener extends Listener {
     if (helpChannelIds.length === 0) return;
     if (!thread.parentId || !helpChannelIds.includes(thread.parentId)) return;
 
+    await this.extendAutoArchive(thread);
+
     const thin =
       helpAssistConfig.autoNeedinfo && (await this.isThinPost(thread));
 
@@ -59,6 +62,30 @@ export class ThreadCreateListener extends Listener {
     await thread
       .send({ embeds: [embed], components: [solvedRow] })
       .catch(() => null);
+  }
+
+  /**
+   * Discord auto-archives idle threads (text-channel threads default to 24h,
+   * forums often 1–3 days), which hides them from the stale-post sweep before
+   * its 72h nudge. Raise new help threads to the one-week maximum when the bot
+   * has Manage Threads; otherwise leave the channel's default alone.
+   */
+  private async extendAutoArchive(thread: AnyThreadChannel): Promise<void> {
+    if (!helpAssistConfig.staleSweepEnabled) return;
+    if ((thread.autoArchiveDuration ?? 0) >= ThreadAutoArchiveDuration.OneWeek)
+      return;
+    if (!thread.manageable) return;
+    await thread
+      .setAutoArchiveDuration(
+        ThreadAutoArchiveDuration.OneWeek,
+        'Keep help posts visible to the stale-post sweep'
+      )
+      .catch((error) =>
+        this.container.logger.warn(
+          `[threadCreate] Could not extend auto-archive for ${thread.id}:`,
+          error
+        )
+      );
   }
 
   /**

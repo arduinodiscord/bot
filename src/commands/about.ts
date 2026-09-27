@@ -1,5 +1,5 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, InteractionContextType } from 'discord.js';
 import { version } from './../../package.json';
 import universalEmbed from '../utils/embed';
 
@@ -15,7 +15,10 @@ export class AboutCommand extends Command {
     registry: ApplicationCommandRegistry
   ) {
     registry.registerChatInputCommand((builder) => {
-      builder.setName(this.name).setDescription(this.description);
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+        .setContexts(InteractionContextType.Guild);
     });
   }
 

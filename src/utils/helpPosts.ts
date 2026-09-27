@@ -1,4 +1,4 @@
-import type { Client, ThreadChannel } from 'discord.js';
+import type { Client, Message, ThreadChannel } from 'discord.js';
 import { SERVER_ID, helpChannelIds } from './config';
 import { SOLVED_PREFIX } from './solveThread';
 
@@ -6,8 +6,8 @@ export interface OpenHelpPost {
   thread: ThreadChannel;
   /** Timestamp (ms) of the last message, falling back to thread creation. */
   lastActivityAt: number;
-  /** Whether that last message was posted by the bot (e.g. a prompt/nudge). */
-  lastFromBot: boolean;
+  /** The last message itself, when it could be fetched. */
+  lastMessage: Message | null;
 }
 
 /** Whether a thread has already been marked solved (✅ title prefix). */
@@ -45,7 +45,7 @@ export async function fetchOpenHelpPosts(
     posts.push({
       thread,
       lastActivityAt: last?.createdTimestamp ?? thread.createdTimestamp ?? 0,
-      lastFromBot: last?.author?.id === client.user?.id,
+      lastMessage: last,
     });
   }
   return posts;

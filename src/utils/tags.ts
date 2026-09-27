@@ -88,7 +88,9 @@ const tags: Record<string, Tag> = {
 
   avrdude: {
     suggest: {
-      pattern: /stk500|avrdude[:\s]|not in sync/i,
+      // Real AVRDUDE output names stk500/avrdude; a bare "not in sync" also
+      // fired on "my servos are not in sync".
+      pattern: /stk500|\bavrdude[:\s]|not in sync: resp=/i,
       prompt: 'Looks like an **AVRDUDE upload error**.',
     },
     embeds: [
@@ -175,8 +177,10 @@ const tags: Record<string, Tag> = {
 
   debounce: {
     suggest: {
+      // A button/switch with a bounce symptom nearby. The old
+      // "button.*multiple" fired on "a button and multiple LEDs".
       pattern:
-        /debounc|button.*(bounc|multiple|several times|twice)|reading (multiple|several) (presses|times)/i,
+        /debounc|\b(button|switch)(es)?\b.{0,40}\b(bounc\w*|(registers?|counts?|triggers?|fires?|reads?|detects?|press(es|ed)?|toggles?)( as)? (multiple|several|two|2|double) (times|presses|clicks)|(registers?|counts?|triggers?|fires?|toggles?) twice|double[- ]?(triggers?|counts?|press(es)?))\b/i,
       prompt: 'Sounds like a **switch debouncing** problem.',
     },
     embeds: [
@@ -327,8 +331,9 @@ const tags: Record<string, Tag> = {
 
   hid: {
     suggest: {
+      // A bare "hid" matched "I hid the wires"; require USB/HID context.
       pattern:
-        /\bhid\b|keyboard\.h|mouse\.h|emulat(e|ing) (a )?(keyboard|mouse)|act as a (keyboard|mouse)/i,
+        /\busb[\s-]?hid\b|\bhid[\s-](device|keyboard|mouse|gamepad|joystick|library|compliant|support|mode)s?\b|\b(as an?|arduino|leonardo|pro ?micro|32u4) hid\b|\b(hid|keyboard|mouse)\.h\b|\bemulat(e|es|ing|ion of) (an? )?(usb )?(keyboard|mouse|gamepad)\b|\b(act|acts|acting|work|show up|appear|be (used|recognized|detected)) as an? (usb )?(keyboard|mouse|gamepad)\b/i,
       prompt: 'Looks like a **USB HID (keyboard/mouse)** question.',
     },
     embeds: [
@@ -396,8 +401,10 @@ const tags: Record<string, Tag> = {
 
   levelShifter: {
     suggest: {
+      // A bare "logic level" also covers logic-level MOSFETs, and "3.3V to 5V"
+      // is often a power question, so require a signal/pin context.
       pattern:
-        /level\s?shift|logic[- ]?level|3\.3\s?v?\s*(to|->|→)\s*5\s?v|5\s?v?\s*(to|->|→)\s*3\.3\s?v/i,
+        /level[\s-]?shift|logic[- ]?level (shift|convert|translat)|\b5\s?v[\s-]tolerant\b|(3\.3\s?v?\s*(to|->|→)\s*5\s?v|5\s?v?\s*(to|->|→)\s*3\.3\s?v)\b.{0,40}\b(logic|signals?|pins?|gpio|rx|tx|sda|scl|spi|i2c|uart|serial|data)\b|\b(logic|signals?|pins?|gpio|rx|tx|sda|scl|spi|i2c|uart|serial|data)\b.{0,40}(3\.3\s?v?\s*(to|->|→)\s*5\s?v|5\s?v?\s*(to|->|→)\s*3\.3\s?v)\b/i,
       prompt: 'Sounds like a **logic-level / voltage-level** question.',
     },
     embeds: [
@@ -448,8 +455,10 @@ const tags: Record<string, Tag> = {
 
   libmissing: {
     suggest: {
+      // Header errors only: a bare "No such file or directory" is usually a
+      // serial port path (/dev/ttyUSB0), not a missing library.
       pattern:
-        /no such file or directory|fatal error:.*\.h|\.h: No such file|library.*(not found|is not installed|missing)/i,
+        /\.h(pp)?['"]?:? no such file|fatal error: [\w./-]+\.h(pp)?\b|\blibrary\b.{0,30}\b(not found|is not installed|not installed)\b/i,
       prompt: 'Looks like a **missing library / header** error.',
     },
     embeds: [
@@ -511,7 +520,9 @@ const tags: Record<string, Tag> = {
 
   ninevolt: {
     suggest: {
-      pattern: /\b9\s?v(olt)?\b.*batter|batter.*\b9\s?v(olt)?\b|smoke (alarm|detector) batter/i,
+      // Keep "9V" and "battery" adjacent; ".*" matched "9V adapter ... AA batteries".
+      pattern:
+        /\b9\s?-?v(olt)?s?\b[\s-]{0,3}(batter|cell|pp3)|\bbatter(y|ies)\s*\(?\s*9\s?v(olt)?\b|\bpp3 batter|smoke (alarm|detector) batter/i,
       prompt: 'Heads up — this looks like the **9V battery** pitfall.',
     },
     embeds: [
@@ -528,8 +539,10 @@ const tags: Record<string, Tag> = {
 
   power: {
     suggest: {
+      // "voltage drop" alone fired on LED/resistor maths and "how to power the"
+      // on anything; require a board or load being powered.
       pattern:
-        /brown\s?out|not enough (power|current)|voltage drop|how (do i|to) power (my|the|a)|powering (my|the|a) (board|arduino|esp|nano|uno|mega)/i,
+        /brown[\s-]?out|not enough (power|current)|voltage (drops|dropping|sags?|sagging) (when|whenever|once|as soon as)|how (do i|to|should i|can i|would i) power (my|the|an?) (board|arduino|esp\w*|nano|uno|mega|project|servos?|motors?)\b|powering (my|the|an?) (board|arduino|esp\w*|nano|uno|mega)\b/i,
       prompt: 'Looks like a **powering your board** question.',
     },
     embeds: [
@@ -567,8 +580,11 @@ const tags: Record<string, Tag> = {
 
   pullup: {
     suggest: {
+      // "pull up" alone fired on "let me pull up the datasheet" and "pull-down
+      // menu", and "button.*random" on "a button that picks a random number";
+      // require resistor/pin context.
       pattern:
-        /pull[\s-]?up|pull[\s-]?down|floating (pin|input)|button.*(random|float|noisy)|reads? (randomly|high and low)/i,
+        /\bpull[\s-]?(up|down)s? resistors?\b|\b(internal|external|weak) pull[\s-]?(up|down)s?\b|\bpulled (up|down) (to|with) (vcc|gnd|ground|5\s?v|3\.3\s?v)\b|\bfloating (pin|input)s?\b|\b(pin|input) (is|keeps|was) floating\b|\b(button|switch|pin|input)\b.{0,40}\b(randomly (triggers?|reads?|changes?|toggles?|goes|flickers?)|reads? (randomly|random values|high and low))\b|\bghost (presses|triggers)\b/i,
       prompt: 'Sounds like a **pull-up / floating input** issue.',
     },
     embeds: [
