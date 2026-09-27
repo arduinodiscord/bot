@@ -6,7 +6,11 @@ import {
   PermissionFlagsBits,
 } from 'discord.js';
 import universalEmbed from '../utils/embed';
-import { applySolved, canMarkSolved } from '../utils/solveThread';
+import {
+  applySolved,
+  canMarkSolved,
+  describeSolveFailure,
+} from '../utils/solveThread';
 
 export class SolvedCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
@@ -63,7 +67,17 @@ export class SolvedCommand extends Command {
       );
 
     await interaction.reply({ embeds: [embed] });
-    await applySolved(channel);
+    const result = await applySolved(channel);
+    const failure = describeSolveFailure(result);
+    if (failure) {
+      this.container.logger.warn(
+        `[solved] Failed to fully close thread ${channel.id} (renamed=${result.renamed}, archived=${result.archived}):`,
+        result.error
+      );
+      await interaction
+        .followUp({ content: failure, flags: MessageFlags.Ephemeral })
+        .catch(() => null);
+    }
     return undefined;
   }
 }
