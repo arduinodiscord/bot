@@ -9,8 +9,10 @@ export interface GlobalImageEvent {
   /** Content ids (SHA-256 of image content); exact, unforgeable identity. */
   contentIds: string[];
   hashes: string[];
-  /** Message had images and no text: the shape scam raids use. */
-  imageOnly: boolean;
+  /** Images with no text or only a short caption: the shape scam raids use. */
+  raidShaped: boolean;
+  /** Author was inside the new-member window when posting. */
+  newMember: boolean;
 }
 
 export interface ClusterResult {

@@ -3,7 +3,7 @@ import type { Attachment, Message } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { automodConfig } from '../config';
 import { createHash } from 'node:crypto';
-import { isRasterImage } from './signature';
+import { imageAttachments, proxyPngUrl } from './signature';
 
 // pHash parameters: resize to DCT_INPUT_SIZE×DCT_INPUT_SIZE, then keep the
 // top-left DCT_COEFF_SIZE×DCT_COEFF_SIZE low-frequency block (64 bits).
@@ -124,7 +124,7 @@ function dct2d(pixels: number[]): number[] {
  * no low-frequency structure, so its bits would be decided by noise and it
  * would "match" every other flat image. Such images get no pHash (a blank
  * canvas with one small 10px mark scores ~18; a real screenshot is in the
- * hundreds or thousands). Exact duplicates are still caught by signature.
+ * hundreds or thousands). Exact duplicates are still caught by content id.
  */
 const MIN_AC_ENERGY = 50;
 
@@ -202,10 +202,8 @@ export function hammingDistance(a: string, b: string): number {
  * a 32×32 proxy directly.
  */
 function thumbnailUrl(attachment: Attachment): string {
-  const base = attachment.proxyURL || attachment.url;
-  const separator = base.includes('?') ? '&' : '?';
-  // format=png: Jimp cannot decode WebP, so ask the proxy for PNG.
-  return `${base}${separator}width=64&height=64&format=png`;
+  // format=png: Jimp cannot decode WebP/AVIF/etc., so the proxy converts.
+  return proxyPngUrl(attachment, 64);
 }
 
 /** Fingerprints for one image attachment. Either may be missing on failure. */
@@ -233,9 +231,7 @@ export interface MessageFingerprints {
  * Never throws.
  */
 export async function imageFingerprints(message: Message): Promise<MessageFingerprints> {
-  const attachments = [...message.attachments.values()]
-    .filter(isRasterImage)
-    .slice(0, MAX_ATTACHMENTS);
+  const attachments = imageAttachments(message).slice(0, MAX_ATTACHMENTS);
 
   const images = await Promise.all(
     attachments.map(async (attachment): Promise<ImageFingerprint> => {
@@ -291,11 +287,10 @@ const EVIDENCE_TIMEOUT_MS = 3000;
  * posted. Best-effort: resolves undefined on any failure, never throws.
  */
 export async function fetchEvidence(message: Message): Promise<Buffer | undefined> {
-  const first = [...message.attachments.values()].find(isRasterImage);
+  const first = imageAttachments(message)[0];
   if (!first) return undefined;
   try {
-    const base = first.proxyURL || first.url;
-    const url = `${base}${base.includes('?') ? '&' : '?'}width=512&height=512&format=png`;
+    const url = proxyPngUrl(first, 512);
     const response = await fetch(url, { signal: AbortSignal.timeout(EVIDENCE_TIMEOUT_MS) });
     if (!response.ok) return undefined;
     if (Number(response.headers.get('content-length') ?? 0) > MAX_EVIDENCE_BYTES) return undefined;

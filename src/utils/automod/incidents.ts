@@ -55,6 +55,8 @@ export interface Incident {
   learning: boolean;
   /** Set when the bot timed the user out automatically, so "Not spam" can undo it. */
   autoTimedOut?: boolean;
+  /** Set when the bot banned the user automatically ("Not spam" can't unban). */
+  autoBanned?: boolean;
 }
 
 /**

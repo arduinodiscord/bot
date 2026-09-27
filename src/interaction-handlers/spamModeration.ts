@@ -14,7 +14,7 @@ import {
   type ButtonInteraction,
 } from 'discord.js';
 import { claimIncident, restoreIncident, type Incident } from '../utils/automod/incidents';
-import { addToBlocklist, addToAllowlist, checkBlocklist } from '../utils/automod/blocklist';
+import { addToBlocklist, addToAllowlist, checkBlocklist, removeFromBlocklist } from '../utils/automod/blocklist';
 import { MOD_LOG_CHANNEL_ID, SERVER_ID } from '../utils/config';
 import { tokenizeOcr, learnKeywords } from '../utils/automod/keywords';
 import {
@@ -207,6 +207,8 @@ export class SpamModerationHandler extends InteractionHandler {
         break;
       }
       case 'dismiss': {
+        // Undo any earlier "Confirm scam/spam" on these images, then allowlist.
+        const unblocked = await removeFromBlocklist(incident.contentIds, incident.hashes);
         await addToAllowlist(incident.contentIds, moderator.id, 'marked not spam');
         clearUser(incident.userId);
         clearFloodUser(incident.userId);
@@ -226,9 +228,11 @@ export class SpamModerationHandler extends InteractionHandler {
         }
         if (incident.messages.length > 0 && incident.autoTimedOut)
           undo += ' The deleted messages cannot be restored, so you may want to let the user know.';
+        if (incident.autoBanned)
+          undo += ' The user was banned automatically and is still banned. Unban them manually from Server Settings > Bans.';
         summary = `Marked as not spam.${
-          incident.contentIds.length > 0 ? ' The image(s) are allowlisted.' : ''
-        }${undo}`;
+          unblocked > 0 ? ' Removed the image(s) from the blocklist.' : ''
+        }${incident.contentIds.length > 0 ? ' The image(s) are allowlisted.' : ''}${undo}`;
         break;
       }
       default:

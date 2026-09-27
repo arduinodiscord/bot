@@ -7,12 +7,29 @@ const base: Signals = {
   clusterUsers: 0, fanoutChannels: 0,
   keywordMatches: 0, seedKeywordMatches: 0, newAccount: false,
   hasLinkOrMention: false, massMention: false,
-  ocrHasLink: false, imageOnlyPair: false, burst: false,
+  ocrHasLink: false, imageOnlyPair: false, raidShaped: false, burst: false,
 };
 const tier = (s: Partial<Signals>) => scoreSignals({ ...base, ...s }).tier;
 
-test('an exact mod-confirmed scam image is critical', () => {
-  assert.equal(tier({ scamExact: true }), 'critical');
+test('an exact mod-confirmed scam image posted in the raid shape is critical', () => {
+  assert.equal(tier({ scamExact: true, raidShaped: true }), 'critical');
+});
+
+test('a new member posting a confirmed scam image with text is critical', () => {
+  assert.equal(tier({ scamExact: true, newAccount: true }), 'critical');
+});
+
+test('an established member reposting a known scam with text (a warning) is only medium', () => {
+  assert.equal(tier({ scamExact: true }), 'medium');
+});
+
+test('an established member reposting a known spam image with text is medium', () => {
+  assert.equal(tier({ spamExact: true }), 'medium');
+});
+
+test('a short caption does not hide a 3-account raid', () => {
+  assert.equal(tier({ clusterUsers: 3, raidShaped: true }), 'high');
+  assert.equal(tier({ clusterUsers: 2, raidShaped: true }), 'medium');
 });
 
 test('a near match to a scam image is never critical', () => {
@@ -24,8 +41,8 @@ test('a near blocklist match with a text question is only medium', () => {
   assert.equal(tier({ nearBlocklist: true }), 'medium');
 });
 
-test('an exact mod-confirmed spam image is high without corroboration', () => {
-  assert.equal(tier({ spamExact: true }), 'high');
+test('an exact mod-confirmed spam image in the raid shape is high', () => {
+  assert.equal(tier({ spamExact: true, raidShaped: true }), 'high');
 });
 
 test('the raid shape (same two images, no text, two accounts) is high', () => {

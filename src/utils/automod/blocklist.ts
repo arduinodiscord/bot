@@ -110,10 +110,15 @@ export async function addToBlocklist(
     const map = kind === 'sha' ? blockExact : blockNear;
     map.set(signature, worse(map.get(signature) ?? null, severity)!);
   }
+  // The latest moderator decision wins: confirming an image that was once
+  // marked "Not spam" removes it from the allowlist.
+  for (const id of contentIds) allowExact.delete(id);
 
   const prisma = getPrisma();
   if (!prisma || entries.length === 0) return;
   try {
+    if (contentIds.length > 0)
+      await prisma.allowSignature.deleteMany({ where: { signature: { in: contentIds } } });
     await prisma.$transaction(
       entries.map(({ signature, kind }) =>
         prisma.spamSignature.upsert({
@@ -150,4 +155,26 @@ export async function addToAllowlist(
   } catch (error) {
     container.logger.error('Persisting allowlist fingerprints failed:', error);
   }
+}
+
+/**
+ * Undo moderator training for these images: remove them from the blocklist
+ * (memory and database). Used by "Not spam", so a wrong "Confirm scam" or
+ * "Confirm spam" can be reversed instead of silently continuing to act.
+ * Returns how many fingerprints were removed.
+ */
+export async function removeFromBlocklist(contentIds: string[], hashes: string[]): Promise<number> {
+  let removed = 0;
+  for (const id of contentIds) if (blockExact.delete(id)) removed++;
+  for (const hash of hashes) if (blockNear.delete(hash)) removed++;
+  const prisma = getPrisma();
+  const all = [...contentIds, ...hashes];
+  if (prisma && all.length > 0) {
+    try {
+      await prisma.spamSignature.deleteMany({ where: { signature: { in: all } } });
+    } catch (error) {
+      container.logger.error('Removing blocklist fingerprints failed:', error);
+    }
+  }
+  return removed;
 }

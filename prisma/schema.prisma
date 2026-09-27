@@ -40,8 +40,8 @@ enum MemberAnalyticsEvent {
 }
 
 /// Blocklist of image fingerprints confirmed to be spam by a moderator.
-/// New uploads matching one of these are auto-actioned. `kind` is "meta" for
-/// exact metadata signatures or "phash" for perceptual hashes (matched by
+/// New uploads matching one of these are auto-actioned. `kind` is "sha" for the
+/// exact image content id (SHA-256) or "phash" for perceptual hashes (matched by
 /// Hamming distance). `severity` distinguishes "scam" (auto-ban on reappearance)
 /// from "spam" (timeout).
 model SpamSignature {

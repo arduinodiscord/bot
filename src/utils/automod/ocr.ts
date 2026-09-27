@@ -3,7 +3,7 @@ import Tesseract from 'tesseract.js';
 import type { Attachment, Message } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { automodConfig } from '../config';
-import { isRasterImage } from './signature';
+import { imageAttachments, proxyPngUrl } from './signature';
 
 // The English model ships inside the image (@tesseract.js-data/eng), so OCR
 // never downloads from a CDN at runtime: a blocked or flaky CDN used to leave
@@ -97,9 +97,7 @@ function releaseOcrSlot(): void {
 }
 
 function readableUrl(a: Attachment): string {
-  const base = a.proxyURL || a.url;
-  const sep = base.includes('?') ? '&' : '?';
-  return `${base}${sep}width=${automodConfig.ocrImageWidth}&height=${automodConfig.ocrImageWidth}`;
+  return proxyPngUrl(a, automodConfig.ocrImageWidth);
 }
 
 async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
@@ -115,7 +113,7 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
 }
 
 /**
- * OCR all raster image attachments on a message; returns concatenated text
+ * OCR the image attachments on a message (incl. forwarded); returns concatenated text
  * (may be ''). `contentIds` are the per-attachment content ids from
  * imageFingerprints (same order); they key the cache. The metadata signature
  * must not be used as a key: an uploader controls it, so a benign image could
@@ -126,14 +124,22 @@ export async function ocrMessage(
   contentIds: Array<string | null> = []
 ): Promise<string> {
   if (!automodConfig.ocrEnabled) return '';
-  const images = [...message.attachments.values()].filter(isRasterImage).slice(0, 4);
+  const images = imageAttachments(message).slice(0, 4);
   const texts = await Promise.all(images.map((a, i) => ocrAttachment(a, contentIds[i] ?? null)));
   return texts.filter(Boolean).join('\n');
 }
 
+/** Jobs in flight per content id: N raiders posting one image share one OCR run. */
+const inflight = new Map<string, Promise<string>>();
+
+/** A recognize() still running after this long means the worker is stuck. */
+const HUNG_JOB_MS = 30_000;
+
 async function ocrAttachment(a: Attachment, key: string | null): Promise<string> {
   const cached = key ? cache.get(key) : undefined;
   if (cached !== undefined) return cached;
+  const shared = key ? inflight.get(key) : undefined;
+  if (shared) return withTimeout(shared, automodConfig.ocrTimeoutMs).then((t) => t ?? '').catch(() => '');
   // Wait (bounded) for a slot rather than skipping outright, so a burst of
   // slow images can't trivially blind OCR for the raid images behind it. A
   // skip is deliberately NOT cached, so it can be retried later. Raid
@@ -144,6 +150,22 @@ async function ocrAttachment(a: Attachment, key: string | null): Promise<string>
   // timeout fires: a timed-out recognize() keeps running in the worker, and
   // releasing early would let new jobs pile up behind it during a raid. While
   // a slow job holds a slot, new images are skipped instead.
+  // If the worker hangs, restart it so the slot (and OCR) isn't lost for good.
+  // Release exactly once, whether the job settles or is abandoned as hung.
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    clearTimeout(hung);
+    if (key) inflight.delete(key);
+    releaseOcrSlot();
+  };
+  const hung = setTimeout(() => {
+    container.logger?.warn(`Automod: OCR job for ${a.id} hung; restarting the OCR worker.`);
+    release();
+    void stopOcr();
+  }, HUNG_JOB_MS);
+  hung.unref?.();
   const job = runOcr(a)
     .then((text) => {
       // Cache genuine completions, even ones that finish after our timeout, so
@@ -157,7 +179,8 @@ async function ocrAttachment(a: Attachment, key: string | null): Promise<string>
       cache.set(key, result);
       return result;
     })
-    .finally(releaseOcrSlot);
+    .finally(release);
+  if (key) inflight.set(key, job);
   try {
     // withTimeout yields null on timeout; runOcr throws on fetch/decode failure.
     // Transient timeouts/errors return '' WITHOUT caching so they can't poison

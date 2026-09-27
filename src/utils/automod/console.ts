@@ -111,12 +111,23 @@ function actionButton(
 }
 
 /** Plain explanation of every alert button, shown on each alert. */
-const BUTTON_GUIDE = [
-  '**Confirm scam**: only for real scam graphics. Deletes the messages and bans the poster, plus other accounts that posted the same image with no text (up to 10). Accounts that posted it with a normal message are not banned. Blocklists the exact image, so anyone who posts it again is banned automatically. Also adds words from the image text to the scam filter.',
-  '**Confirm spam**: deletes the messages, times out the user and blocklists the image as spam. Future posts of it are deleted and the poster is timed out automatically.',
-  '**Time out only** / **Ban this user only** / **Delete messages only**: act on this user or these messages. Nothing is blocklisted. Ban also deletes their last 24 hours of messages.',
-  '**Not spam**: permanently allowlists the image so it is never flagged again, and lifts the timeout the bot applied. Deleted messages cannot be restored.',
-].join('\n');
+/** Button explanations, split across two fields (each field is capped at 1024 chars). */
+const BUTTON_GUIDE: Array<{ name: string; value: string }> = [
+  {
+    name: 'What the confirm buttons do',
+    value: [
+      '**Confirm scam**: only for real scam graphics. Deletes the messages and bans the poster, plus other accounts that posted the same image with no text or a short caption (up to 10). Accounts that posted it with a real message are not banned. Blocklists the exact image: anyone who posts it again with no text, or from a new account, is banned automatically; an established member posting it with text (often a warning) is flagged for you instead. Also adds words from the image text to the scam filter. If every image in the post is a scam, use this; if one is an innocent image the scammer attached, use Ban this user only.',
+      '**Confirm spam**: deletes the messages, times out the user and blocklists the image as spam. Future posts of it are deleted and the poster is timed out automatically.',
+    ].join('\n'),
+  },
+  {
+    name: 'What the other buttons do',
+    value: [
+      '**Time out only** / **Ban this user only** / **Delete messages only**: act on this user or these messages. Nothing is blocklisted. Ban also deletes their last 24 hours of messages.',
+      '**Not spam**: removes the image from the blocklist if it was on it, allowlists it so it is not flagged again, and lifts a timeout the bot applied. It cannot undo a ban or restore deleted messages.',
+    ].join('\n'),
+  },
+];
 
 /** Build the alert message moderators see in the console channel. */
 export function buildAlertPayload(
@@ -252,10 +263,7 @@ export function buildAlertPayload(
     });
   }
 
-  embed.addFields({
-    name: 'What the buttons do',
-    value: BUTTON_GUIDE,
-  });
+  embed.addFields(...BUTTON_GUIDE);
 
   // Row 1: confirmscam, confirm, timeout, ban  (4 buttons)
   // Row 2: delete, dismiss                     (2 buttons)
@@ -355,6 +363,12 @@ const UNKNOWN_MESSAGE = 10008;
  * each handler re-deleted all of them (quadratic API calls under rate limits).
  */
 const deletedRecently = new Map<string, Promise<boolean>>();
+/** Messages confirmed gone (subset of deletedRecently that resolved true). */
+const deletedDone = new Set<string>();
+
+/** How many of these messages are already confirmed deleted. */
+export const countAlreadyDeleted = (messages: Pick<Incident, 'messages'>['messages']): number =>
+  messages.filter((m) => deletedDone.has(m.messageId)).length;
 const DELETED_TTL_MS = 10 * 60_000;
 /** Most messages one incident may delete, as a blast-radius limit. */
 export const MAX_DELETE_PER_INCIDENT = 25;
@@ -367,14 +381,19 @@ export const MAX_DELETE_PER_INCIDENT = 25;
 /** Test-only reset. */
 export function __resetDeletes(): void {
   deletedRecently.clear();
+  deletedDone.clear();
 }
 
 export async function deleteIncidentMessages(
   client: Client,
   incident: Pick<Incident, 'messages'>
 ): Promise<number> {
+  // Messages already gone don't use up the cap: in a big raid every incident
+  // lists the earlier raiders' (already deleted) messages first.
+  const done = countAlreadyDeleted(incident.messages);
+  const todo = incident.messages.filter((m) => !deletedDone.has(m.messageId));
   const results = await Promise.all(
-    incident.messages.slice(0, MAX_DELETE_PER_INCIDENT).map(({ channelId, messageId }) => {
+    todo.slice(0, MAX_DELETE_PER_INCIDENT).map(({ channelId, messageId }) => {
       const pending = deletedRecently.get(messageId);
       if (pending) return pending;
       const attempt = (async () => {
@@ -394,15 +413,21 @@ export async function deleteIncidentMessages(
       })();
       deletedRecently.set(messageId, attempt);
       // Forget failures immediately (so a mod retry works) and successes later.
-      void attempt.then((ok) =>
-        ok
-          ? setTimeout(() => deletedRecently.delete(messageId), DELETED_TTL_MS).unref()
-          : deletedRecently.delete(messageId)
-      );
+      void attempt.then((ok) => {
+        if (!ok) {
+          deletedRecently.delete(messageId);
+          return;
+        }
+        deletedDone.add(messageId);
+        setTimeout(() => {
+          deletedRecently.delete(messageId);
+          deletedDone.delete(messageId);
+        }, DELETED_TTL_MS).unref();
+      });
       return attempt;
     })
   );
-  return results.filter(Boolean).length;
+  return done + results.filter(Boolean).length;
 }
 
 /** Best-effort audit log of a moderation action (no-op without a database). */

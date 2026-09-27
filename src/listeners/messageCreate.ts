@@ -1,7 +1,7 @@
 import { Events, Listener, container } from '@sapphire/framework';
 import { PermissionFlagsBits, type GuildMember, type Message } from 'discord.js';
 import { SERVER_ID, MOD_LOG_CHANNEL_ID, automodConfig } from '../utils/config';
-import { imageSignatures } from '../utils/automod/signature';
+import { imageSignatures, isRaidShaped, messageText } from '../utils/automod/signature';
 import { imageFingerprints, fetchEvidence, type ImageFingerprint } from '../utils/automod/phash';
 import { ocrMessage } from '../utils/automod/ocr';
 import {
@@ -25,7 +25,7 @@ import { isAutomodReady } from '../utils/automod/state';
 import { learningModeActive } from '../utils/automod/learning';
 import { recordAndCluster } from '../utils/automod/globalIndex';
 import { matchKeywords, matchSeedKeywords } from '../utils/automod/keywords';
-import { scoreSignals, WIDE_SPREAD, type Signals, type Tier } from '../utils/automod/score';
+import { scoreSignals, type Signals, type Tier } from '../utils/automod/score';
 import {
   createIncident,
   type Incident,
@@ -39,6 +39,7 @@ import {
   timeoutMember,
   banMember,
   MAX_DELETE_PER_INCIDENT,
+  countAlreadyDeleted,
 } from '../utils/automod/console';
 
 /** Severity order, so a more severe detection can break through the alert cooldown. */
@@ -97,10 +98,15 @@ export class MessageCreateListener extends Listener {
     }
 
     // OCR text feeds the scam-keyword signal; best-effort and may be ''.
-    const ocrText = await ocrMessage(
-      message,
-      fp.images.map((i) => i.contentId)
-    );
+    // Skipped for an exact confirmed-scam match: the outcome is already known,
+    // and waiting on OCR would only delay the ban during a raid.
+    const ocrText =
+      block.exact === 'scam'
+        ? ''
+        : await ocrMessage(
+            message,
+            fp.images.map((i) => i.contentId)
+          );
 
     // New members get a stricter burst threshold so join-then-spam trips
     // faster; tenure is useless for compromised veterans, who are instead
@@ -120,8 +126,9 @@ export class MessageCreateListener extends Listener {
         : {}
     );
 
-    const content = message.content.trim();
+    const content = messageText(message);
     const imageOnly = content === '';
+    const raidShaped = isRaidShaped(content);
 
     // Cross-user clustering: the same image posted by several accounts.
     const cluster = recordAndCluster({
@@ -131,7 +138,8 @@ export class MessageCreateListener extends Listener {
       at: now,
       contentIds,
       hashes,
-      imageOnly,
+      raidShaped,
+      newMember: isNewMember,
     });
 
     // Corroborating content signals.
@@ -157,6 +165,7 @@ export class MessageCreateListener extends Listener {
       massMention,
       ocrHasLink,
       imageOnlyPair,
+      raidShaped,
       burst: detection.level === 'burst',
     };
     const { score, tier, matched: matchedSignals, newAccountOnly } = scoreSignals(signals);
@@ -187,27 +196,30 @@ export class MessageCreateListener extends Listener {
       }
     }
 
-    // Messages this incident covers. The author's own always count. Another
-    // account's message is only included when it also has the raid shape
-    // (images, no text) and this one does too, or the spread is wide: a member
-    // who shared the same diagram with a normal question must never have
-    // their message deleted because someone else reposted it.
-    const msgMap = new Map<string, { channelId: string; messageId: string }>();
+    // Messages this incident covers. The author's own come first (so a
+    // delete cap never skips them). Another account's message is included
+    // only when it has the raid shape AND the raid is established: that
+    // account is new, or 3+ accounts posted the image. A member whose own
+    // post someone reposts, or who shared the image with a real question,
+    // never loses their message over it.
+    const own = new Map<string, { channelId: string; messageId: string }>();
+    const others = new Map<string, { channelId: string; messageId: string }>();
     const raidUserIds = new Set<string>([message.author.id]);
-    for (const e of cluster.events) {
-      if (e.userId === message.author.id) {
-        msgMap.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
-        continue;
-      }
-      if (e.imageOnly) raidUserIds.add(e.userId);
-      if (e.imageOnly && (imageOnly || cluster.userIds.length >= WIDE_SPREAD))
-        msgMap.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
-    }
+    own.set(message.id, { channelId: message.channelId, messageId: message.id });
     if (detection.level !== 'none')
       for (const e of detection.events)
-        msgMap.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
-    msgMap.set(message.id, { channelId: message.channelId, messageId: message.id });
-    const messages = [...msgMap.values()];
+        own.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
+    for (const e of cluster.events) {
+      if (e.userId === message.author.id) {
+        own.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
+        continue;
+      }
+      if (!e.raidShaped) continue;
+      raidUserIds.add(e.userId);
+      if (raidShaped && (e.newMember || cluster.userIds.length >= 3))
+        others.set(e.messageId, { channelId: e.channelId, messageId: e.messageId });
+    }
+    const messages = [...own.values(), ...others.values()];
 
     // Incident level drives the console title/label; the tier drives colour and
     // auto-action.
@@ -266,17 +278,22 @@ export class MessageCreateListener extends Listener {
     if (tier === 'critical' || tier === 'high') {
       // Grab a copy of the image first: once deleted, moderators can't see it.
       const evidenceFetch = fetchEvidence(message);
-      const attempted = Math.min(messages.length, MAX_DELETE_PER_INCIDENT);
+      const attempted = Math.min(
+        messages.length,
+        countAlreadyDeleted(messages) + MAX_DELETE_PER_INCIDENT
+      );
       if (tier === 'critical') {
+        // Evidence first: a ban also purges the user's recent messages.
+        evidence = await evidenceFetch;
         // Auto-ban ONLY the author. Each raider posting the blocklisted image
         // is banned as the author of their own message; the rest of the
         // cluster is listed in the alert for one-click moderator action.
-        const banned = banMember(message.guild, message.author.id, `Automod: ${reason}`).catch(
+        const banned = await banMember(message.guild, message.author.id, `Automod: ${reason}`).catch(
           () => false
         );
-        evidence = await evidenceFetch;
         const deleted = await deleteIncidentMessages(container.client, incident).catch(() => 0);
-        autoAction = { attempted, deleted, banned: await banned };
+        autoAction = { attempted, deleted, banned };
+        incident.autoBanned = banned;
       } else {
         // Time out first so the raider stops posting while deletes run.
         const timedOut = timeoutMember(message.guild, message.author.id, `Automod: ${reason}`).catch(

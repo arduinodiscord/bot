@@ -88,13 +88,16 @@ test('sanity: generated images carry perceptual hashes', async () => {
   assert.notEqual(hashes[0], hashes[1]);
 });
 
-test('1: two established accounts post the identical 2-image message -> high: delete both, time out the second', async () => {
+test('1: two established accounts post the identical 2-image message -> high: second is deleted + timed out, first is listed for mods', async () => {
   const a = addMember('alice');
   const b = addMember('bob');
   const m1 = await post(a, { images: [raidA, raidB], channelId: 'general' });
   const m2 = await post(b, { images: [raidA, raidB], channelId: 'projects' });
 
-  assert.deepEqual(deletedIds(), [m1.id, m2.id].sort());
+  // alice may be the victim of a repost, so her post is left for a moderator
+  // (she is listed under Accounts and would be banned by Confirm scam).
+  assert.deepEqual(deletedIds(), [m2.id]);
+  assert.ok(!deletedIds().includes(m1.id));
   assert.equal(timedOut('bob').length, 1);
   assert.equal(timedOut('alice').length, 0);
 
@@ -102,7 +105,8 @@ test('1: two established accounts post the identical 2-image message -> high: de
   assert.equal(tierOf(last), 'HIGH');
   assert.match(field(last, 'Signal')!, /Same image from 2 accounts/);
   const action = field(last, AUTO_ACTION_FIELD)!;
-  assert.match(action, /✅ Deleted 2\/2 message\(s\)/);
+  assert.match(action, /✅ Deleted 1\/1 message\(s\)/);
+  assert.match(field(last, 'Accounts')!, /alice/);
   assert.match(action, /✅ Timed out/);
   assert.doesNotMatch(action, /FAILED/);
 });
@@ -123,7 +127,8 @@ test('1c: re-encoded copies (different metadata, same pixels) still cluster via 
   const m1 = await post(addMember('p1'), { images: [raidA, raidB] });
   const m2 = await post(addMember('p2'), { images: [reA, reB] });
   assert.equal(tierOf(imageAlerts().at(-1)!), 'HIGH');
-  assert.deepEqual(deletedIds(), [m1.id, m2.id].sort());
+  assert.deepEqual(deletedIds(), [m2.id]);
+  assert.ok(m1.id);
   assert.equal(timedOut('p2').length, 1);
 });
 
@@ -403,4 +408,55 @@ test('S5: a tutorial link, or a URL in a diagram, is not scam evidence', async (
   await post(addMember('s5b'), { images: [diagram], content: 'I followed https://docs.arduino.cc too', channelId: 'help-2' });
   assert.equal(tierOf(imageAlerts().at(-1)!), 'MEDIUM');
   assert.equal(world.deletes.length + world.timeouts.length, 0);
+});
+
+// ------------------------------------------------------------- rework review
+
+test('R1: an established member reposting a known scam with a warning is flagged, not banned', async () => {
+  await addToBlocklist([contentIdOf(raidA)], [], 'mod', 'test', 'scam');
+  await post(addMember('veteran'), {
+    images: [raidA],
+    content: 'Got this in my DMs, is this a scam? Be careful everyone',
+  });
+  assert.equal(world.bans.length, 0);
+  assert.equal(world.deletes.length, 0);
+  assert.equal(tierOf(imageAlerts().at(-1)!), 'MEDIUM');
+});
+
+test('R2: "Not spam" removes a wrongly confirmed image from the blocklist', async () => {
+  await addToBlocklist([contentIdOf(diagram)], [], 'mod', 'mistake', 'scam');
+  await post(addNewMember('victim'), { images: [diagram] });
+  assert.ok(world.bans.some((b) => b.userId === 'victim'));
+  const i = await click('dismiss', incidentIdOf(imageAlerts().at(-1)!));
+  assert.match(i.edits.at(-1)!, /Removed the image\(s\) from the blocklist/);
+  assert.match(i.edits.at(-1)!, /still banned/);
+
+  const bans = world.bans.length;
+  await post(addNewMember('next'), { images: [diagram] });
+  assert.equal(world.bans.length, bans, 'the image no longer auto-bans');
+});
+
+test('R3: a 30-account raid deletes every raider message despite the per-incident cap', async () => {
+  const msgs = [];
+  for (let i = 0; i < 30; i++)
+    msgs.push(await post(addNewMember(`big${i}`), { images: [raidA, raidB], channelId: `c${i}` }));
+  // The first raider scores low (nothing to compare with yet); all others are high.
+  const expected = msgs.slice(1).map((m) => m.id);
+  for (const id of expected) assert.ok(deletedIds().includes(id), `message ${id} deleted`);
+});
+
+test('R4: a short caption does not hide a 3-account raid', async () => {
+  const ids = ['cap1', 'cap2', 'cap3'].map((id) => addMember(id));
+  for (const m of ids) await post(m, { images: [raidA, raidB], content: 'hi', channelId: `ch-${m.id}` });
+  assert.equal(tierOf(imageAlerts().at(-1)!), 'HIGH');
+  assert.equal(timedOut('cap3').length, 1);
+});
+
+test('R5: forwarded scam images are checked like posted ones', async () => {
+  await addToBlocklist([contentIdOf(raidA)], [], 'mod', 'test', 'scam');
+  const fwd = makeMessage(addNewMember('forwarder'), { channelId: 'general' }) as unknown as Record<string, unknown>;
+  const inner = makeMessage(addMember('ghost'), { images: [raidA] }) as unknown as { attachments: unknown };
+  fwd.messageSnapshots = new Map([['snap', { attachments: inner.attachments, content: '' }]]);
+  await listener.run(fwd as unknown as Message);
+  assert.ok(world.bans.some((b) => b.userId === 'forwarder'));
 });

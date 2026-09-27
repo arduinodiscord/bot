@@ -16,6 +16,8 @@ export interface Signals {
   massMention: boolean;      // @everyone / @here written in the message
   ocrHasLink: boolean;    // a URL / invite link inside the image text itself
   imageOnlyPair: boolean; // image-only message with exactly 2 images
+  /** Images with no text, or only a short caption (no question): the raid shape. */
+  raidShaped: boolean;
   burst: boolean;
 }
 
@@ -38,18 +40,34 @@ const CORROBORATING_CAP = 45;
 export const WIDE_SPREAD = 4;
 
 export function scoreSignals(s: Signals): ScoreResult {
-  // Only an exact, mod-confirmed scam image can auto-ban. A perceptual near
-  // match could be an innocent original that a confirmed scam was built on.
-  if (s.scamExact)
+  // Only an exact, mod-confirmed scam image can auto-ban, and only when the
+  // post looks like the raid itself (no real text) or comes from a new
+  // member. An established member posting it with text is usually warning
+  // others ("is this a scam?"): that goes to a moderator instead.
+  if (s.scamExact) {
+    const raid = s.raidShaped || s.newAccount;
     return {
-      score: 100,
-      tier: 'critical',
-      matched: [{ label: 'Known scam image (mod-confirmed)', points: 100 }],
+      score: raid ? 100 : 40,
+      tier: raid ? 'critical' : 'medium',
+      matched: [
+        {
+          label: raid
+            ? 'Known scam image (mod-confirmed)'
+            : 'Known scam image, posted with text by an established member (maybe a warning)',
+          points: raid ? 100 : 40,
+        },
+      ],
       newAccountOnly: false,
     };
+  }
 
   const strong: MatchedSignal[] = [];
-  if (s.spamExact) strong.push({ label: 'Known spam image (mod-confirmed)', points: automodConfig.scoreHigh });
+  // Same idea for a confirmed spam image: an established member posting it
+  // with a real message is not treated as the spam itself.
+  const spamRepost = s.spamExact && (s.raidShaped || s.newAccount);
+  if (spamRepost) strong.push({ label: 'Known spam image (mod-confirmed)', points: automodConfig.scoreHigh });
+  else if (s.spamExact)
+    strong.push({ label: 'Known spam image, posted with text by an established member', points: 40 });
   else if (s.nearBlocklist)
     strong.push({ label: 'Looks like a blocklisted image', points: 50 });
   if (s.clusterUsers >= automodConfig.clusterMinUsers) {
@@ -97,11 +115,12 @@ export function scoreSignals(s: Signals): ScoreResult {
   // words, @everyone/@here, or the two-images-no-text shape the raids use.
   const scamContent =
     s.imageOnlyPair ||
+    (s.raidShaped && s.clusterUsers >= 3) ||
     s.massMention ||
     s.seedKeywordMatches >= 2 ||
     (s.ocrHasLink && s.seedKeywordMatches >= 1);
   const wideSpread = s.clusterUsers >= WIDE_SPREAD || s.fanoutChannels >= WIDE_SPREAD;
-  if (tier === 'high' && !s.spamExact && !scamContent && !wideSpread) tier = 'medium';
+  if (tier === 'high' && !spamRepost && !scamContent && !wideSpread) tier = 'medium';
 
   return { score, tier, matched: [...strong, ...corrob], newAccountOnly };
 }
