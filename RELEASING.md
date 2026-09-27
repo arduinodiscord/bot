@@ -30,6 +30,17 @@ How a change gets from a branch to the production bot.
 
 **Policy: roll forward.** Never edit or delete a migration that has been deployed. To undo one, write a new migration. A code rollback does not undo a schema change, so keep migrations backward compatible with the previous release where possible (add columns before using them, drop them a release later).
 
+## Pre-release checks
+
+- CI is green on the commit being released (build, tests, migrations against Postgres, Docker build).
+- **Once, and after any report of automod misses:** check that Discord's media proxy gives identical thumbnails for two uploads of the same file. The automod's exact image matching (blocklist, allowlist, cross-account matching) depends on it. Upload one image file twice in a test channel, copy both image links, and run:
+
+  ```bash
+  node scripts/check-proxy-determinism.mjs <link-1> <link-2>
+  ```
+
+  `OK` means exact matching works. `DIFFERENT` means confirmed scam images would only be caught by the perceptual near-match (timeout + delete, never auto-ban): stop and fix before releasing.
+
 ## Deploying (Dockge host)
 
 **What gets deployed:** production always runs a **release tag** (`vX.Y.Z`, an annotated tag on `main`, created as above). Never deploy a moving branch to production: `git checkout main` or `git pull` gives you whatever is newest, not what was reviewed. A staging/test deploy may use a branch or a commit SHA, but note the SHA you deployed. Either way the startup log's `Build: <sha>` line is the proof of what is running.
