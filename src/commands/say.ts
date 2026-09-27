@@ -52,7 +52,7 @@ export class SayCommand extends Command {
         .addStringOption((option) =>
           option
             .setName('fields')
-            .setDescription('Optional fields: Name::Value | Name::Value (\\n = line break)')
+            .setDescription('Optional fields: Name::Value | Name::Value (put spaces around |; \\n = line break)')
         )
         .addStringOption((option) =>
           option
@@ -140,14 +140,15 @@ type ParsedFields =
   | { error: string };
 
 /**
- * Parse `Name::Value | Name::Value` into embed fields. `|` separates fields
- * and the first `::` in each separates its name from its value. Malformed
- * input is reported rather than silently dropped.
+ * Parse `Name::Value | Name::Value` into embed fields. A `|` with whitespace
+ * on both sides separates fields (so `||spoiler||` and `a|b` survive), and
+ * the first `::` in each separates its name from its value. Malformed input
+ * is reported rather than silently dropped.
  */
-function parseFields(raw: string | null): ParsedFields {
+export function parseFields(raw: string | null): ParsedFields {
   if (!raw?.trim()) return { fields: [] };
   const fields: { name: string; value: string }[] = [];
-  const segments = raw.split('|').map((s) => s.trim()).filter(Boolean);
+  const segments = raw.split(/\s\|\s/).map((s) => s.trim()).filter(Boolean);
   for (const [i, segment] of segments.entries()) {
     const sep = segment.indexOf('::');
     if (sep === -1)
