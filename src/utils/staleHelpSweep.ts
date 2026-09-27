@@ -4,6 +4,7 @@ import {
   ButtonStyle,
   EmbedBuilder,
   type Client,
+  type Message,
 } from 'discord.js';
 import { container } from '@sapphire/framework';
 import { helpChannelIds, helpAssistConfig } from './config';
@@ -12,13 +13,11 @@ import universalEmbed from './embed';
 
 const SWEEP_INTERVAL_MS = 30 * 60_000;
 
-/** Threads we've nudged, so we can later auto-archive if still abandoned. */
-const nudged = new Map<string, number>();
+const NUDGE_TEXT =
+  "👋 This post has been quiet for a while. If you're sorted, tap **Mark Solved** to close it — otherwise reply with an update (what you've tried, your wiring/code) so a helper can jump back in.";
 
 function nudgePayload() {
-  const embed = new EmbedBuilder(universalEmbed).setDescription(
-    "👋 This post has been quiet for a while. If you're sorted, tap **Mark Solved** to close it — otherwise reply with an update (what you've tried, your wiring/code) so a helper can jump back in."
-  );
+  const embed = new EmbedBuilder(universalEmbed).setDescription(NUDGE_TEXT);
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('solved')
@@ -29,37 +28,49 @@ function nudgePayload() {
 }
 
 /**
+ * Whether `message` is one of our stale-post nudges. Nudge state is derived
+ * from the thread itself rather than memory, so a restart never re-nudges a
+ * post whose last message is already our nudge.
+ */
+function isNudge(message: Message | null, botId: string | undefined): boolean {
+  if (!message || !botId || message.author.id !== botId) return false;
+  return message.embeds.some((embed) => embed.description === NUDGE_TEXT);
+}
+
+/**
  * One pass: nudge open help posts idle past the nudge threshold, and archive
- * those still untouched by a human a while after their nudge. A human reply
- * after the nudge clears the state so the post is treated as live again.
+ * those whose last message is still our nudge after the archive threshold.
+ * Any reply after the nudge makes the post live again (and eligible for a
+ * fresh nudge once it goes quiet).
  */
 async function sweepOnce(client: Client): Promise<void> {
   const now = Date.now();
   const posts = await fetchOpenHelpPosts(client);
-  const live = new Set(posts.map((p) => p.thread.id));
 
-  for (const { thread, lastActivityAt, lastFromBot } of posts) {
-    const nudgedAt = nudged.get(thread.id);
-
-    if (nudgedAt) {
-      const humanReplied = !lastFromBot && lastActivityAt > nudgedAt;
-      if (humanReplied) {
-        nudged.delete(thread.id);
-      } else if (now - nudgedAt >= helpAssistConfig.staleArchiveMs) {
-        await thread.setArchived(true, 'Auto-archived: no activity after nudge').catch(() => null);
-        nudged.delete(thread.id);
-      }
+  for (const { thread, lastActivityAt, lastMessage } of posts) {
+    if (isNudge(lastMessage, client.user?.id)) {
+      if (now - lastActivityAt >= helpAssistConfig.staleArchiveMs)
+        await thread
+          .setArchived(true, 'Auto-archived: no activity after nudge')
+          .catch((error) =>
+            container.logger.warn(
+              `Stale sweep: could not archive thread ${thread.id}:`,
+              error
+            )
+          );
       continue;
     }
 
-    if (now - lastActivityAt >= helpAssistConfig.staleNudgeMs) {
-      const sent = await thread.send(nudgePayload()).catch(() => null);
-      if (sent) nudged.set(thread.id, now);
-    }
+    if (now - lastActivityAt >= helpAssistConfig.staleNudgeMs)
+      await thread
+        .send(nudgePayload())
+        .catch((error) =>
+          container.logger.warn(
+            `Stale sweep: could not nudge thread ${thread.id}:`,
+            error
+          )
+        );
   }
-
-  // Forget state for threads that are no longer open (solved/archived/deleted).
-  for (const id of nudged.keys()) if (!live.has(id)) nudged.delete(id);
 }
 
 /**
