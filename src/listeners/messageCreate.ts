@@ -24,7 +24,7 @@ import { isBlocklisted, isAllowlisted } from '../utils/automod/blocklist';
 import { learningModeActive } from '../utils/automod/learning';
 import { recordAndCluster } from '../utils/automod/globalIndex';
 import { matchKeywords } from '../utils/automod/keywords';
-import { scoreSignals } from '../utils/automod/score';
+import { scoreSignals, type Tier } from '../utils/automod/score';
 import {
   createIncident,
   type Incident,
@@ -32,10 +32,15 @@ import {
 } from '../utils/automod/incidents';
 import {
   buildAlertPayload,
+  attemptedAutoAction,
   deleteIncidentMessages,
+  type AutoActionResult,
   timeoutMember,
   banMember,
 } from '../utils/automod/console';
+
+/** Severity order, so a more severe detection can break through the alert cooldown. */
+const TIER_RANK: Record<Tier, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
 
 export class MessageCreateListener extends Listener {
   public constructor(context: Listener.Context, options: Listener.Options) {
@@ -50,9 +55,14 @@ export class MessageCreateListener extends Listener {
     if (message.member && this.isImmune(message.member)) return;
 
     // Text-flooding and cross-channel question spam run independently of the
-    // image automod below: they key off message text, not attachments.
-    await this.runFlood(message);
-    await this.runCrosspost(message);
+    // image automod below: they key off message text, not attachments. A
+    // failure in either must not stop the image checks.
+    await this.runFlood(message).catch((error) =>
+      container.logger.error('Automod: flood detector failed:', error)
+    );
+    await this.runCrosspost(message).catch((error) =>
+      container.logger.error('Automod: crosspost detector failed:', error)
+    );
 
     const signatures = imageSignatures(message);
     if (signatures.length === 0) return;
@@ -64,7 +74,12 @@ export class MessageCreateListener extends Listener {
 
     // Moderator-vetted images are never spam: short-circuit before spending any
     // OCR / clustering work on them.
-    if (isAllowlisted(signatures, hashes)) return;
+    if (isAllowlisted(signatures, hashes)) {
+      container.logger.info(
+        `Automod: image from ${message.author.id} in ${message.channelId} matched the allowlist ("Not spam"); skipped.`
+      );
+      return;
+    }
 
     // OCR text feeds the scam-keyword signal; best-effort and may be ''.
     const ocrText = await ocrMessage(message);
@@ -150,9 +165,6 @@ export class MessageCreateListener extends Listener {
       }
     }
 
-    if (!shouldAlert(message.author.id, now)) return;
-    markAlerted(message.author.id, now);
-
     // Deduped message list: cluster events + per-user detection events + the
     // current message, keyed by message id.
     const msgMap = new Map<string, { channelId: string; messageId: string }>();
@@ -219,36 +231,46 @@ export class MessageCreateListener extends Listener {
 
     // Tiered enforcement, capped at the approved ceiling: only a confirmed scam
     // blocklist match (the sole path to `critical`) auto-bans; `high` deletes
-    // and times out; medium/low alert only and wait for a human.
-    let autoActed = false;
+    // and times out; medium/low alert only and wait for a human. Enforcement
+    // always runs — the alert cooldown below only throttles mod-log posts.
+    let autoAction: AutoActionResult | null = null;
     if (tier === 'critical') {
-      await deleteIncidentMessages(container.client, incident).catch(() => 0);
       // Auto-ban ONLY the confirmed-scam author. Cluster members are joined by
-      // lenient pHash similarity and are not independently confirmed, so we do
-      // not auto-ban them here — each raider posting the blocklisted image is
-      // banned as the author of their own message. The cluster is still recorded
-      // on the incident and surfaced in the alert for one-click mod action.
-      await banMember(
-        message.guild,
-        message.author.id,
-        `Automod: ${reason}`
-      ).catch(() => false);
-      autoActed = true;
+      // similarity and are not independently confirmed, so we do not auto-ban
+      // them here — each raider posting the blocklisted image is banned as the
+      // author of their own message. The cluster is still recorded on the
+      // incident and surfaced in the alert for one-click mod action.
+      autoAction = {
+        attempted: incident.messages.length,
+        deleted: await deleteIncidentMessages(container.client, incident).catch(() => 0),
+        banned: await banMember(message.guild, message.author.id, `Automod: ${reason}`).catch(
+          () => false
+        ),
+      };
     } else if (tier === 'high') {
-      const deleted = await deleteIncidentMessages(
-        container.client,
-        incident
-      ).catch(() => 0);
-      const timedOut = await timeoutMember(
-        message.guild,
-        message.author.id,
-        `Automod: ${reason}`
-      ).catch(() => false);
-      autoActed = deleted > 0 || timedOut;
+      autoAction = {
+        attempted: incident.messages.length,
+        deleted: await deleteIncidentMessages(container.client, incident).catch(() => 0),
+        timedOut: await timeoutMember(message.guild, message.author.id, `Automod: ${reason}`).catch(
+          () => false
+        ),
+      };
+      incident.autoTimedOut = autoAction.timedOut;
     }
 
+    const rank = TIER_RANK[tier];
+    if (!shouldAlert(message.author.id, now, rank)) {
+      container.logger.info(
+        `Automod: alert for ${message.author.id} suppressed by cooldown (score ${score}, ${tier})${
+          autoAction ? `; auto-action: ${JSON.stringify(autoAction)}` : ''
+        }.`
+      );
+      return;
+    }
+    markAlerted(message.author.id, now, rank);
+
     const previewUrl = message.attachments.first()?.proxyURL;
-    await this.postAlert(message, incident, autoActed, previewUrl);
+    await this.postAlert(message, incident, autoAction, previewUrl);
   }
 
   /**
@@ -289,15 +311,17 @@ export class MessageCreateListener extends Listener {
 
     // Flooding is usually a habit, not an attack, so we only auto-act when a
     // server opts in; otherwise a human decides from the console.
-    let autoActed = false;
+    let autoAction: AutoActionResult | null = null;
     if (automodConfig.floodAutoTimeout)
-      autoActed = await timeoutMember(
-        message.guild,
-        message.author.id,
-        `Automod: ${incident.reason}`
-      ).catch(() => false);
+      autoAction = {
+        timedOut: await timeoutMember(
+          message.guild,
+          message.author.id,
+          `Automod: ${incident.reason}`
+        ).catch(() => false),
+      };
 
-    await this.postAlert(message, incident, autoActed);
+    await this.postAlert(message, incident, autoAction);
   }
 
   /**
@@ -348,20 +372,22 @@ export class MessageCreateListener extends Listener {
     // of duplicates, so it only alerts and waits for a human. Gated behind an
     // opt-in flag so a false positive can't silently delete a legit message
     // until a server has watched the detector and trusts it.
-    let autoActed = false;
+    let autoAction: AutoActionResult | null = null;
     if (
       automodConfig.crosspostAutoDelete &&
       detection.kind === 'similar' &&
       messages.length > 1
     ) {
-      const deleted = await deleteIncidentMessages(container.client, {
-        ...incident,
-        messages: messages.slice(1),
-      }).catch(() => 0);
-      autoActed = deleted > 0;
+      const duplicates = messages.slice(1);
+      autoAction = {
+        attempted: duplicates.length,
+        deleted: await deleteIncidentMessages(container.client, {
+          messages: duplicates,
+        }).catch(() => 0),
+      };
     }
 
-    await this.postAlert(message, incident, autoActed);
+    await this.postAlert(message, incident, autoAction);
   }
 
   private isImmune(member: GuildMember): boolean {
@@ -382,7 +408,7 @@ export class MessageCreateListener extends Listener {
   private async postAlert(
     message: Message<true>,
     incident: Incident,
-    autoActed: boolean,
+    autoAction: AutoActionResult | null,
     previewUrl?: string
   ): Promise<void> {
     const channel = await container.client.channels
@@ -399,8 +425,16 @@ export class MessageCreateListener extends Listener {
       message.member ??
       (await message.guild.members.fetch(message.author.id).catch(() => null));
 
-    await channel.send(
-      buildAlertPayload(incident, member, autoActed, previewUrl)
-    );
+    try {
+      await channel.send(buildAlertPayload(incident, member, autoAction, previewUrl));
+    } catch (error) {
+      // The auto-action (if any) already happened; make sure it is not lost.
+      container.logger.error(
+        `Automod: posting alert to mod log failed (missing Send Messages / Embed Links?). Incident ${incident.id} for ${incident.userId}: ${incident.reason}${
+          attemptedAutoAction(autoAction) ? `; auto-action: ${JSON.stringify(autoAction)}` : ''
+        }`,
+        error
+      );
+    }
   }
 }

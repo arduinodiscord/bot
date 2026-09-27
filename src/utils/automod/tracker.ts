@@ -38,7 +38,7 @@ const NONE: Detection = {
 /** Per-user recent image events, pruned to the longest detection window. */
 const userEvents = new Map<string, ImageEvent[]>();
 /** Last time we raised an alert for a user, for cooldown suppression. */
-const lastAlertAt = new Map<string, number>();
+const lastAlertAt = new Map<string, { at: number; rank: number }>();
 
 const retentionMs = () =>
   Math.max(automodConfig.burstWindowMs, automodConfig.fanoutWindowMs);
@@ -159,14 +159,19 @@ function detectPerceptualFanout(events: ImageEvent[]): Detection | null {
   return null;
 }
 
-/** Whether enough time has passed since the last alert for this user. */
-export function shouldAlert(userId: string, now: number): boolean {
+/**
+ * Whether to post an alert for this user: the cooldown has passed, or this
+ * detection is more severe (`rank`) than the one last alerted, so an
+ * escalation (e.g. medium -> high) is never hidden by the cooldown. The
+ * cooldown only throttles alerts; it must never gate enforcement.
+ */
+export function shouldAlert(userId: string, now: number, rank = 0): boolean {
   const last = lastAlertAt.get(userId);
-  return !last || now - last >= automodConfig.alertCooldownMs;
+  return !last || now - last.at >= automodConfig.alertCooldownMs || rank > last.rank;
 }
 
-export function markAlerted(userId: string, now: number): void {
-  lastAlertAt.set(userId, now);
+export function markAlerted(userId: string, now: number, rank = 0): void {
+  lastAlertAt.set(userId, { at: now, rank });
 }
 
 /** Forget a user's tracked state (e.g. after a moderator resolves an alert). */
@@ -186,7 +191,7 @@ const sweep = setInterval(() => {
     else userEvents.set(userId, fresh);
   }
   const cooldownHorizon = Date.now() - automodConfig.alertCooldownMs;
-  for (const [userId, at] of lastAlertAt)
-    if (at < cooldownHorizon) lastAlertAt.delete(userId);
+  for (const [userId, last] of lastAlertAt)
+    if (last.at < cooldownHorizon) lastAlertAt.delete(userId);
 }, 5 * 60_000);
 sweep.unref();

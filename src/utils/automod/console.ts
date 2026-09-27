@@ -49,20 +49,48 @@ const LEVEL_TITLE: Record<IncidentLevel, string> = {
   crosspost: '🚨 Possible cross-channel question spam',
 };
 
-/** What an automatic action did, shown when the bot acted before a human. */
-const HIGH_CONFIDENCE_NOTE =
-  'High-confidence signal: the messages were deleted and the user was timed out automatically. Review and escalate or reverse below.';
-const CRITICAL_NOTE =
-  'Known scam image: the messages were deleted and the user was banned automatically. Review and reverse below if needed.';
-const AUTO_ACTION_NOTE: Record<IncidentLevel, string> = {
-  fanout: HIGH_CONFIDENCE_NOTE,
-  blocklist: HIGH_CONFIDENCE_NOTE,
-  burst: HIGH_CONFIDENCE_NOTE,
-  suspect: HIGH_CONFIDENCE_NOTE,
-  flood: 'The user was timed out automatically. Review and escalate or reverse below.',
-  crosspost:
-    'The duplicate crossposts were deleted automatically (the first copy was kept). Review and escalate or reverse below.',
-};
+/**
+ * What the bot actually did automatically before a human saw the alert. Each
+ * field is only present when that action was attempted, so the alert can
+ * report real outcomes instead of assuming success.
+ */
+export interface AutoActionResult {
+  /** Messages deleted (or already gone) out of `attempted`. */
+  deleted?: number;
+  attempted?: number;
+  timedOut?: boolean;
+  banned?: boolean;
+}
+
+const tick = (ok: boolean) => (ok ? '✅' : '❌');
+
+/** Human-readable summary of an auto-action, flagging anything that failed. */
+function describeAutoAction(result: AutoActionResult): string {
+  const parts: string[] = [];
+  if (result.attempted !== undefined)
+    parts.push(
+      `${tick(result.deleted === result.attempted)} Deleted ${result.deleted ?? 0}/${result.attempted} message(s)`
+    );
+  if (result.timedOut !== undefined)
+    parts.push(`${tick(result.timedOut)} ${result.timedOut ? 'Timed out' : 'Timeout FAILED'}`);
+  if (result.banned !== undefined)
+    parts.push(`${tick(result.banned)} ${result.banned ? 'Banned' : 'Ban FAILED'}`);
+  const failed =
+    (result.attempted !== undefined && result.deleted !== result.attempted) ||
+    result.timedOut === false ||
+    result.banned === false;
+  return (
+    parts.join('\n') +
+    (failed
+      ? '\n**Some actions failed** — check the bot has Manage Messages / Moderate Members / Ban Members and that its role sits above the user\'s. Act manually below.'
+      : '\nReview and escalate or reverse below.')
+  );
+}
+
+/** Whether an auto-action result recorded any attempted action. */
+export const attemptedAutoAction = (result: AutoActionResult | null): result is AutoActionResult =>
+  result !== null &&
+  (result.attempted !== undefined || result.timedOut !== undefined || result.banned !== undefined);
 
 /** One moderation action button bound to an incident id. */
 function actionButton(
@@ -81,7 +109,7 @@ function actionButton(
 export function buildAlertPayload(
   incident: Incident,
   member: GuildMember | null,
-  autoActed: boolean,
+  autoAction: AutoActionResult | null,
   previewUrl?: string
 ): MessageCreateOptions {
   const channelMentions =
@@ -186,10 +214,8 @@ export function buildAlertPayload(
 
   embed.addFields({ name: 'Jump to messages', value: jumpLinks });
 
-  if (autoActed) {
-    const autoNote =
-      incident.tier === 'critical' ? CRITICAL_NOTE : AUTO_ACTION_NOTE[incident.level];
-    embed.addFields({ name: '🔒 Auto-action taken', value: autoNote });
+  if (attemptedAutoAction(autoAction)) {
+    embed.addFields({ name: '🔒 Auto-action', value: describeAutoAction(autoAction) });
   }
 
   if (incident.learning) {
@@ -226,11 +252,23 @@ export async function timeoutMember(
   reason: string
 ): Promise<boolean> {
   const member = await guild.members.fetch(userId).catch(() => null);
-  if (!member || !member.moderatable) return false;
+  if (!member) {
+    container.logger.warn(`Automod: cannot time out ${userId}: not in the guild.`);
+    return false;
+  }
+  if (!member.moderatable) {
+    container.logger.warn(
+      `Automod: cannot time out ${userId}: missing Moderate Members or their role is above the bot's.`
+    );
+    return false;
+  }
   return member
     .timeout(automodConfig.timeoutMs, reason)
     .then(() => true)
-    .catch(() => false);
+    .catch((error) => {
+      container.logger.warn(`Automod: timing out ${userId} failed:`, error);
+      return false;
+    });
 }
 
 /**
@@ -255,26 +293,52 @@ export async function banMember(
   reason: string
 ): Promise<boolean> {
   const member = await guild.members.fetch(userId).catch(() => null);
-  if (member && (!member.bannable || isAutomodImmune(member))) return false;
+  if (member && isAutomodImmune(member)) {
+    container.logger.warn(`Automod: refusing to ban ${userId}: member is automod-immune.`);
+    return false;
+  }
+  if (member && !member.bannable) {
+    container.logger.warn(
+      `Automod: cannot ban ${userId}: missing Ban Members or their role is above the bot's.`
+    );
+    return false;
+  }
   return guild.members
     .ban(userId, { reason, deleteMessageSeconds: 24 * 60 * 60 })
     .then(() => true)
-    .catch(() => false);
+    .catch((error) => {
+      container.logger.warn(`Automod: banning ${userId} failed:`, error);
+      return false;
+    });
 }
 
-/** Delete every message recorded on an incident. Returns the count deleted. */
+/** Discord error code for a message that no longer exists. */
+const UNKNOWN_MESSAGE = 10008;
+
+/**
+ * Delete every message recorded on an incident. Returns how many are gone —
+ * a message that was already deleted (by its author, a mod, or an earlier
+ * pass) counts as gone, since the goal is achieved.
+ */
 export async function deleteIncidentMessages(
   client: Client,
-  incident: Incident
+  incident: Pick<Incident, 'messages'>
 ): Promise<number> {
   let deleted = 0;
   for (const { channelId, messageId } of incident.messages) {
     const channel = await client.channels.fetch(channelId).catch(() => null);
-    if (!channel || !channel.isTextBased() || channel.isDMBased()) continue;
+    if (!channel || !channel.isTextBased() || channel.isDMBased()) {
+      container.logger.warn(`Automod: cannot delete ${messageId}: channel ${channelId} unavailable.`);
+      continue;
+    }
     const ok = await channel.messages
       .delete(messageId)
       .then(() => true)
-      .catch(() => false);
+      .catch((error: { code?: number }) => {
+        if (error?.code === UNKNOWN_MESSAGE) return true;
+        container.logger.warn(`Automod: deleting ${messageId} in ${channelId} failed:`, error);
+        return false;
+      });
     if (ok) deleted++;
   }
   return deleted;

@@ -46,6 +46,8 @@ export interface Incident {
   severity: 'scam' | 'spam';
   /** Whether this alert was posted by learning mode below the normal tier gate. */
   learning: boolean;
+  /** Set when the bot timed the user out automatically, so "Not spam" can undo it. */
+  autoTimedOut?: boolean;
 }
 
 /**
@@ -54,7 +56,9 @@ export interface Incident {
  * the bot restarts, open alerts simply expire (their buttons report this).
  */
 const incidents = new Map<string, Incident>();
-const TTL_MS = 60 * 60 * 1000;
+// Volunteer moderators often reach an alert hours later; keep it actionable
+// for a day. Incidents are small, and the sweep below bounds the map.
+const TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Input type for `createIncident`. The six scoring/enrichment fields are
@@ -89,6 +93,22 @@ export const getIncident = (id: string): Incident | undefined =>
   incidents.get(id);
 
 export const deleteIncident = (id: string): boolean => incidents.delete(id);
+
+/**
+ * Atomically take an incident for handling: returns it and removes it from the
+ * store, so a second moderator clicking at the same moment gets nothing
+ * instead of repeating the action. Put it back with `restoreIncident` if the
+ * action fails and should be retryable.
+ */
+export function claimIncident(id: string): Incident | undefined {
+  const incident = incidents.get(id);
+  if (incident) incidents.delete(id);
+  return incident;
+}
+
+export function restoreIncident(incident: Incident): void {
+  incidents.set(incident.id, incident);
+}
 
 const sweep = setInterval(() => {
   const horizon = Date.now() - TTL_MS;
