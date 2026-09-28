@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [revamp, staging, main]
+  pull_request:
+    branches: [revamp, staging, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      # postinstall runs `prisma generate`; no DATABASE_URL is needed for it
+      # or for `prisma validate` (prisma.config.ts omits the datasource).
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npm run build
+      - run: npm test
+        env:
+          BOT_TOKEN: test
+
+  # Apply every migration to a real Postgres (same major as docker-compose),
+  # then fail if the migrated database doesn't match schema.prisma, i.e. a
+  # schema change was committed without a matching migration or vice versa.
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arduino
+          POSTGRES_PASSWORD: arduino
+          POSTGRES_DB: arduino
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arduino"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # prisma.config.ts only defines a datasource when this is set.
+      DATABASE_URL: postgresql://arduino:arduino@localhost:5432/arduino
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      # --exit-code: 0 = no drift, 2 = drift, 1 = error.
+      - run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+
+  docker:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: arduino
+          POSTGRES_PASSWORD: arduino
+          POSTGRES_DB: arduino
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U arduino" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build --build-arg GIT_SHA=${{ github.sha }} -t arduino-bot:ci .
+      # Run the image exactly as docker-compose does (same command, same
+      # non-root user), against a real Postgres: migrations must apply, and
+      # the bot must load every piece, the OCR model and the DB, and get as
+      # far as logging in. A dummy token makes login fail, which is expected.
+      - name: Smoke-test the container
+        run: |
+          set -o pipefail
+          timeout 90 docker run --rm --network host \
+            -e BOT_TOKEN=ci-dummy-token \
+            -e DATABASE_URL=postgresql://arduino:arduino@localhost:5432/arduino \
+            arduino-bot:ci \
+            sh -c "node_modules/.bin/prisma migrate deploy && exec node dist/src/index.js" \
+            2>&1 | tee smoke.log || true
+          grep -q "migrations have been successfully applied\|No pending migrations" smoke.log
+          grep -q "Attempting to connect to discord client" smoke.log
+          # Login with a dummy token must be the only failure.
+          grep -qi "TokenInvalid\|invalid token\|An invalid token was provided" smoke.log
+          ! grep -qiE "Cannot find module|EACCES|permission denied|SyntaxError|failed to load" smoke.log

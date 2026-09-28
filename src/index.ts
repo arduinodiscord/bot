@@ -1,8 +1,7 @@
 import { SapphireClient, Logger, LogLevel } from '@sapphire/framework';
-import { EmbedBuilder, GatewayIntentBits } from 'discord.js';
+import { ActivityType, GatewayIntentBits, Partials } from 'discord.js';
 import { BOT_TOKEN } from './utils/config';
 import { version } from '../package.json';
-// import './utils/db';
 
 const logger = new Logger(LogLevel.Info);
 
@@ -11,19 +10,16 @@ const client = new SapphireClient({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildInvites,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages,
   ],
+  // Leave events for members not in the cache (most of a 41k-member server)
+  // are only emitted as partials; without these they are silently dropped.
+  partials: [Partials.GuildMember, Partials.User],
   presence: {
-    activities: [{
-      name: `/help | v${version}`,
-      type: 3
-    }]
-  }
-})
+    activities: [{ name: `/tag • v${version}`, type: ActivityType.Watching }],
+  },
+});
 
-logger.info('Attempting to connect to discord client...')
-client.login(BOT_TOKEN)
-
-export default (new EmbedBuilder().setFooter({ text: 'Arduino Bot • GPL-3.0 • /tag' }).setColor('#dc5b05').toJSON())
+logger.info('Attempting to connect to discord client...');
+void client.login(BOT_TOKEN);
