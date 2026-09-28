@@ -160,7 +160,7 @@ Type `/` in your server — the bot's commands should appear:
 | `/openposts` | everyone (ephemeral) | Digest of open help posts, oldest-waiting first |
 | `/ping`, `/about` | everyone | Health check / bot info |
 | `/say` | Manage Server | Send a custom embed as the bot. `description` and field values take a literal `\n` for a line break. `fields` format: `Name::Value \| Name::Value` (e.g. `Rules::Be nice \| Help::Ask in #help`) |
-| **Request more info** (message context menu: right-click a message → **Apps**) | everyone (cooldown; none for Manage Messages) | Replies to that message with the `needinfo` checklist for its author |
+| **Request more info** (message context menu: right-click a message → **Apps**) | roles in `REQUEST_INFO_ROLE_IDS` and staff (cooldown; none for Manage Messages) | Replies to that message with the `needinfo` checklist for its author |
 
 **Automod console active?**
 Confirm `MOD_LOG_CHANNEL_ID` is set (the bot logs a startup warning if it isn't). Post a test image in two different channels quickly — you should see an alert appear in the mod-log channel within seconds.
@@ -295,6 +295,7 @@ The English Tesseract model ships with the image (`@tesseract.js-data/eng`) and 
 | `TAG_SUGGEST_ENABLED` | `true` | Keyword → tag auto-suggestion |
 | `CODE_FORMAT_SUGGEST_ENABLED` | `true` | Nudge for unformatted code pastes |
 | `ASK_SUGGEST_ENABLED` | `false` | Nudge for "can I ask?" / "anyone here?" messages |
+| `REQUEST_INFO_ROLE_IDS` | *(none)* | Comma-separated role IDs allowed to use the "Request more info" message command. Staff (Manage Messages) can always use it; unset means staff only. Usually the same helper/Trusted roles as below. |
 | `SUGGEST_IMMUNE_ROLE_IDS` | *(none)* | Comma-separated role IDs whose holders never receive suggestions (Trusted, Knowledgeable, Helper, Moderator, etc.). Self-assignable notification roles should **not** be listed. |
 | `SUGGEST_IGNORE_CHANNEL_IDS` | *(none)* | Comma-separated channel IDs where suggestions are suppressed entirely (e.g. staff channels). Listing a forum channel's ID silences all its threads. |
 | `HELP_AUTO_NEEDINFO` | `false` | Set `true` to auto-post a concise checklist when a new help post is thin. Off by default — enable after observing the Mark Solved rollout. |

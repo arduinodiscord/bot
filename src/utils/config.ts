@@ -83,6 +83,14 @@ export const suggestIgnoreChannelIds = idList(process.env.SUGGEST_IGNORE_CHANNEL
 export const suggestImmuneRoleIds = idList(process.env.SUGGEST_IMMUNE_ROLE_IDS);
 
 /**
+ * Role IDs allowed to use the "Request more info" message command (helpers,
+ * Trusted, etc.). Staff (Manage Messages) can always use it. Unset means staff
+ * only: a bot pinging someone with "how to ask" should come from a helper, not
+ * from any member.
+ */
+export const requestInfoRoleIds = idList(process.env.REQUEST_INFO_ROLE_IDS);
+
+/**
  * Channels treated as "help" channels. Entries may be **forum** channels (each
  * post is a thread) or **regular text** channels (threads opened inside them get
  * the same treatment): new help threads get a "Mark Solved" button and, when

@@ -70,7 +70,7 @@ All active development is on `revamp`. The branch adds substantial new features 
 
 *Phase 1* — reduces repetitive load on community helpers:
 - Keyword → tag auto-suggest (`src/listeners/tagSuggest.ts`): tag entries each carry a `suggest: { pattern, prompt }` field; the listener matches incoming messages and offers a one-click tag button with a per-user cooldown. Toggle: `TAG_SUGGEST_ENABLED`.
-- "Request more info" message context-menu (`src/commands/requestInfo.ts`): right-click any message to post the `needinfo` checklist to the asker in one click.
+- "Request more info" message context-menu (`src/commands/requestInfo.ts`): right-click any message to post the `needinfo` checklist to the asker in one click. Limited to `REQUEST_INFO_ROLE_IDS` holders and staff (unset = staff only).
 - Solve workflow: `/solved [helper]` command + "Mark Solved" button on new help threads. Shared logic in `src/utils/solveThread.ts` titles the thread with a checkmark, credits the helper, and archives. OP or staff only.
 
 *Phase 2* — broader coverage and close-the-loop on help posts:

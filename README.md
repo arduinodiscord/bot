@@ -191,7 +191,8 @@ the most questions:
   three suggestions in specific channels (e.g. staff channels). Listing a forum
   channel's ID silences all its threads.
 - **"Request more info" context-menu** — right-click any message → *Request more
-  info* to post the `needinfo` checklist to the asker in one click.
+  info* to post the `needinfo` checklist to the asker in one click. Helpers
+  (`REQUEST_INFO_ROLE_IDS`) and staff only.
 - **Auto-needinfo on thin posts** — when a new help thread lacks substance (no
   code, image, URL, or inline code, and the post title + body together are under
   `HELP_NEEDINFO_MIN_CHARS` characters), the bot sends a concise checklist and the

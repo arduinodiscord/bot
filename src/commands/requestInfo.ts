@@ -7,6 +7,20 @@ import {
   type Message,
 } from 'discord.js';
 import { resolveTag } from '../utils/resolveTag';
+import { requestInfoRoleIds } from '../utils/config';
+
+/**
+ * Whether a member may use "Request more info": staff always; otherwise only
+ * holders of a configured helper role. Accepts both cached members (roles
+ * cache) and raw interaction members (role id array).
+ */
+export function mayRequestInfo(
+  isStaff: boolean,
+  roleIds: readonly string[],
+  allowed: readonly string[] = requestInfoRoleIds
+): boolean {
+  return isStaff || roleIds.some((id) => allowed.includes(id));
+}
 
 /** Per-invoker cooldown so the long checklist can't be spammed at people. */
 const COOLDOWN_MS = 30_000;
@@ -41,6 +55,21 @@ export class RequestInfoCommand extends Command {
   ) {
     if (!interaction.isMessageContextMenuCommand()) return;
 
+    const isStaff =
+      interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages) ??
+      false;
+    const member = interaction.member;
+    const roleIds = !member
+      ? []
+      : Array.isArray(member.roles)
+        ? member.roles
+        : [...member.roles.cache.keys()];
+    if (!mayRequestInfo(isStaff, roleIds))
+      return interaction.reply({
+        content: 'Only helpers and staff can use Request more info.',
+        flags: MessageFlags.Ephemeral,
+      });
+
     // Interaction permissions are resolved for this channel (overwrites
     // included), so read-only channels are refused here.
     const sendFlag = interaction.channel?.isThread()
@@ -64,9 +93,6 @@ export class RequestInfoCommand extends Command {
         flags: MessageFlags.Ephemeral,
       });
 
-    const isStaff =
-      interaction.memberPermissions?.has(PermissionFlagsBits.ManageMessages) ??
-      false;
     const now = Date.now();
     const last = lastUsed.get(interaction.user.id);
     if (!isStaff && last && now - last < COOLDOWN_MS)
