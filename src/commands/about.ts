@@ -1,21 +1,24 @@
 import { ApplicationCommandRegistry, Command } from '@sapphire/framework';
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, InteractionContextType } from 'discord.js';
 import { version } from './../../package.json';
-import universalEmbed from '../index'
+import universalEmbed from '../utils/embed';
 
 export class AboutCommand extends Command {
   public constructor(context: Command.Context, options: Command.Options) {
     super(context, {
       ...options,
       name: 'about',
-      description: 'Retrieve information about this bot.',
+      description: 'Show information about this bot.',
     });
   }
   public override registerApplicationCommands(
     registry: ApplicationCommandRegistry
   ) {
     registry.registerChatInputCommand((builder) => {
-      builder.setName(this.name).setDescription(this.description);
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+        .setContexts(InteractionContextType.Guild);
     });
   }
 

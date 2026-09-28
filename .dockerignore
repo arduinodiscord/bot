@@ -1,2 +1,36 @@
+# Only package*.json, prisma/, prisma.config.ts, tsconfig.json and src/ are
+# needed to build the image. Everything else stays out of the build context —
+# above all secrets, which `COPY . .` would otherwise bake into a layer.
+
+# Secrets / local environment
+.env
+.env.*
+
+# Build output and dependencies (rebuilt inside the image)
 node_modules
 dist
+dist-test
+build
+coverage
+*.tsbuildinfo
+*.log
+
+# VCS, editor and agent state
+.git
+.gitignore
+.github
+.vscode
+.idea
+.claude
+
+# Local working files and docs (not needed at runtime)
+local
+docs
+*.md
+spam_example.png
+scratch.md
+
+# Container config itself
+Dockerfile
+.dockerignore
+docker-compose*.yml
