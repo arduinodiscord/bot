@@ -39,7 +39,7 @@ const tags: Record<string, Tag> = {
         )
         .setTitle('🚫 NO AI ZONE')
         .setDescription(
-          "This server is a **NO AI** zone. AI-generated content is not allowed. That includes ChatGPT, Midjourney, DALL-E and similar tools, and it covers code, schematics, and anything else AI can generate, including requests for help with it.\n\nIf you have a question, ask the community. You learn more by working through a problem with other members than by having a tool do it for you.\n\nDo NOT use AI to reply to users. If someone is using AI for their project, do not assist.",
+          "This server is a **NO AI** zone. AI-generated content is not allowed. That includes ChatGPT, Midjourney, DALL-E and similar tools, and it covers code, schematics, and anything else AI can generate, including requests for help with it, and advice.\n\nIf you have a question, ask the community. You learn more by working through a problem with other members than by having a tool do it for you.\n\nDo NOT use AI to reply to users. If someone is using AI for their project, do not assist. Report AI usage to mods for its removal.",
         )
         .setFooter({
           text: 'Help us keep this a NO AI zone.\n\nAnswering someone with AI does them no favors. It holds back their learning.',
@@ -103,7 +103,7 @@ const tags: Record<string, Tag> = {
           {
             name: '1. Is your Serial monitor, or any 3D printer software open?',
             value:
-              'If it is, close it, so the IDE can upload without a conflict. Only have one IDE open at a time, since multiple open IDEs can cause problems. Close them all before uploading, and try restarting your PC.',
+              'If YES, close it, so the IDE can upload without a conflict. Only have one IDE open at a time, since multiple open IDEs can cause problems. Close them all before uploading, and try restarting your PC.',
           },
           {
             name: '2. Have you selected the right port in your IDE?',
@@ -126,8 +126,8 @@ const tags: Record<string, Tag> = {
             name: '5. Are your drivers installed?',
             value:
               "Check your drivers. Sometimes uninstalling them, reinstalling them, and rebooting the PC fixes it. Clone boards often use the **CH340 USB-Serial** chip, which isn't supported by default. Check the name printed on the small SMD USB-Serial chip on your board (not the big one).\n" +
-              '- **[How to install CH340 drivers](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all)**\n' +
-              "- If you have an FTDI chip: **[how to install FTDI drivers](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all)**. If you have neither, search for the name of your board's USB-Serial chip.",
+              '- **[How to install CH340 drivers](https://learn.sparkfun.com/tutorials/how-to-install-ch340-drivers/all#:~:text=of%20your%20choice!-,Meet%20the%20CH340,-There%20are%20a)**\n' +
+              "- If you have an FTDI chip: **[how to install FTDI drivers](https://learn.sparkfun.com/tutorials/how-to-install-ftdi-drivers/all#:~:text=install%20the%20drivers.-,Windows%20%2D%20Quick%20and%20Easy,-Note%3A%20The)**. If you have neither, search for the name of your board's USB-Serial chip.",
           },
           {
             name: '6. Is your cable faulty or capable of sending data?',
@@ -163,7 +163,7 @@ const tags: Record<string, Tag> = {
           },
           {
             name: '12. Is this a problem with your IDE?',
-            value: "If you think that's the case, try reinstalling the IDE.",
+            value: "If you think that's the case, try reinstalling the IDE. Only download the ide from the Arduino website. NOT from the MS store. Do not allow the IDE to install to ONEDRIVE, or other cloud storage. Use github or other system like this to backup your projects, but cloud drives are often to slow and will error out when the ide is aempting to pull files from them.",
           },
         ),
     ],
@@ -346,7 +346,7 @@ const tags: Record<string, Tag> = {
           {
             name: 'Boards that are __NOT__ HID compliant',
             value:
-              'Uno (R3 or older), Mega, Nano (328), and Pro Mini cannot be used as HID devices. Attempting to do so will result in a bricked board.',
+              'Uno (R3 or older), Mega, Nano (328), and Pro Mini cannot be used as HID devices. Attempting to do so will result in a bricked board Most of the time. We do not assist people with that in this server, or help people recover after they have installed a bootloader to there board allready.',
           },
           {
             name: 'Boards that __ARE__ HID compliant',
@@ -392,7 +392,7 @@ const tags: Record<string, Tag> = {
           'What Coding Language Does Arduino IDE Use? What Language Should You Learn?',
         )
         .addFields({
-          name: 'Arduino IDE code is normally C++14',
+          name: 'Arduino IDE code is normally C++11/14',
           value:
             'The Arduino IDE mainly uses **C++14**, plus some added functions for the Arduino platform, listed at https://www.arduino.cc/reference/en/. MicroPython and other Python variants are sometimes used, but very few boards support them and their library selection is small. Their community, examples, and tutorials are also very limited, so they are rarely used in this community and never used in real-world **commercial or industrial** applications. Help for them is hard to find, so we do not recommend them unless you already know them and have a specific reason to use them. If possible, learn C++14. It is the most widely used language in the Arduino community and is also used in many other areas, such as game development, web development, and more.',
         }),
@@ -557,12 +557,12 @@ const tags: Record<string, Tag> = {
           {
             name: '2. How much power can each pin of the Arduino provide?',
             value:
-              'Each pin of the Arduino **UNO** is rated for 20mA (*other Arduinos are less*). In many cases, if you do not provide a resistor to the circuit on a pin, you can damage the Arduino. We use resistors for LEDs or any other component that can draw more than 20mA. **Motors should never be driven directly off the Arduino pins**, no matter how small they are or what you have seen others do. This risks damaging your Arduino or your PC in some cases.',
+              'Each pin of the Arduino **UNO** is rated for 20mA (*other Arduinos are less*). In many cases, if you do not provide a resistor to the circuit on a pin, you can damage the Arduino.Even if it works initialy, it is taking lifespan away from your componunts and or arduino the longer you use it. We use resistors for LEDs or any other component that can draw more than 20mA. **Motors should never be driven directly off the Arduino pins**, no matter how small they are or what you have seen others do. This risks damaging your Arduino or your PC in some cases.',
           },
           {
             name: '3. Powering the Arduino properly',
             value:
-              'Most Arduino boards have a pin marked **VIN** (Voltage Input). You can supply up to your board\'s maximum rated voltage on this pin. An UNO accepts 7-12V. The voltage regulator needs around 2V more than its output: 5V plus 2V of overhead = 7V or more. The more voltage you supply to this pin, the less current you can get out of the board. For example, at 7V you can get 400mA out of the regulator; at 12V, 100mA. 24V might overheat the regulator with just the board itself. If you have a regulated 5V power supply, you can sometimes use the 5V pin to power the Arduino. You should **NOT** connect batteries to the 5V or 3.3V pins. You can also power Arduinos via USB, which is connected directly to the 5V pin on the board, or the barrel jack, which is connected directly to the VIN pin on some boards.',
+              'Most Arduino boards have a pin marked **VIN** (Voltage Input). You can supply up to your board\'s maximum rated voltage on this pin. An UNO accepts 7-12V. The voltage regulator needs around 2V more than its output: 5V plus 2V of overhead = 7V or more. The more voltage you supply to this pin, the less current you can get out of the board. For example, at 7V you can get 400mA out of the regulator; at 12V, this value drops to 100mA. 24V might overheat the regulator with just the board itself, and nothing else conected. If you have a regulated 5V power supply, you can sometimes use the 5V pin to power the Arduino. You should **NOT** connect batteries to the 5V or 3.3V pins. You can also power Arduinos via USB, which is connected directly to the 5V pin on the board, or the barrel jack, which is connected directly to the VIN pin on some boards. You should NOT power 5v to the 5v pin AND have your PC pluged in the USB at the same time, for risk of damaging the pc on some clone boards.',
           },
           {
             name: '4. The 3.3V pin',
